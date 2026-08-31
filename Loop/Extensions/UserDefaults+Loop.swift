@@ -17,6 +17,7 @@ extension UserDefaults {
         case loopNotRunningNotifications = "com.loopkit.Loop.loopNotRunningNotifications"
         case inFlightAutomaticDose = "com.loopkit.Loop.inFlightAutomaticDose"
         case favoriteFoods = "com.loopkit.Loop.favoriteFoods"
+        case favoriteFoodFolders = "com.loopkit.Loop.favoriteFoodFolders"
     }
 
     var legacyPumpManagerRawValue: PumpManager.RawValue? {
@@ -106,6 +107,25 @@ extension UserDefaults {
                 set(data, forKey: Key.favoriteFoods.rawValue)
             } catch {
                 assertionFailure("Unable to encode stored favorite foods")
+            }
+        }
+    }
+
+    var favoriteFoodFolders: [FavoriteFoodFolder] {
+        get {
+            let decoder = JSONDecoder()
+            guard let data = object(forKey: Key.favoriteFoodFolders.rawValue) as? Data else {
+                return []
+            }
+            return (try? decoder.decode([FavoriteFoodFolder].self, from: data)) ?? []
+        }
+        set {
+            do {
+                let encoder = JSONEncoder()
+                let data = try encoder.encode(newValue)
+                set(data, forKey: Key.favoriteFoodFolders.rawValue)
+            } catch {
+                assertionFailure("Unable to encode favorite food folders")
             }
         }
     }

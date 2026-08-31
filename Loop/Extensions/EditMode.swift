@@ -10,7 +10,9 @@ import SwiftUI
 
 extension EditMode {
     var title: String {
-        self == .active ? "Done" : "Edit"
+        self == .active
+            ? String(localized: "Done", comment: "Title of the button that leaves list edit mode")
+            : String(localized: "Edit", comment: "Title of the button that enters list edit mode")
     }
     
     mutating func toggle() {

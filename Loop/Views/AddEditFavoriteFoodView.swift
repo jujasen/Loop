@@ -21,14 +21,14 @@ struct AddEditFavoriteFoodView: View {
     private var isNewEntry = true
         
     /// Initializer for adding a new favorite food or editing a `StoredFavoriteFood`
-    init(originalFavoriteFood: StoredFavoriteFood? = nil, onSave: @escaping (NewFavoriteFood) -> Void) {
-        self._viewModel = StateObject(wrappedValue: AddEditFavoriteFoodViewModel(originalFavoriteFood: originalFavoriteFood, onSave: onSave))
+    init(originalFavoriteFood: StoredFavoriteFood? = nil, folders: [FavoriteFoodFolder] = [], initialFolderID: String? = nil, onSave: @escaping (NewFavoriteFood) -> Void) {
+        self._viewModel = StateObject(wrappedValue: AddEditFavoriteFoodViewModel(originalFavoriteFood: originalFavoriteFood, folders: folders, initialFolderID: initialFolderID, onSave: onSave))
         self.isNewEntry = originalFavoriteFood == nil
     }
     
     /// Initializer for presenting the `AddEditFavoriteFoodView` prepopulated from the `CarbEntryView`
-    init(carbsQuantity: Double?, foodType: String, absorptionTime: TimeInterval, onSave: @escaping (NewFavoriteFood) -> Void) {
-        self._viewModel = StateObject(wrappedValue: AddEditFavoriteFoodViewModel(carbsQuantity: carbsQuantity, foodType: foodType, absorptionTime: absorptionTime, onSave: onSave))
+    init(carbsQuantity: Double?, foodType: String, absorptionTime: TimeInterval, folders: [FavoriteFoodFolder] = [], onSave: @escaping (NewFavoriteFood) -> Void) {
+        self._viewModel = StateObject(wrappedValue: AddEditFavoriteFoodViewModel(carbsQuantity: carbsQuantity, foodType: foodType, absorptionTime: absorptionTime, folders: folders, onSave: onSave))
     }
     
     var body: some View {
@@ -64,7 +64,7 @@ struct AddEditFavoriteFoodView: View {
                     }
                 }
                 .navigationBarBackButtonHidden(viewModel.updatedFavoriteFood != nil)
-                .navigationBarTitle(viewModel.originalFavoriteFood?.title ?? "", displayMode: .inline)
+                .navigationBarTitle(viewModel.originalFavoriteFood?.name ?? "", displayMode: .inline)
         }
     }
     
@@ -75,7 +75,7 @@ struct AddEditFavoriteFoodView: View {
             
             ScrollView {
                 card
-                    .padding(.top, 8)
+                    .padding(.top, 12)
                 
                 saveActionButton
             }
@@ -89,12 +89,17 @@ struct AddEditFavoriteFoodView: View {
     private var card: some View {
         VStack(spacing: 10) {
             let nameFocused: Binding<Bool> = Binding(get: { expandedRow == .name }, set: { expandedRow = $0 ? .name : nil })
+            let servingSizeFocused: Binding<Bool> = Binding(get: { expandedRow == .servingSize }, set: { expandedRow = $0 ? .servingSize : nil })
             let carbQuantityFocused: Binding<Bool> = Binding(get: { expandedRow == .carbQuantity }, set: { expandedRow = $0 ? .carbQuantity : nil })
             let foodTypeFocused: Binding<Bool> = Binding(get: { expandedRow == .foodType }, set: { expandedRow = $0 ? .foodType : nil })
             let absorptionTimeFocused: Binding<Bool> = Binding(get: { expandedRow == .absorptionTime }, set: { expandedRow = $0 ? .absorptionTime : nil })
             
             TextFieldRow(text: $viewModel.name, isFocused: nameFocused, title: String(localized: "Name", comment: "Label for name row on add favorite food screen"), placeholder: String(localized: "Apple", comment: "Default name on add favorite food screen"))
             
+            CardSectionDivider()
+
+            TextFieldRow(text: $viewModel.servingSize, isFocused: servingSizeFocused, title: String(localized: "Serving Size", comment: "Label for the free-text serving size row on add favorite food screen"), placeholder: String(localized: "1 slice", comment: "Placeholder for the free-text serving size row on add favorite food screen"))
+
             CardSectionDivider()
 
             CarbQuantityRow(quantity: $viewModel.carbsQuantity, isFocused: carbQuantityFocused, title: String(localized: "Carb Quantity", comment: "Label for carb quantity row on add favorite food screen"), preferredCarbUnit: viewModel.preferredCarbUnit)
@@ -107,13 +112,62 @@ struct AddEditFavoriteFoodView: View {
 
             AbsorptionTimePickerRow(absorptionTime: $viewModel.absorptionTime, isFocused: absorptionTimeFocused, validDurationRange: viewModel.absorptionRimesRange, showHowAbsorptionTimeWorks: $showHowAbsorptionTimeWorks)
                 .padding(.bottom, 2)
+
+            if !viewModel.folders.isEmpty {
+                CardSectionDivider()
+
+                folderRow
+            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal)
         .background(CardBackground())
         .padding(.horizontal)
     }
-    
+
+    private var folderRow: some View {
+        HStack {
+            Text("Folder", comment: "Label for the folder row on add favorite food screen")
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            Menu {
+                Button(action: { viewModel.folderID = nil }) {
+                    if viewModel.folderID == nil {
+                        Label(noFolderTitle, systemImage: "checkmark")
+                    }
+                    else {
+                        Text(noFolderTitle)
+                    }
+                }
+
+                ForEach(viewModel.folders) { folder in
+                    Button(action: { viewModel.folderID = folder.id }) {
+                        if viewModel.folderID == folder.id {
+                            Label(folder.title, systemImage: "checkmark")
+                        }
+                        else {
+                            Text(folder.title)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(viewModel.folderName ?? noFolderTitle)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2.weight(.semibold))
+                }
+                .foregroundColor(.accentColor)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var noFolderTitle: String {
+        String(localized: "No Folder", comment: "Folder picker option for a favorite food that is not in a folder")
+    }
+
     private func alert(for alert: AddEditFavoriteFoodViewModel.Alert) -> SwiftUI.Alert {
         switch alert {
         case .maxQuantityExceded:
@@ -168,6 +222,6 @@ extension AddEditFavoriteFoodView {
 
 extension AddEditFavoriteFoodView {
     enum Row {
-        case name, carbQuantity, foodType, absorptionTime
+        case name, servingSize, carbQuantity, foodType, absorptionTime
     }
 }

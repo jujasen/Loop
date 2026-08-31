@@ -41565,6 +41565,270 @@
           }
         }
       }
+    },
+    "Serving Size" : {
+      "comment" : "Label for the free-text serving size row on add favorite food screen",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengde"
+          }
+        }
+      }
+    },
+    "1 slice" : {
+      "comment" : "Placeholder for the free-text serving size row on add favorite food screen",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 skive"
+          }
+        }
+      }
+    },
+    "Folder" : {
+      "comment" : "Label for the folder row on add favorite food screen",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mappe"
+          }
+        }
+      }
+    },
+    "No Folder" : {
+      "comment" : "Folder picker option for a favorite food that is not in a folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen mappe"
+          }
+        }
+      }
+    },
+    "Search foods" : {
+      "comment" : "Placeholder for the favorite foods search field",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Søk i mat"
+          }
+        }
+      }
+    },
+    "Give each food a name and a serving size — like “1 bowl” — and file it in a folder to keep your list tidy." : {
+      "comment" : "Explanation of serving sizes and folders shown when there are no favorite foods yet",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gi hver mat et navn og en mengde – for eksempel «1 skål» – og legg den i en mappe for å holde orden i listen."
+          }
+        }
+      }
+    },
+    "No matching foods" : {
+      "comment" : "Title shown when a favorite food search returns nothing",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen treff"
+          }
+        }
+      }
+    },
+    "Try a different name or serving size." : {
+      "comment" : "Hint shown when a favorite food search returns nothing",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prøv et annet navn eller en annen mengde."
+          }
+        }
+      }
+    },
+    "Not in a Folder" : {
+      "comment" : "Section header for favorite foods that are not filed in a folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uten mappe"
+          }
+        }
+      }
+    },
+    "This folder is empty." : {
+      "comment" : "Placeholder row shown for a favorite food folder with no foods in it",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne mappen er tom."
+          }
+        }
+      }
+    },
+    "Add Food Here" : {
+      "comment" : "Menu action to add a favorite food directly into a folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til mat her"
+          }
+        }
+      }
+    },
+    "Edit Folder" : {
+      "comment" : "Menu action to rename a favorite food folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rediger mappe"
+          }
+        }
+      }
+    },
+    "Delete Folder" : {
+      "comment" : "Menu action to delete a favorite food folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slett mappe"
+          }
+        }
+      }
+    },
+    "Move to" : {
+      "comment" : "Header of the context menu used to file a favorite food into a folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flytt til"
+          }
+        }
+      }
+    },
+    "Add a folder" : {
+      "comment" : "Button label to create a new favorite food folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til mappe"
+          }
+        }
+      }
+    },
+    "Breakfast" : {
+      "comment" : "Placeholder name for a new favorite food folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frokost"
+          }
+        }
+      }
+    },
+    "Icon" : {
+      "comment" : "Label for the optional emoji shown on a favorite food folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikon"
+          }
+        }
+      }
+    },
+    "Folders are optional. Deleting a folder keeps its foods — they simply move back out of the folder." : {
+      "comment" : "Footer explaining favorite food folders",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mapper er valgfrie. Sletter du en mappe, blir maten beholdt – den flyttes bare ut av mappen."
+          }
+        }
+      }
+    },
+    "The foods in this folder will be kept and moved out of the folder." : {
+      "comment" : "Message confirming deletion of a favorite food folder",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maten i mappen blir beholdt og flyttet ut av mappen."
+          }
+        }
+      }
+    },
+    "New Folder" : {
+      "comment" : "Title of the new favorite food folder screen",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ny mappe"
+          }
+        }
+      }
+    },
+    "Browse all favorites" : {
+      "comment" : "Button label opening the searchable list of Favorite Foods from the carb entry screen",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se alle favoritter"
+          }
+        }
+      }
+    },
+    "Clear selection" : {
+      "comment" : "Button label clearing the selected Favorite Food",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fjern valg"
+          }
+        }
+      }
+    },
+    "Edit" : {
+      "comment" : "Title of the button that enters list edit mode",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rediger"
+          }
+        }
+      }
+    },
+    "Simplify Carb Entry" : {
+      "comment" : "Descriptive text for the Favorite Foods settings row",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enklere karbo-registrering"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

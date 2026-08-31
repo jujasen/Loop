@@ -80,7 +80,16 @@ final class CarbEntryViewModel: ObservableObject {
     }
     
     @Published var favoriteFoods = UserDefaults.standard.favoriteFoods
+    @Published var favoriteFoodFolders = UserDefaults.standard.favoriteFoodFolders
     @Published var selectedFavoriteFoodIndex = -1
+
+    lazy var carbFormatter = QuantityFormatter(for: preferredCarbUnit)
+    lazy var absorptionTimeFormatter: DateComponentsFormatter = {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.hour, .minute]
+        formatter.unitsStyle = .abbreviated
+        return formatter
+    }()
     
     weak var delegate: CarbEntryViewModelDelegate?
     
@@ -212,9 +221,50 @@ final class CarbEntryViewModel: ObservableObject {
     
     // MARK: - Favorite Foods
     func onFavoriteFoodSave(_ food: NewFavoriteFood) {
-        let newStoredFood = StoredFavoriteFood(name: food.name, carbsQuantity: food.carbsQuantity, foodType: food.foodType, absorptionTime: food.absorptionTime)
+        let newStoredFood = StoredFavoriteFood(name: food.name, carbsQuantity: food.carbsQuantity, foodType: food.foodType, absorptionTime: food.absorptionTime, servingSize: food.servingSize, folderID: food.folderID)
         favoriteFoods.append(newStoredFood)
         selectedFavoriteFoodIndex = favoriteFoods.count - 1
+    }
+
+    var selectedFavoriteFood: StoredFavoriteFood? {
+        guard favoriteFoods.indices.contains(selectedFavoriteFoodIndex) else { return nil }
+        return favoriteFoods[selectedFavoriteFoodIndex]
+    }
+
+    /// Selects a favorite food, or clears the selection when passed `nil`.
+    func selectFavoriteFood(_ food: StoredFavoriteFood?) {
+        guard let food, let index = favoriteFoods.firstIndex(of: food) else {
+            selectedFavoriteFoodIndex = -1
+            return
+        }
+        selectedFavoriteFoodIndex = index
+    }
+
+    /// Tapping the food that is already applied clears it, so one control both applies and undoes.
+    func toggleFavoriteFood(_ food: StoredFavoriteFood) {
+        if selectedFavoriteFood == food {
+            selectFavoriteFood(nil)
+        }
+        else {
+            selectFavoriteFood(food)
+        }
+    }
+
+    /// Favorite foods grouped for display: folders in their stored order, then unfiled foods.
+    var favoriteFoodSections: [FavoriteFoodSection] {
+        var sections = favoriteFoodFolders.map { folder in
+            FavoriteFoodSection(folder: folder, foods: favoriteFoods.filter { $0.folderID == folder.id })
+        }
+        .filter { !$0.foods.isEmpty }
+
+        let unfiled = favoriteFoods.filter { food in
+            guard let folderID = food.folderID else { return true }
+            return !favoriteFoodFolders.contains(where: { $0.id == folderID })
+        }
+        if !unfiled.isEmpty {
+            sections.append(FavoriteFoodSection(folder: nil, foods: unfiled))
+        }
+        return sections
     }
     
     private func observeFavoriteFoodIndexChange() {

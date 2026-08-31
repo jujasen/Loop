@@ -29,6 +29,15 @@ final class AddEditFavoriteFoodViewModel: ObservableObject {
     
     @Published var foodType = ""
 
+    /// Free-text serving size, e.g. "1 bowl". Optional — a food is savable without one.
+    @Published var servingSize = ""
+
+    /// Folder the food is filed under, `nil` for unfiled.
+    @Published var folderID: String? = nil
+
+    /// Folders offered in the folder picker. Empty when the caller has no folders to offer.
+    let folders: [FavoriteFoodFolder]
+
     @Published var absorptionTime: TimeInterval
     let minAbsorptionTime = LoopConstants.minCarbAbsorptionTime
     let maxAbsorptionTime = LoopConstants.maxCarbAbsorptionTime
@@ -40,31 +49,41 @@ final class AddEditFavoriteFoodViewModel: ObservableObject {
     
     private let onSave: (NewFavoriteFood) -> ()
     
-    init(originalFavoriteFood: StoredFavoriteFood?, onSave: @escaping (NewFavoriteFood) -> ()) {
+    init(originalFavoriteFood: StoredFavoriteFood?, folders: [FavoriteFoodFolder] = [], initialFolderID: String? = nil, onSave: @escaping (NewFavoriteFood) -> ()) {
         self.onSave = onSave
+        self.folders = folders
         if let food = originalFavoriteFood {
             self.originalFavoriteFood = food
             self.name = food.name
             self.carbsQuantity = food.carbsQuantity.doubleValue(for: preferredCarbUnit)
             self.foodType = food.foodType
             self.absorptionTime = food.absorptionTime
+            self.servingSize = food.servingSize
+            self.folderID = food.folderID
         }
         else {
             self.absorptionTime = .hours(3)
+            self.folderID = initialFolderID
         }
     }
     
-    init(carbsQuantity: Double?, foodType: String, absorptionTime: TimeInterval, onSave: @escaping (NewFavoriteFood) -> ()) {
+    init(carbsQuantity: Double?, foodType: String, absorptionTime: TimeInterval, folders: [FavoriteFoodFolder] = [], onSave: @escaping (NewFavoriteFood) -> ()) {
         self.onSave = onSave
+        self.folders = folders
         self.carbsQuantity = carbsQuantity
         self.foodType = foodType
         self.absorptionTime = absorptionTime
+    }
+
+    var folderName: String? {
+        guard let folderID, let folder = folders.first(where: { $0.id == folderID }) else { return nil }
+        return folder.title
     }
     
     var originalFavoriteFood: StoredFavoriteFood?
     var updatedFavoriteFood: NewFavoriteFood? {
         if let quantity = carbsQuantity, quantity != 0, name != "", foodType != "" {
-            if let o = originalFavoriteFood, o.name == name, o.carbsQuantity.doubleValue(for: preferredCarbUnit) == carbsQuantity && o.foodType == foodType && o.absorptionTime == absorptionTime {
+            if let o = originalFavoriteFood, o.name == name, o.carbsQuantity.doubleValue(for: preferredCarbUnit) == carbsQuantity && o.foodType == foodType && o.absorptionTime == absorptionTime && o.servingSize == servingSize && o.folderID == folderID {
                 return nil  // No changes were made
             }
             
@@ -72,7 +91,9 @@ final class AddEditFavoriteFoodViewModel: ObservableObject {
                 name: name,
                 carbsQuantity: HKQuantity(unit: preferredCarbUnit, doubleValue: quantity),
                 foodType: foodType,
-                absorptionTime: absorptionTime
+                absorptionTime: absorptionTime,
+                servingSize: servingSize.trimmingCharacters(in: .whitespacesAndNewlines),
+                folderID: folderID
             )
         }
         else {

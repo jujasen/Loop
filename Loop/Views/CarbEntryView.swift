@@ -21,6 +21,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     
     @State private var showHowAbsorptionTimeWorks = false
     @State private var showAddFavoriteFood = false
+    @State private var showFavoriteFoodPicker = false
     
     private let isNewEntry: Bool
 
@@ -88,7 +89,19 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         }
         .alert(item: $viewModel.alert, content: alert(for:))
         .sheet(isPresented: $showAddFavoriteFood, onDismiss: clearExpandedRow) {
-            AddEditFavoriteFoodView(carbsQuantity: $viewModel.carbsQuantity.wrappedValue, foodType: $viewModel.foodType.wrappedValue, absorptionTime: $viewModel.absorptionTime.wrappedValue, onSave: onFavoriteFoodSave(_:))
+            AddEditFavoriteFoodView(carbsQuantity: $viewModel.carbsQuantity.wrappedValue, foodType: $viewModel.foodType.wrappedValue, absorptionTime: $viewModel.absorptionTime.wrappedValue, folders: viewModel.favoriteFoodFolders, onSave: onFavoriteFoodSave(_:))
+        }
+        .sheet(isPresented: $showFavoriteFoodPicker) {
+            FavoriteFoodPickerView(
+                sections: viewModel.favoriteFoodSections,
+                selectedFood: viewModel.selectedFavoriteFood,
+                carbFormatter: viewModel.carbFormatter,
+                absorptionTimeFormatter: viewModel.absorptionTimeFormatter,
+                onSelect: { food in
+                    viewModel.selectFavoriteFood(food)
+                    showFavoriteFoodPicker = false
+                }
+            )
         }
         .sheet(isPresented: $showHowAbsorptionTimeWorks) {
             HowAbsorptionTimeWorksView()
@@ -216,39 +229,14 @@ extension CarbEntryView {
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 26)
             
-            VStack(spacing: 10) {
+            VStack(spacing: 12) {
                 if !viewModel.favoriteFoods.isEmpty {
-                    VStack {
-                        HStack {
-                            Text("Choose Favorite:", comment: "The label for the row where you choose saved Favorite Food")
-                            
-                            let selectedFavorite = favoritedFoodTextFromIndex(viewModel.selectedFavoriteFoodIndex)
-                            Text(selectedFavorite)
-                                .minimumScaleFactor(0.8)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                        
-                        if expandedRow == .favoriteFoodSelection {
-                            Picker(String(""), selection: $viewModel.selectedFavoriteFoodIndex) {
-                                ForEach(-1..<viewModel.favoriteFoods.count, id: \.self) { index in
-                                    Text(favoritedFoodTextFromIndex(index))
-                                        .tag(index)
-                                }
-                            }
-                            .pickerStyle(.wheel)
-                        }
-                    }
-                    .onTapGesture {
-                        withAnimation {
-                            if expandedRow == .favoriteFoodSelection {
-                                expandedRow = nil
-                            }
-                            else {
-                                expandedRow = .favoriteFoodSelection
-                            }
-                        }
-                    }
-                    
+                    quickPickRow
+
+                    CardSectionDivider()
+
+                    browseFavoritesButton
+
                     CardSectionDivider()
                 }
                 
@@ -264,14 +252,44 @@ extension CarbEntryView {
             .padding(.horizontal)
         }
     }
-    
-    private func favoritedFoodTextFromIndex(_ index: Int) -> String {
-        if index == -1 {
-            return String(localized: "None", comment: "Indicates no favorite food is selected")
+
+    /// One tap applies a favorite; tapping the applied favorite again clears it.
+    private var quickPickRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(viewModel.favoriteFoods) { food in
+                    FavoriteFoodQuickPickChip(
+                        food: food,
+                        isSelected: viewModel.selectedFavoriteFood == food,
+                        action: { viewModel.toggleFavoriteFood(food) }
+                    )
+                }
+            }
+            .padding(.vertical, 2)
         }
-        else {
-            let food = viewModel.favoriteFoods[index]
-            return "\(food.name) \(food.foodType)"
+    }
+
+    private var browseFavoritesButton: some View {
+        Button(action: { showFavoriteFoodPicker = true }) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .font(.footnote.weight(.semibold))
+
+                Text("Browse all favorites", comment: "Button label opening the searchable list of Favorite Foods from the carb entry screen")
+
+                Spacer()
+
+                if let selectedFavoriteFood = viewModel.selectedFavoriteFood {
+                    Text(selectedFavoriteFood.name)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Image(systemName: "chevron.forward")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(Color(UIColor.tertiaryLabel))
+            }
         }
     }
     
@@ -283,6 +301,177 @@ extension CarbEntryView {
         clearExpandedRow()
         self.showAddFavoriteFood = false
         viewModel.onFavoriteFoodSave(food)
+    }
+}
+
+/// A compact, one-tap representation of a favorite food used in the carb entry screen.
+struct FavoriteFoodQuickPickChip: View {
+    @Environment(\.carbTintColor) private var carbTintColor
+
+    let food: StoredFavoriteFood
+    let isSelected: Bool
+    let action: () -> Void
+
+    private let cornerRadius: CGFloat = 14
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if food.foodType.isEmpty {
+                    Image(systemName: "fork.knife")
+                        .font(.footnote)
+                        .foregroundColor(carbTintColor)
+                }
+                else {
+                    Text(food.foodType)
+                        .font(.body)
+                }
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(food.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+
+                    if food.hasServingSize {
+                        Text(food.servingSize)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if isSelected {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(isSelected ? carbTintColor.opacity(0.18) : Color(.tertiarySystemFill))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(isSelected ? carbTintColor : .clear, lineWidth: 1.5)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+/// A searchable, folder-grouped list for choosing a favorite food, presented from the carb entry screen.
+struct FavoriteFoodPickerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.carbTintColor) private var carbTintColor
+
+    let sections: [FavoriteFoodSection]
+    let selectedFood: StoredFavoriteFood?
+    let carbFormatter: QuantityFormatter
+    let absorptionTimeFormatter: DateComponentsFormatter
+    let onSelect: (StoredFavoriteFood?) -> Void
+
+    @State private var searchText = ""
+
+    private var filteredSections: [FavoriteFoodSection] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return sections }
+        return sections
+            .map { FavoriteFoodSection(folder: $0.folder, foods: $0.foods.filter { $0.matches(searchQuery: query) }) }
+            .filter { !$0.foods.isEmpty }
+    }
+
+    var body: some View {
+        NavigationView {
+            List {
+                if selectedFood != nil {
+                    Section {
+                        Button(action: { onSelect(nil) }) {
+                            HStack {
+                                Image(systemName: "xmark.circle")
+                                Text("Clear selection", comment: "Button label clearing the selected Favorite Food")
+                            }
+                        }
+                    }
+                }
+
+                if filteredSections.isEmpty {
+                    Section {
+                        Text("No matching foods", comment: "Title shown when a favorite food search returns nothing")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                else {
+                    ForEach(filteredSections) { section in
+                        Section(header: Text(sectionTitle(for: section))) {
+                            ForEach(section.foods) { food in
+                                Button(action: { onSelect(food) }) {
+                                    row(for: food)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .insetGroupedListStyle()
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: Text("Search foods", comment: "Placeholder for the favorite foods search field"))
+            .navigationBarTitle(String(localized: "Favorite Foods", comment: "Title for Favorite Foods view"), displayMode: .inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: dismiss.callAsFunction) {
+                        Text("Cancel", comment: "Button label for cancel")
+                    }
+                }
+            }
+        }
+    }
+
+    private func row(for food: StoredFavoriteFood) -> some View {
+        HStack(spacing: 12) {
+            FavoriteFoodEmojiTile(emoji: food.foodType, tint: carbTintColor, size: 38)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(food.name)
+                    .font(.body.weight(.semibold))
+                    .foregroundColor(.primary)
+
+                if food.hasServingSize {
+                    Text(food.servingSize)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                Text(FavoriteFoodSummary.carbsAndAbsorption(for: food, carbFormatter: carbFormatter, absorptionTimeFormatter: absorptionTimeFormatter))
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            if selectedFood == food {
+                Image(systemName: "checkmark")
+                    .font(.footnote.weight(.bold))
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+
+    private func sectionTitle(for section: FavoriteFoodSection) -> String {
+        if let folder = section.folder {
+            return folder.title
+        }
+        else if sections.count > 1 {
+            return String(localized: "Not in a Folder", comment: "Section header for favorite foods that are not filed in a folder")
+        }
+        else {
+            return String(localized: "All Favorites", comment: "section header for list of existing FavoriteFoods")
+        }
     }
 }
 
@@ -314,6 +503,6 @@ extension CarbEntryView {
 
 extension CarbEntryView {
     enum Row {
-        case amountConsumed, time, foodType, absorptionTime, favoriteFoodSelection
+        case amountConsumed, time, foodType, absorptionTime
     }
 }
