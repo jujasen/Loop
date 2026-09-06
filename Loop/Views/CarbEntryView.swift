@@ -26,9 +26,8 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     private let isNewEntry: Bool
 
     init(viewModel: CarbEntryViewModel) {
-        if viewModel.shouldBeginEditingQuantity {
-            expandedRow = .amountConsumed
-        }
+        // Deliberately no starting focus: raising the keyboard on open hid the favorite foods,
+        // which is the faster way to fill this screen in.
         isNewEntry = viewModel.originalCarbEntry == nil
         self.viewModel = viewModel
     }
@@ -256,27 +255,28 @@ extension CarbEntryView {
 
     /// One tap applies a favorite. Foods saved with several amounts open a short menu of those
     /// amounts instead, so a "slice" can be logged as a whole, a half or a quarter.
+    ///
+    /// The chips wrap onto as many lines as they need rather than scrolling sideways, so every
+    /// favorite is visible and reachable without swiping.
     private var quickPickRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(viewModel.favoriteFoods) { food in
-                    if food.hasMultiplePortions {
-                        Menu {
-                            portionMenuItems(for: food)
-                        } label: {
-                            chip(for: food)
-                        }
-                    }
-                    else {
-                        Button(action: { viewModel.toggleFavoriteFood(food) }) {
-                            chip(for: food)
-                        }
-                        .buttonStyle(.plain)
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 148), spacing: 8)], spacing: 8) {
+            ForEach(viewModel.favoriteFoods) { food in
+                if food.hasMultiplePortions {
+                    Menu {
+                        portionMenuItems(for: food)
+                    } label: {
+                        chip(for: food)
                     }
                 }
+                else {
+                    Button(action: { viewModel.toggleFavoriteFood(food) }) {
+                        chip(for: food)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .padding(.vertical, 2)
         }
+        .padding(.vertical, 2)
     }
 
     private func chip(for food: StoredFavoriteFood) -> some View {
@@ -397,6 +397,8 @@ struct FavoriteFoodQuickPickChip: View {
                 }
             }
 
+            Spacer(minLength: 4)
+
             if isSelected {
                 Image(systemName: "xmark.circle.fill")
                     .font(.footnote)
@@ -411,6 +413,7 @@ struct FavoriteFoodQuickPickChip: View {
         .lineLimit(1)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(isSelected ? carbTintColor.opacity(0.18) : Color(.tertiarySystemFill))
