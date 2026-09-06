@@ -82,6 +82,8 @@ final class CarbEntryViewModel: ObservableObject {
     @Published var favoriteFoods = UserDefaults.standard.favoriteFoods
     @Published var favoriteFoodFolders = UserDefaults.standard.favoriteFoodFolders
     @Published var selectedFavoriteFoodIndex = -1
+    /// `id` of the amount applied from the selected favorite food, for foods that have several.
+    @Published var selectedPortionID: String? = nil
 
     lazy var carbFormatter = QuantityFormatter(for: preferredCarbUnit)
     lazy var absorptionTimeFormatter: DateComponentsFormatter = {
@@ -104,7 +106,6 @@ final class CarbEntryViewModel: ObservableObject {
         
         observeAbsorptionTimeChange()
         observeFavoriteFoodChange()
-        observeFavoriteFoodIndexChange()
         observeLoopUpdates()
     }
     
@@ -221,9 +222,9 @@ final class CarbEntryViewModel: ObservableObject {
     
     // MARK: - Favorite Foods
     func onFavoriteFoodSave(_ food: NewFavoriteFood) {
-        let newStoredFood = StoredFavoriteFood(name: food.name, carbsQuantity: food.carbsQuantity, foodType: food.foodType, absorptionTime: food.absorptionTime, servingSize: food.servingSize, folderID: food.folderID)
+        let newStoredFood = StoredFavoriteFood(name: food.name, portions: food.portions, foodType: food.foodType, absorptionTime: food.absorptionTime, folderID: food.folderID)
         favoriteFoods.append(newStoredFood)
-        selectedFavoriteFoodIndex = favoriteFoods.count - 1
+        selectFavoriteFood(newStoredFood)
     }
 
     var selectedFavoriteFood: StoredFavoriteFood? {
@@ -231,23 +232,44 @@ final class CarbEntryViewModel: ObservableObject {
         return favoriteFoods[selectedFavoriteFoodIndex]
     }
 
-    /// Selects a favorite food, or clears the selection when passed `nil`.
-    func selectFavoriteFood(_ food: StoredFavoriteFood?) {
-        guard let food, let index = favoriteFoods.firstIndex(of: food) else {
-            selectedFavoriteFoodIndex = -1
-            return
-        }
-        selectedFavoriteFoodIndex = index
+    /// The amount applied from the selected food, when that food offers several.
+    var selectedPortion: FavoriteFoodPortion? {
+        selectedFavoriteFood?.portion(withID: selectedPortionID)
     }
 
-    /// Tapping the food that is already applied clears it, so one control both applies and undoes.
-    func toggleFavoriteFood(_ food: StoredFavoriteFood) {
-        if selectedFavoriteFood == food {
+    /// Selects a favorite food at one of its amounts, or clears the selection when passed `nil`.
+    /// Passing no portion applies the food's first amount.
+    func selectFavoriteFood(_ food: StoredFavoriteFood?, portion: FavoriteFoodPortion? = nil) {
+        guard let food, let index = favoriteFoods.firstIndex(of: food) else {
+            selectedFavoriteFoodIndex = -1
+            selectedPortionID = nil
+            applyClearedFavoriteFood()
+            return
+        }
+
+        let portion = portion ?? food.defaultPortion
+        selectedFavoriteFoodIndex = index
+        selectedPortionID = portion.id
+        apply(food: food, portion: portion)
+    }
+
+    /// Tapping the food and amount that is already applied clears it, so one control both applies
+    /// and undoes. Picking a different amount of the same food just switches amount.
+    func toggleFavoriteFood(_ food: StoredFavoriteFood, portion: FavoriteFoodPortion? = nil) {
+        let portion = portion ?? food.defaultPortion
+        if selectedFavoriteFood == food, selectedPortionID == portion.id {
             selectFavoriteFood(nil)
         }
         else {
-            selectFavoriteFood(food)
+            selectFavoriteFood(food, portion: portion)
         }
+    }
+
+    /// True when this exact food and amount is what the entry currently holds.
+    func isSelected(_ food: StoredFavoriteFood, portion: FavoriteFoodPortion? = nil) -> Bool {
+        guard selectedFavoriteFood == food else { return false }
+        guard let portion else { return true }
+        return selectedPortionID == portion.id
     }
 
     /// Favorite foods grouped for display: folders in their stored order, then unfiled foods.
@@ -267,16 +289,6 @@ final class CarbEntryViewModel: ObservableObject {
         return sections
     }
     
-    private func observeFavoriteFoodIndexChange() {
-        $selectedFavoriteFoodIndex
-            .receive(on: RunLoop.main)
-            .dropFirst()
-            .sink { [weak self] index in
-                self?.favoriteFoodSelected(at: index)
-            }
-            .store(in: &cancellables)
-    }
-    
     private func observeFavoriteFoodChange() {
         $favoriteFoods
             .dropFirst()
@@ -287,25 +299,24 @@ final class CarbEntryViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    private func favoriteFoodSelected(at index: Int) {
+    private func applyClearedFavoriteFood() {
         self.absorptionEditIsProgrammatic = true
-        if index == -1 {
-            self.carbsQuantity = 0
-            self.foodType = ""
-            self.absorptionTime = defaultAbsorptionTimes.medium
-            self.absorptionTimeWasEdited = false
-            self.usesCustomFoodType = false
-        }
-        else {
-            let food = favoriteFoods[index]
-            self.carbsQuantity = food.carbsQuantity.doubleValue(for: preferredCarbUnit)
-            self.foodType = food.foodType
-            self.absorptionTime = food.absorptionTime
-            self.absorptionTimeWasEdited = true
-            self.usesCustomFoodType = true
-        }
+        self.carbsQuantity = 0
+        self.foodType = ""
+        self.absorptionTime = defaultAbsorptionTimes.medium
+        self.absorptionTimeWasEdited = false
+        self.usesCustomFoodType = false
     }
-    
+
+    private func apply(food: StoredFavoriteFood, portion: FavoriteFoodPortion) {
+        self.absorptionEditIsProgrammatic = true
+        self.carbsQuantity = portion.carbsQuantity.doubleValue(for: preferredCarbUnit)
+        self.foodType = food.foodType
+        self.absorptionTime = food.absorptionTime
+        self.absorptionTimeWasEdited = true
+        self.usesCustomFoodType = true
+    }
+
     // MARK: - Utility
     func restoreUserActivityState(_ activity: NSUserActivity) {
         if let entry = activity.newCarbEntry {

@@ -102,7 +102,7 @@ final class FavoriteFoodsViewModel: ObservableObject {
 
     func onFoodSave(_ newFood: NewFavoriteFood) {
         if isAddViewActive {
-            let newStoredFood = StoredFavoriteFood(name: newFood.name, carbsQuantity: newFood.carbsQuantity, foodType: newFood.foodType, absorptionTime: newFood.absorptionTime, servingSize: newFood.servingSize, folderID: newFood.folderID ?? addToFolderID)
+            let newStoredFood = StoredFavoriteFood(name: newFood.name, portions: newFood.portions, foodType: newFood.foodType, absorptionTime: newFood.absorptionTime, folderID: newFood.folderID ?? addToFolderID)
             withAnimation {
                 favoriteFoods.append(newStoredFood)
             }
@@ -111,10 +111,9 @@ final class FavoriteFoodsViewModel: ObservableObject {
         }
         else if var selectedFood, let selectedFoodIndex = favoriteFoods.firstIndex(of: selectedFood) {
             selectedFood.name = newFood.name
-            selectedFood.carbsQuantity = newFood.carbsQuantity
+            selectedFood.portions = newFood.portions
             selectedFood.foodType = newFood.foodType
             selectedFood.absorptionTime = newFood.absorptionTime
-            selectedFood.servingSize = newFood.servingSize
             selectedFood.folderID = newFood.folderID
             favoriteFoods[selectedFoodIndex] = selectedFood
             self.selectedFood = selectedFood
@@ -249,9 +248,9 @@ final class FavoriteFoodsViewModel: ObservableObject {
 }
 
 extension FavoriteFood {
-    /// Matches on the food's name, serving size and emoji, so "skål" finds "Yoghurt · 1 skål".
+    /// Matches on the food's name, its serving sizes and emoji, so "skive" finds "Halv skive".
     func matches(searchQuery query: String) -> Bool {
-        let haystack = [name, servingSize, foodType]
+        let haystack = [name, servingSize, foodType] + portions.map(\.name)
         return haystack.contains { $0.localizedCaseInsensitiveContains(query) }
     }
 }

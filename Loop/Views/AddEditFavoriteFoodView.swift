@@ -89,8 +89,6 @@ struct AddEditFavoriteFoodView: View {
     private var card: some View {
         VStack(spacing: 10) {
             let nameFocused: Binding<Bool> = Binding(get: { expandedRow == .name }, set: { expandedRow = $0 ? .name : nil })
-            let servingSizeFocused: Binding<Bool> = Binding(get: { expandedRow == .servingSize }, set: { expandedRow = $0 ? .servingSize : nil })
-            let carbQuantityFocused: Binding<Bool> = Binding(get: { expandedRow == .carbQuantity }, set: { expandedRow = $0 ? .carbQuantity : nil })
             let foodTypeFocused: Binding<Bool> = Binding(get: { expandedRow == .foodType }, set: { expandedRow = $0 ? .foodType : nil })
             let absorptionTimeFocused: Binding<Bool> = Binding(get: { expandedRow == .absorptionTime }, set: { expandedRow = $0 ? .absorptionTime : nil })
             
@@ -98,12 +96,8 @@ struct AddEditFavoriteFoodView: View {
             
             CardSectionDivider()
 
-            TextFieldRow(text: $viewModel.servingSize, isFocused: servingSizeFocused, title: String(localized: "Serving Size", comment: "Label for the free-text serving size row on add favorite food screen"), placeholder: String(localized: "1 slice", comment: "Placeholder for the free-text serving size row on add favorite food screen"))
+            portionsSection
 
-            CardSectionDivider()
-
-            CarbQuantityRow(quantity: $viewModel.carbsQuantity, isFocused: carbQuantityFocused, title: String(localized: "Carb Quantity", comment: "Label for carb quantity row on add favorite food screen"), preferredCarbUnit: viewModel.preferredCarbUnit)
-            
             CardSectionDivider()
             
             EmojiRow(text: $viewModel.foodType, isFocused: foodTypeFocused, emojiType: .food, title: String(localized: "Food Type", comment: "Label for food type entry on add favorite food screen"))
@@ -123,6 +117,79 @@ struct AddEditFavoriteFoodView: View {
         .padding(.horizontal)
         .background(CardBackground())
         .padding(.horizontal)
+    }
+
+    // MARK: - Serving sizes
+
+    private var portionsSection: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Text("Serving Size", comment: "Label for the free-text serving size row on add favorite food screen")
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                Text("Carbs", comment: "Column heading above the carb quantity of each serving size")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            ForEach($viewModel.portions) { $portion in
+                let nameFocused: Binding<Bool> = Binding(
+                    get: { expandedRow == .portionName(portion.id) },
+                    set: { expandedRow = $0 ? .portionName(portion.id) : nil }
+                )
+                let carbsFocused: Binding<Bool> = Binding(
+                    get: { expandedRow == .portionCarbs(portion.id) },
+                    set: { expandedRow = $0 ? .portionCarbs(portion.id) : nil }
+                )
+
+                FavoriteFoodPortionRow(
+                    name: $portion.name,
+                    quantity: $portion.carbsQuantity,
+                    isNameFocused: nameFocused,
+                    isQuantityFocused: carbsFocused,
+                    namePlaceholder: viewModel.portionNamePlaceholder,
+                    preferredCarbUnit: viewModel.preferredCarbUnit,
+                    onDelete: viewModel.hasMultiplePortions ? { removePortion(id: portion.id) } : nil
+                )
+            }
+
+            Button(action: addPortion) {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.footnote)
+
+                    Text("Add a serving size", comment: "Button label to add another serving size to a favorite food")
+                        .font(.subheadline)
+
+                    Spacer()
+                }
+                .foregroundColor(.accentColor)
+            }
+            .buttonStyle(.plain)
+
+            if viewModel.hasMultiplePortions {
+                Text("Give each amount a name so you can tell them apart when logging carbs.", comment: "Hint shown when a favorite food has more than one serving size")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private func addPortion() {
+        viewModel.addPortion()
+        if let newPortion = viewModel.portions.last {
+            expandedRow = .portionName(newPortion.id)
+        }
+    }
+
+    private func removePortion(id: String) {
+        if expandedRow == .portionName(id) || expandedRow == .portionCarbs(id) {
+            expandedRow = nil
+        }
+        viewModel.removePortion(id: id)
     }
 
     private var folderRow: some View {
@@ -184,7 +251,7 @@ struct AddEditFavoriteFoodView: View {
         case .warningQuantityValidation:
             let message = String(
                 format: NSLocalizedString("Did you intend to enter %1$@ grams as the amount of carbohydrates for this meal?", comment: "Alert body when entered carbohydrates is greater than threshold (1: entered quantity in grams)"),
-                NumberFormatter.localizedString(from: NSNumber(value: viewModel.carbsQuantity ?? 0), number: .none)
+                NumberFormatter.localizedString(from: NSNumber(value: viewModel.alertQuantity), number: .none)
             )
             return SwiftUI.Alert(
                 title: Text("Large Meal Entered", comment: "Title of the warning shown when a large meal was entered"),
@@ -221,7 +288,9 @@ extension AddEditFavoriteFoodView {
 }
 
 extension AddEditFavoriteFoodView {
-    enum Row {
-        case name, servingSize, carbQuantity, foodType, absorptionTime
+    enum Row: Equatable {
+        case name, foodType, absorptionTime
+        case portionName(String)
+        case portionCarbs(String)
     }
 }

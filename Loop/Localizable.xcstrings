@@ -41829,6 +41829,72 @@
           }
         }
       }
+    },
+    "Carbs" : {
+      "comment" : "Column heading above the carb quantity of each serving size",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karbo"
+          }
+        }
+      }
+    },
+    "Serving Sizes" : {
+      "comment" : "Section header for the list of amounts a favorite food can be logged at",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengder"
+          }
+        }
+      }
+    },
+    "Whole slice" : {
+      "comment" : "Placeholder for the name of one serving size of a favorite food",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hel skive"
+          }
+        }
+      }
+    },
+    "Add a serving size" : {
+      "comment" : "Button label to add another serving size to a favorite food",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til mengde"
+          }
+        }
+      }
+    },
+    "Give each amount a name so you can tell them apart when logging carbs." : {
+      "comment" : "Hint shown when a favorite food has more than one serving size",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gi hver mengde et navn, så du kan skille dem når du registrerer karbohydrater."
+          }
+        }
+      }
+    },
+    "%lld sizes" : {
+      "comment" : "Number of serving sizes shown on a favorite food chip (1: number of serving sizes)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld mengder"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

@@ -42,6 +42,20 @@ public struct FavoriteFoodDetailView: View {
                 }
                 .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
 
+                Section(header: Text("Serving Sizes", comment: "Section header for the list of amounts a favorite food can be logged at")) {
+                    ForEach(food.portions) { portion in
+                        HStack {
+                            Text(portion.hasName ? portion.name : String(localized: "Carb Quantity", comment: "Label for carb quantity row on add favorite food screen"))
+                                .font(.subheadline)
+                            Spacer()
+                            Text(portion.carbsString(formatter: carbFormatter))
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+
                 Section("Information") {
                     ForEach(rows(for: food), id: \.field) { row in
                         HStack {
@@ -100,18 +114,10 @@ public struct FavoriteFoodDetailView: View {
 
     private func rows(for food: StoredFavoriteFood) -> [(field: String, value: String)] {
         var rows: [(field: String, value: String)] = [
-            (String(localized: "Name", comment: "Label for name row on add favorite food screen"), food.name)
-        ]
-
-        if food.hasServingSize {
-            rows.append((String(localized: "Serving Size", comment: "Label for the free-text serving size row on add favorite food screen"), food.servingSize))
-        }
-
-        rows.append(contentsOf: [
-            (String(localized: "Carb Quantity", comment: "Label for carb quantity row on add favorite food screen"), food.carbsString(formatter: carbFormatter)),
+            (String(localized: "Name", comment: "Label for name row on add favorite food screen"), food.name),
             (String(localized: "Food Type", comment: "Label for food type entry on add favorite food screen"), food.foodType),
             (String(localized: "Absorption Time", comment: "Label for food absorption entry on add favorite food screen"), food.absorptionTimeString(formatter: absorptionTimeFormatter))
-        ])
+        ]
 
         if let folderTitle {
             rows.append((String(localized: "Folder", comment: "Label for the folder row on add favorite food screen"), folderTitle))

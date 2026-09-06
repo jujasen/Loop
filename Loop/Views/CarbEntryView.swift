@@ -95,10 +95,11 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
             FavoriteFoodPickerView(
                 sections: viewModel.favoriteFoodSections,
                 selectedFood: viewModel.selectedFavoriteFood,
+                selectedPortionID: viewModel.selectedPortionID,
                 carbFormatter: viewModel.carbFormatter,
                 absorptionTimeFormatter: viewModel.absorptionTimeFormatter,
-                onSelect: { food in
-                    viewModel.selectFavoriteFood(food)
+                onSelect: { food, portion in
+                    viewModel.selectFavoriteFood(food, portion: portion)
                     showFavoriteFoodPicker = false
                 }
             )
@@ -253,19 +254,57 @@ extension CarbEntryView {
         }
     }
 
-    /// One tap applies a favorite; tapping the applied favorite again clears it.
+    /// One tap applies a favorite. Foods saved with several amounts open a short menu of those
+    /// amounts instead, so a "slice" can be logged as a whole, a half or a quarter.
     private var quickPickRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(viewModel.favoriteFoods) { food in
-                    FavoriteFoodQuickPickChip(
-                        food: food,
-                        isSelected: viewModel.selectedFavoriteFood == food,
-                        action: { viewModel.toggleFavoriteFood(food) }
-                    )
+                    if food.hasMultiplePortions {
+                        Menu {
+                            portionMenuItems(for: food)
+                        } label: {
+                            chip(for: food)
+                        }
+                    }
+                    else {
+                        Button(action: { viewModel.toggleFavoriteFood(food) }) {
+                            chip(for: food)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
             .padding(.vertical, 2)
+        }
+    }
+
+    private func chip(for food: StoredFavoriteFood) -> some View {
+        FavoriteFoodQuickPickChip(
+            food: food,
+            selectedPortion: viewModel.isSelected(food) ? viewModel.selectedPortion : nil,
+            isSelected: viewModel.isSelected(food)
+        )
+    }
+
+    @ViewBuilder
+    private func portionMenuItems(for food: StoredFavoriteFood) -> some View {
+        ForEach(food.portions) { portion in
+            Button(action: { viewModel.toggleFavoriteFood(food, portion: portion) }) {
+                let title = FavoriteFoodSummary.portion(portion, carbFormatter: viewModel.carbFormatter)
+                if viewModel.isSelected(food, portion: portion) {
+                    Label(title, systemImage: "checkmark")
+                }
+                else {
+                    Text(title)
+                }
+            }
+        }
+
+        if viewModel.isSelected(food) {
+            Button(action: { viewModel.selectFavoriteFood(nil) }) {
+                Label(String(localized: "Clear selection", comment: "Button label clearing the selected Favorite Food"), systemImage: "xmark.circle")
+            }
         }
     }
 
@@ -280,7 +319,7 @@ extension CarbEntryView {
                 Spacer()
 
                 if let selectedFavoriteFood = viewModel.selectedFavoriteFood {
-                    Text(selectedFavoriteFood.name)
+                    Text(selectedFavoriteFoodLabel(for: selectedFavoriteFood))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -291,6 +330,13 @@ extension CarbEntryView {
                     .foregroundColor(Color(UIColor.tertiaryLabel))
             }
         }
+    }
+
+    private func selectedFavoriteFoodLabel(for food: StoredFavoriteFood) -> String {
+        if let portion = viewModel.selectedPortion, portion.hasName, food.hasMultiplePortions {
+            return "\(food.name) · \(portion.name)"
+        }
+        return food.name
     }
     
     private func saveAsFavoriteFood() {
@@ -309,71 +355,88 @@ struct FavoriteFoodQuickPickChip: View {
     @Environment(\.carbTintColor) private var carbTintColor
 
     let food: StoredFavoriteFood
+    let selectedPortion: FavoriteFoodPortion?
     let isSelected: Bool
-    let action: () -> Void
 
     private let cornerRadius: CGFloat = 14
 
+    private var subtitle: String? {
+        if let selectedPortion, selectedPortion.hasName {
+            return selectedPortion.name
+        }
+        if food.hasMultiplePortions {
+            return String(
+                format: String(localized: "%lld sizes", comment: "Number of serving sizes shown on a favorite food chip (1: number of serving sizes)"),
+                food.portions.count
+            )
+        }
+        return food.hasServingSize ? food.servingSize : nil
+    }
+
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                if food.foodType.isEmpty {
-                    Image(systemName: "fork.knife")
-                        .font(.footnote)
-                        .foregroundColor(carbTintColor)
-                }
-                else {
-                    Text(food.foodType)
-                        .font(.body)
-                }
+        HStack(spacing: 8) {
+            if food.foodType.isEmpty {
+                Image(systemName: "fork.knife")
+                    .font(.footnote)
+                    .foregroundColor(carbTintColor)
+            }
+            else {
+                Text(food.foodType)
+                    .font(.body)
+            }
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(food.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(food.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
 
-                    if food.hasServingSize {
-                        Text(food.servingSize)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                if isSelected {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.footnote)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2)
                         .foregroundColor(.secondary)
                 }
             }
-            .lineLimit(1)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(isSelected ? carbTintColor.opacity(0.18) : Color(.tertiarySystemFill))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(isSelected ? carbTintColor : .clear, lineWidth: 1.5)
-            )
-            .contentShape(Rectangle())
+
+            if isSelected {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+            else if food.hasMultiplePortions {
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.secondary)
+            }
         }
-        .buttonStyle(.plain)
+        .lineLimit(1)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(isSelected ? carbTintColor.opacity(0.18) : Color(.tertiarySystemFill))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(isSelected ? carbTintColor : .clear, lineWidth: 1.5)
+        )
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
-/// A searchable, folder-grouped list for choosing a favorite food, presented from the carb entry screen.
+/// A searchable, folder-grouped list for choosing a favorite food, presented from the carb entry
+/// screen. Foods saved with several amounts list those amounts as their own rows.
 struct FavoriteFoodPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.carbTintColor) private var carbTintColor
 
     let sections: [FavoriteFoodSection]
     let selectedFood: StoredFavoriteFood?
+    let selectedPortionID: String?
     let carbFormatter: QuantityFormatter
     let absorptionTimeFormatter: DateComponentsFormatter
-    let onSelect: (StoredFavoriteFood?) -> Void
+    let onSelect: (StoredFavoriteFood?, FavoriteFoodPortion?) -> Void
 
     @State private var searchText = ""
 
@@ -390,7 +453,7 @@ struct FavoriteFoodPickerView: View {
             List {
                 if selectedFood != nil {
                     Section {
-                        Button(action: { onSelect(nil) }) {
+                        Button(action: { onSelect(nil, nil) }) {
                             HStack {
                                 Image(systemName: "xmark.circle")
                                 Text("Clear selection", comment: "Button label clearing the selected Favorite Food")
@@ -409,8 +472,19 @@ struct FavoriteFoodPickerView: View {
                     ForEach(filteredSections) { section in
                         Section(header: Text(sectionTitle(for: section))) {
                             ForEach(section.foods) { food in
-                                Button(action: { onSelect(food) }) {
-                                    row(for: food)
+                                if food.hasMultiplePortions {
+                                    foodHeader(for: food)
+
+                                    ForEach(food.portions) { portion in
+                                        Button(action: { onSelect(food, portion) }) {
+                                            portionRow(for: portion, in: food)
+                                        }
+                                    }
+                                }
+                                else {
+                                    Button(action: { onSelect(food, nil) }) {
+                                        row(for: food)
+                                    }
                                 }
                             }
                         }
@@ -459,6 +533,47 @@ struct FavoriteFoodPickerView: View {
             }
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+
+    /// Non-tappable row naming a food whose amounts follow it.
+    private func foodHeader(for food: StoredFavoriteFood) -> some View {
+        HStack(spacing: 12) {
+            FavoriteFoodEmojiTile(emoji: food.foodType, tint: carbTintColor, size: 38)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(food.name)
+                    .font(.body.weight(.semibold))
+                    .foregroundColor(.primary)
+
+                Text(FavoriteFoodSummary.carbsAndAbsorption(for: food, carbFormatter: carbFormatter, absorptionTimeFormatter: absorptionTimeFormatter))
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func portionRow(for portion: FavoriteFoodPortion, in food: StoredFavoriteFood) -> some View {
+        HStack {
+            Text(portion.hasName ? portion.name : portion.carbsString(formatter: carbFormatter))
+                .foregroundColor(.primary)
+
+            Spacer(minLength: 8)
+
+            Text(portion.carbsString(formatter: carbFormatter))
+                .foregroundColor(.secondary)
+
+            if selectedFood == food, selectedPortionID == portion.id {
+                Image(systemName: "checkmark")
+                    .font(.footnote.weight(.bold))
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .padding(.leading, 50)
+        .padding(.vertical, 2)
         .contentShape(Rectangle())
     }
 
