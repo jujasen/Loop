@@ -26,6 +26,9 @@ final class DeviceDataManager {
     let bluetoothProvider: BluetoothProvider
     weak var onboardingManager: OnboardingManager?
 
+    /// Outcome of the most recent manual bolus, surfaced as a banner on the status screen.
+    let manualBolusRecovery = ManualBolusRecovery()
+
     /// Remember the launch date of the app for diagnostic reporting
     private let launchDate = Date()
 
@@ -827,6 +830,86 @@ extension DeviceDataManager {
     }
 }
 
+/// Tracks the outcome of a manual bolus so the app can still say what happened after the bolus
+/// screen has closed, and can deliver just the insulin again when the meal's carbs are already in.
+///
+/// This exists because a failed pod command used to surface only as a notification, seconds after
+/// the bolus screen had already reported success. That reads as "the meal did not go in", so
+/// people entered the meal a second time — doubling both the carbs and the next recommendation.
+final class ManualBolusRecovery: ObservableObject {
+    enum Outcome {
+        /// The command is on its way to the pump.
+        case delivering
+        /// The pump was unreachable or refused. The insulin was definitely not delivered, so
+        /// asking for it again is safe.
+        case notDelivered(reason: String?)
+        /// Loop cannot tell whether the pod delivered. Asking again could double the dose.
+        case uncertain
+    }
+
+    struct Attempt {
+        var units: Double
+        /// Carbs saved together with this bolus, so the banner can say they are already logged.
+        var carbGrams: Double?
+        var startedAt: Date
+        var outcome: Outcome
+        /// Kept so a retry is recorded exactly the way the first attempt was.
+        var activationType: BolusActivationType
+
+        var isRetryable: Bool {
+            if case .notDelivered = outcome { return true }
+            return false
+        }
+    }
+
+    @Published private(set) var attempt: Attempt?
+
+    private var pendingCarbGrams: Double?
+
+    /// Called with the carbs of the dosing decision just before the bolus is requested.
+    func noteAccompanyingCarbs(grams: Double?) {
+        onMain { self.pendingCarbGrams = grams }
+    }
+
+    func began(units: Double, activationType: BolusActivationType, at date: Date = Date()) {
+        onMain {
+            self.attempt = Attempt(units: units, carbGrams: self.pendingCarbGrams, startedAt: date, outcome: .delivering, activationType: activationType)
+            self.pendingCarbGrams = nil
+        }
+    }
+
+    func succeeded() {
+        onMain { self.attempt = nil }
+    }
+
+    func failed(_ error: PumpManagerError) {
+        onMain {
+            guard var attempt = self.attempt else { return }
+            switch error {
+            case .uncertainDelivery:
+                attempt.outcome = .uncertain
+            default:
+                let reason = [error.failureReason, error.recoverySuggestion].compactMap({ $0 }).joined(separator: " ")
+                attempt.outcome = .notDelivered(reason: reason.isEmpty ? nil : reason)
+            }
+            self.attempt = attempt
+        }
+    }
+
+    /// Clears the banner without delivering anything.
+    func dismiss() {
+        onMain { self.attempt = nil }
+    }
+
+    private func onMain(_ work: @escaping () -> Void) {
+        if Thread.isMainThread {
+            work()
+        } else {
+            DispatchQueue.main.async(execute: work)
+        }
+    }
+}
+
 // MARK: - Client API
 extension DeviceDataManager {
     func enactBolus(units: Double, activationType: BolusActivationType, completion: @escaping (_ error: Error?) -> Void = { _ in }) {
@@ -835,10 +918,17 @@ extension DeviceDataManager {
             return
         }
 
+        if !activationType.isAutomatic {
+            manualBolusRecovery.began(units: units, activationType: activationType)
+        }
+
         self.loopManager.addRequestedBolus(DoseEntry(type: .bolus, startDate: Date(), value: units, unit: .units, isMutable: true)) {
             pumpManager.enactBolus(units: units, activationType: activationType) { (error) in
                 if let error = error {
                     self.log.error("%{public}@", String(describing: error))
+                    if !activationType.isAutomatic {
+                        self.manualBolusRecovery.failed(error)
+                    }
                     switch error {
                     case .uncertainDelivery:
                         // Do not generate notification on uncertain delivery error
@@ -854,6 +944,9 @@ extension DeviceDataManager {
                         completion(error)
                     }
                 } else {
+                    if !activationType.isAutomatic {
+                        self.manualBolusRecovery.succeeded()
+                    }
                     self.loopManager.bolusConfirmed() {
                         completion(nil)
                     }
@@ -864,6 +957,14 @@ extension DeviceDataManager {
         }
     }
     
+    /// Requests the same bolus again after a failure that definitely delivered nothing. The carb
+    /// entry was already saved, so this deliberately touches only the insulin.
+    func retryManualBolus() {
+        guard let attempt = manualBolusRecovery.attempt, attempt.isRetryable else { return }
+        manualBolusRecovery.noteAccompanyingCarbs(grams: attempt.carbGrams)
+        enactBolus(units: attempt.units, activationType: attempt.activationType)
+    }
+
     func enactBolus(units: Double, activationType: BolusActivationType) async throws {
         return try await withCheckedThrowingContinuation { continuation in
             enactBolus(units: units, activationType: activationType) { error in

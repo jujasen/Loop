@@ -44,6 +44,9 @@ extension DeviceDataManager: BolusEntryViewModelDelegate, ManualDoseViewModelDel
     }
 
     func storeManualBolusDosingDecision(_ bolusDosingDecision: BolusDosingDecision, withDate date: Date) {
+        // The bolus that follows may fail; remember what it was for so the banner can say the
+        // carbs are already logged and offer to deliver only the insulin again.
+        manualBolusRecovery.noteAccompanyingCarbs(grams: bolusDosingDecision.carbEntry?.quantity.doubleValue(for: .gram()))
         loopManager.storeManualBolusDosingDecision(bolusDosingDecision, withDate: date)
     }
 
