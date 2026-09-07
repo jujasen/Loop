@@ -61,7 +61,8 @@ extension BGChartModel {
                     value: mgdl,
                     sgv: mgdl,
                     label: "",
-                    pillText: "BG Check\n\(BGChartGlucoseDisplay.string(fromMGDL: mgdl))\n\(pillTimeString(for: sample.startDate))"
+                    pillText: "BG Check\n\(BGChartGlucoseDisplay.string(fromMGDL: mgdl))\n\(pillTimeString(for: sample.startDate))",
+                    lane: .onCurve
                 ))
             } else {
                 readings.append(BGPoint(
@@ -101,7 +102,10 @@ extension BGChartModel {
         sensorStarts = []
 
         // Treatments hang off the glucose curve, so they need a y value; the
-        // reading either side of the treatment gives it.
+        // reading either side of the treatment gives it. The lane each kind is
+        // given then lifts or drops the symbol clear of the curve — and of the
+        // other kinds — so a carb entry and a bolus logged in the same minute
+        // are both readable instead of one hiding the other.
         let interpolator = GlucoseInterpolator(points: readings, fallback: thresholds.low)
 
         boluses = Self.spread(data.doseEntries.compactMap { dose -> TreatmentPoint? in
@@ -114,7 +118,8 @@ extension BGChartModel {
                 value: units,
                 sgv: interpolator.value(at: dose.startDate),
                 label: label,
-                pillText: "Bolus\n\(label)U\n\(pillTimeString(for: dose.startDate))"
+                pillText: "Bolus\n\(label)U\n\(pillTimeString(for: dose.startDate))",
+                lane: .insulin
             )
         }, minGap: Spread.bolusGap, maxShift: Spread.bolusShift)
 
@@ -130,7 +135,8 @@ extension BGChartModel {
                 value: Double(grams),
                 sgv: interpolator.value(at: entry.startDate),
                 label: label,
-                pillText: "Carbs\n\(grams)g\n\(pillTimeString(for: entry.startDate))"
+                pillText: "Carbs\n\(grams)g\n\(pillTimeString(for: entry.startDate))",
+                lane: .carbs
             )
         }, minGap: Spread.carbGap, maxShift: Spread.carbShift)
 
@@ -140,7 +146,8 @@ extension BGChartModel {
                 value: 0,
                 sgv: interpolator.value(at: dose.startDate),
                 label: "",
-                pillText: "Suspend\n\(pillTimeString(for: dose.startDate))"
+                pillText: "Suspend\n\(pillTimeString(for: dose.startDate))",
+                lane: .pumpEvent
             )
         }
         resumes = data.doseEntries.filter { $0.type == .resume }.map { dose in
@@ -149,7 +156,8 @@ extension BGChartModel {
                 value: 0,
                 sgv: interpolator.value(at: dose.startDate),
                 label: "",
-                pillText: "Resume\n\(pillTimeString(for: dose.startDate))"
+                pillText: "Resume\n\(pillTimeString(for: dose.startDate))",
+                lane: .pumpEvent
             )
         }
 

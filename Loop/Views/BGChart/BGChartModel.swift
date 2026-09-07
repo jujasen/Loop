@@ -54,23 +54,54 @@ final class BGChartModel: ObservableObject {
         var id: Double { date.timeIntervalSince1970 }
     }
 
+    /// Vertical band a treatment symbol is drawn in, relative to the glucose
+    /// curve it hangs off. Carbs ride above the curve and insulin below it —
+    /// the reading Nightscout and LoopFollow use — and pump events get a band
+    /// of their own further out, so treatments logged in the same minute never
+    /// land on the same pixel and hide one another.
+    ///
+    /// The offset is a fraction of the y-domain rather than a fixed mg/dL
+    /// amount, so a lane keeps the same on-screen distance from the curve
+    /// however far the y-axis is scaled.
+    enum TreatmentLane {
+        /// Drawn exactly on the curve. For marks that *are* a glucose value.
+        case onCurve
+        case carbs
+        case insulin
+        case pumpEvent
+        case note
+
+        var offsetFraction: Double {
+            switch self {
+            case .onCurve: return 0
+            case .carbs: return 0.05
+            case .insulin: return -0.05
+            case .pumpEvent: return -0.13
+            case .note: return 0.13
+            }
+        }
+    }
+
     struct TreatmentPoint: Identifiable {
         let date: Date
         let value: Double
         let sgv: Double
         let label: String
         let pillText: String
+        /// Which vertical band the symbol is drawn in; see `TreatmentLane`.
+        let lane: TreatmentLane
         /// Where the symbol is drawn. Equals `date` unless `spread` nudged it
         /// left to keep a crowded run of treatments from stacking up.
         var drawnDate: Date
         var id: Double { date.timeIntervalSince1970 }
 
-        init(date: Date, value: Double, sgv: Double, label: String, pillText: String) {
+        init(date: Date, value: Double, sgv: Double, label: String, pillText: String, lane: TreatmentLane = .onCurve) {
             self.date = date
             self.value = value
             self.sgv = sgv
             self.label = label
             self.pillText = pillText
+            self.lane = lane
             drawnDate = date
         }
     }
@@ -298,9 +329,10 @@ final class BGChartModel: ObservableObject {
 
     /// Minimum drawn spacing between two treatments of the same population, and
     /// the furthest a treatment may be moved from its true time to reach it.
-    /// Boluses and SMBs share a y-anchor and symbol footprint, so they are
-    /// decluttered as one population; carbs carry a wider "30 3h" label, so
-    /// they need — and are allowed — more room.
+    /// Only treatments sharing a lane can collide, so each lane is decluttered
+    /// on its own: boluses and SMBs share the insulin lane and its symbol
+    /// footprint, while carbs carry a wider "30 3h" label, so they need — and
+    /// are allowed — more room in theirs.
     enum Spread {
         static let bolusGap: TimeInterval = 240
         static let bolusShift: TimeInterval = 240

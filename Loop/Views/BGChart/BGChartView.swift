@@ -77,6 +77,22 @@ private func chartYDomainUpperBound(_ maxBG: Double) -> Double {
     return clampedMax + topPadding
 }
 
+/// Y value a treatment symbol is drawn at: the glucose curve where it happened,
+/// lifted or dropped into the treatment's lane so the kinds cannot cover one
+/// another, and kept inside the plot at the extremes of the y-axis.
+///
+/// Every consumer of a treatment's y position goes through here — the marks,
+/// the scrub indicator and the tap hit test — so the pill and indicator land on
+/// the symbol the user is actually pointing at.
+@available(iOS 17.0, *)
+private func lanedValue(_ point: BGChartModel.TreatmentPoint, maxBG: Double) -> Double {
+    guard point.lane != .onCurve else { return point.sgv }
+    let yMax = chartYDomainUpperBound(maxBG)
+    let margin = yMax * 0.02
+    let laned = point.sgv + point.lane.offsetFraction * yMax
+    return min(max(laned, margin), yMax - margin)
+}
+
 @available(iOS 17.0, *)
 struct BGChartView: View {
     enum Config {
@@ -656,7 +672,7 @@ private struct MainBGChart: View {
                       model.notes, model.suspends, model.resumes, model.sensorStarts]
         {
             for t in group {
-                body(t.drawnDate, t.sgv, t.pillText)
+                body(t.drawnDate, lanedValue(t, maxBG: model.maxBG), t.pillText)
             }
         }
     }
@@ -1343,11 +1359,11 @@ private struct BGChartCanvas: View, Equatable {
         ForEach(windowed(model.boluses) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
-                y: .value("sgv", pt.sgv)
+                y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
             )
             .symbolSize(isSmall ? 24 : 64)
             .foregroundStyle(Color.blue.opacity(0.75))
-            .annotation(position: .top, alignment: .center) {
+            .annotation(position: .bottom, alignment: .center) {
                 if !isSmall, BGChartSettings.shared.showValues {
                     Text(pt.label).font(.caption2).foregroundColor(.primary)
                 }
@@ -1357,7 +1373,7 @@ private struct BGChartCanvas: View, Equatable {
         ForEach(windowed(model.carbs) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
-                y: .value("sgv", pt.sgv)
+                y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
             )
             .symbolSize(isSmall ? 24 : 64)
             .foregroundStyle(Color.orange.opacity(0.75))
@@ -1371,12 +1387,12 @@ private struct BGChartCanvas: View, Equatable {
         ForEach(windowed(model.smbs) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
-                y: .value("sgv", pt.sgv)
+                y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
             )
             .symbol(DownwardTriangle())
             .symbolSize(isSmall ? 28 : 64)
             .foregroundStyle(Color.blue.opacity(0.75))
-            .annotation(position: .top, alignment: .center) {
+            .annotation(position: .bottom, alignment: .center) {
                 if !isSmall, BGChartSettings.shared.showValues {
                     Text(pt.label).font(.caption2).foregroundColor(.primary)
                 }
@@ -1386,7 +1402,7 @@ private struct BGChartCanvas: View, Equatable {
         ForEach(windowed(model.bgChecks) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
-                y: .value("sgv", pt.sgv)
+                y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
             )
             .symbolSize(isSmall ? 22 : 54)
             .foregroundStyle(Color.red.opacity(0.75))
@@ -1395,7 +1411,7 @@ private struct BGChartCanvas: View, Equatable {
         ForEach(windowed(model.suspends) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
-                y: .value("sgv", pt.sgv)
+                y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
             )
             .symbol(.square)
             .symbolSize(isSmall ? 22 : 54)
@@ -1405,7 +1421,7 @@ private struct BGChartCanvas: View, Equatable {
         ForEach(windowed(model.resumes) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
-                y: .value("sgv", pt.sgv)
+                y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
             )
             .symbol(.square)
             .symbolSize(isSmall ? 22 : 54)
@@ -1415,7 +1431,7 @@ private struct BGChartCanvas: View, Equatable {
         ForEach(windowed(model.sensorStarts) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
-                y: .value("sgv", pt.sgv)
+                y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
             )
             .symbol(.cross)
             .symbolSize(isSmall ? 22 : 54)
@@ -1425,7 +1441,7 @@ private struct BGChartCanvas: View, Equatable {
         ForEach(windowed(model.notes) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
-                y: .value("sgv", pt.sgv)
+                y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
             )
             .symbolSize(isSmall ? 22 : 54)
             .foregroundStyle(Color.gray.opacity(0.75))

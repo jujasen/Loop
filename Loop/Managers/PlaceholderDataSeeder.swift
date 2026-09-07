@@ -198,7 +198,9 @@ enum PlaceholderDataSeeder {
             (4.5, -19 * 3600 + 300, 120),
             (6.2, -12 * 3600 + 300, 150),
             (1.1, -8 * 3600, 60),
-            (3.4, -4 * 3600 + 300, 120),
+            // Same minute as the third meal's carb entry, the way a meal bolus
+            // usually is — the case where the two symbols must not collide.
+            (3.4, -4 * 3600, 120),
             (0.9, -70 * 60, 60),
         ]
 
