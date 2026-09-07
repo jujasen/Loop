@@ -589,6 +589,14 @@
 		E9C58A7E24DB529A00487A17 /* dynamic_glucose_effect_partially_observed.json in Resources */ = {isa = PBXBuildFile; fileRef = E9C58A7924DB529A00487A17 /* dynamic_glucose_effect_partially_observed.json */; };
 		E9C58A7F24DB529A00487A17 /* counteraction_effect_falling_glucose.json in Resources */ = {isa = PBXBuildFile; fileRef = E9C58A7A24DB529A00487A17 /* counteraction_effect_falling_glucose.json */; };
 		E9C58A8024DB529A00487A17 /* insulin_effect.json in Resources */ = {isa = PBXBuildFile; fileRef = E9C58A7B24DB529A00487A17 /* insulin_effect.json */; };
+		0D0A46F469F245AFA36D0EE7 /* BGChartModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11E0494A11E4ED4A901455B /* BGChartModel.swift */; };
+		5FCAE91DEFF4489DBD0A8ADB /* BGChartModel+Loop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8B6DB28BAC456A86D12188 /* BGChartModel+Loop.swift */; };
+		0B2C3907DBC04898A4D9C5AA /* BGChartSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA15944F2A54077B43B4C71 /* BGChartSettings.swift */; };
+		59FD0CF25E924D6E88114882 /* BGChartTableViewCells.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DBED24B3FA3403FB25E9A2F /* BGChartTableViewCells.swift */; };
+		B5AA93BD72354A3F9AB689F9 /* BGChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79FE0DE5AFA84F7C9D9B189A /* BGChartView.swift */; };
+		463FA078B40C4E8390BC369E /* GlucoseStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9371035EA014E41A0153911 /* GlucoseStats.swift */; };
+		419377AE28624F63BC4F17B3 /* StatsDisplayModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2CBA4D5709B4F979F9CE8AB /* StatsDisplayModel.swift */; };
+		A5491D7A925C4BBAB991F6FF /* StatsDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7483155F1B5147B6964E1E87 /* StatsDisplayView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1413,6 +1421,14 @@
 		F5E0BDD827E1D71E0033557E /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/Main.strings; sourceTree = "<group>"; };
 		F5E0BDDA27E1D71F0033557E /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/Localizable.strings; sourceTree = "<group>"; };
 		F5E0BDE327E1D7230033557E /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/Localizable.strings; sourceTree = "<group>"; };
+		F11E0494A11E4ED4A901455B /* BGChartModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BGChartModel.swift"; sourceTree = "<group>"; };
+		1A8B6DB28BAC456A86D12188 /* BGChartModel+Loop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BGChartModel+Loop.swift"; sourceTree = "<group>"; };
+		CDA15944F2A54077B43B4C71 /* BGChartSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BGChartSettings.swift"; sourceTree = "<group>"; };
+		9DBED24B3FA3403FB25E9A2F /* BGChartTableViewCells.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BGChartTableViewCells.swift"; sourceTree = "<group>"; };
+		79FE0DE5AFA84F7C9D9B189A /* BGChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BGChartView.swift"; sourceTree = "<group>"; };
+		D9371035EA014E41A0153911 /* GlucoseStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GlucoseStats.swift"; sourceTree = "<group>"; };
+		C2CBA4D5709B4F979F9CE8AB /* StatsDisplayModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StatsDisplayModel.swift"; sourceTree = "<group>"; };
+		7483155F1B5147B6964E1E87 /* StatsDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StatsDisplayView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1964,6 +1980,7 @@
 		43F5C2CF1B92A2ED003EB13D /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				5FD61942074049A9953F2A50 /* BGChart */,
 				1452F4AA2A851EDF00F8B9E4 /* AddEditFavoriteFoodView.swift */,
 				B4001CED28CBBC82002FB414 /* AlertManagementView.swift */,
 				897A5A9524C2175B00C4E71D /* BolusEntryView.swift */,
@@ -2663,6 +2680,21 @@
 				E9C58A7724DB529A00487A17 /* momentum_effect_bouncing.json */,
 			);
 			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		5FD61942074049A9953F2A50 /* BGChart */ = {
+			isa = PBXGroup;
+			children = (
+				F11E0494A11E4ED4A901455B /* BGChartModel.swift */,
+				1A8B6DB28BAC456A86D12188 /* BGChartModel+Loop.swift */,
+				CDA15944F2A54077B43B4C71 /* BGChartSettings.swift */,
+				9DBED24B3FA3403FB25E9A2F /* BGChartTableViewCells.swift */,
+				79FE0DE5AFA84F7C9D9B189A /* BGChartView.swift */,
+				D9371035EA014E41A0153911 /* GlucoseStats.swift */,
+				C2CBA4D5709B4F979F9CE8AB /* StatsDisplayModel.swift */,
+				7483155F1B5147B6964E1E87 /* StatsDisplayView.swift */,
+			);
+			path = BGChart;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -3382,6 +3414,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0D0A46F469F245AFA36D0EE7 /* BGChartModel.swift in Sources */,
+				5FCAE91DEFF4489DBD0A8ADB /* BGChartModel+Loop.swift in Sources */,
+				0B2C3907DBC04898A4D9C5AA /* BGChartSettings.swift in Sources */,
+				59FD0CF25E924D6E88114882 /* BGChartTableViewCells.swift in Sources */,
+				B5AA93BD72354A3F9AB689F9 /* BGChartView.swift in Sources */,
+				463FA078B40C4E8390BC369E /* GlucoseStats.swift in Sources */,
+				419377AE28624F63BC4F17B3 /* StatsDisplayModel.swift in Sources */,
+				A5491D7A925C4BBAB991F6FF /* StatsDisplayView.swift in Sources */,
 				C17824A51E1AD4D100D9D25C /* ManualBolusRecommendation.swift in Sources */,
 				897A5A9624C2175B00C4E71D /* BolusEntryView.swift in Sources */,
 				4F70C2131DE90339006380B7 /* StatusExtensionContext.swift in Sources */,
