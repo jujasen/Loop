@@ -54,6 +54,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         tableView.register(BolusProgressTableViewCell.nib(), forCellReuseIdentifier: BolusProgressTableViewCell.className)
         tableView.register(AlertPermissionsDisabledWarningCell.self, forCellReuseIdentifier: AlertPermissionsDisabledWarningCell.className)
         tableView.register(MuteAlertsWarningCell.self, forCellReuseIdentifier: MuteAlertsWarningCell.className)
+        tableView.register(BolusRecoveryBannerCell.self, forCellReuseIdentifier: BolusRecoveryBannerCell.className)
         tableView.register(ChartDetailsHeaderCell.self, forCellReuseIdentifier: ChartDetailsHeaderCell.className)
         tableView.register(ChartDetailsNavigationCell.self, forCellReuseIdentifier: ChartDetailsNavigationCell.className)
 
@@ -132,6 +133,16 @@ final class StatusTableViewController: LoopChartsTableViewController {
         automaticDosingStatus.$automaticDosingEnabled
             .receive(on: DispatchQueue.main)
             .sink { self.automaticDosingStatusChanged($0) }
+            .store(in: &cancellables)
+
+        deviceManager.manualBolusRecovery.$attempt
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, self.isViewLoaded else { return }
+                self.tableView.reloadSections(IndexSet(integer: Section.bolusRecovery.rawValue), with: .automatic)
+                // The main chart sizes itself from what the fixed rows leave over.
+                self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
+            }
             .store(in: &cancellables)
 
 
@@ -757,6 +768,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
     }
 
     private enum Section: Int, CaseIterable {
+        /// Outcome of the last manual bolus, shown while it is in flight and after it failed.
+        case bolusRecovery
         case alertWarning
         case hud
         case status
@@ -1177,6 +1190,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch Section(rawValue: section)! {
+        case .bolusRecovery:
+            return deviceManager.manualBolusRecovery.attempt != nil ? 1 : 0
         case .alertWarning:
             return shouldShowBannerWarning ? 1 : 0
         case .hud:
@@ -1269,8 +1284,150 @@ final class StatusTableViewController: LoopChartsTableViewController {
         }
     }
     
+    /// Says what became of the last manual bolus. A pod that is out of range fails several
+    /// seconds after the bolus screen has closed, and a meal's carbs are already saved by then,
+    /// so this has to be unambiguous about which half went in.
+    private class BolusRecoveryBannerCell: UITableViewCell {
+        var attempt: ManualBolusRecovery.Attempt?
+
+        private static let unitsFormatter: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.maximumFractionDigits = 2
+            return formatter
+        }()
+
+        private static let carbsFormatter: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.maximumFractionDigits = 0
+            return formatter
+        }()
+
+        override func updateConfiguration(using state: UICellConfigurationState) {
+            super.updateConfiguration(using: state)
+
+            guard let attempt else { return }
+
+            let adjustViewForNarrowDisplay = bounds.width < 350
+            let units = Self.unitsFormatter.string(from: NSNumber(value: attempt.units)) ?? ""
+            let carbsSentence: String? = attempt.carbGrams
+                .flatMap { Self.carbsFormatter.string(from: NSNumber(value: $0)) }
+                .map { String(format: NSLocalizedString("%1$@ g of carbs are already saved — do not enter the meal again.", comment: "Banner detail warning against re-entering a meal whose carbs were saved (1: carb amount)"), $0) }
+
+            let title: String
+            let detail: String
+            let symbolName: String
+            let background: UIColor
+
+            switch attempt.outcome {
+            case .delivering:
+                title = NSLocalizedString("Delivering Bolus", comment: "Banner title while a manual bolus is being sent to the pump")
+                detail = String(format: NSLocalizedString("%1$@ U — keep your phone near the pod.", comment: "Banner detail while a manual bolus is being sent (1: bolus amount)"), units)
+                symbolName = "arrow.triangle.2.circlepath"
+                background = .insulinTintColor
+
+            case .notDelivered(let reason):
+                title = NSLocalizedString("Insulin Was Not Delivered", comment: "Banner title when a manual bolus definitely failed")
+                var sentences = [String(format: NSLocalizedString("%1$@ U did not reach the pod.", comment: "Banner detail naming the bolus that failed (1: bolus amount)"), units)]
+                if let carbsSentence {
+                    sentences.append(carbsSentence)
+                }
+                if let reason, !reason.isEmpty {
+                    sentences.append(reason)
+                }
+                sentences.append(NSLocalizedString("Tap to deliver the insulin again.", comment: "Banner detail inviting a retry of a failed bolus"))
+                detail = sentences.joined(separator: " ")
+                symbolName = "exclamationmark.triangle.fill"
+                background = .critical
+
+            case .uncertain:
+                title = NSLocalizedString("Delivery Is Uncertain", comment: "Banner title when Loop cannot tell whether a bolus was delivered")
+                var sentences = [String(format: NSLocalizedString("Loop cannot tell whether %1$@ U was delivered. Do not bolus again.", comment: "Banner detail for an uncertain bolus (1: bolus amount)"), units)]
+                if let carbsSentence {
+                    sentences.append(carbsSentence)
+                }
+                sentences.append(NSLocalizedString("Keep your phone near the pod until Loop reconnects.", comment: "Banner detail asking the user to stay near the pod"))
+                detail = sentences.joined(separator: " ")
+                symbolName = "questionmark.circle.fill"
+                background = .warning
+            }
+
+            var contentConfig = defaultContentConfiguration().updated(for: state)
+            contentConfig.image = UIImage(systemName: symbolName, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold, scale: .medium))
+            contentConfig.imageProperties.tintColor = .white
+            contentConfig.text = title
+            contentConfig.textProperties.color = .white
+            contentConfig.textProperties.font = .systemFont(ofSize: adjustViewForNarrowDisplay ? 16 : 18, weight: .bold)
+            contentConfig.textProperties.adjustsFontSizeToFitWidth = true
+            contentConfig.secondaryText = detail
+            contentConfig.secondaryTextProperties.color = .white
+            contentConfig.secondaryTextProperties.font = .systemFont(ofSize: adjustViewForNarrowDisplay ? 13 : 15)
+            contentConfig.secondaryTextProperties.numberOfLines = 0
+            contentConfiguration = contentConfig
+
+            var backgroundConfig = backgroundConfiguration?.updated(for: state)
+            backgroundConfig?.backgroundColor = background
+            backgroundConfiguration = backgroundConfig
+            backgroundConfiguration?.backgroundInsets = NSDirectionalEdgeInsets(top: 0, leading: 10, bottom: 5, trailing: 10)
+            backgroundConfiguration?.cornerRadius = 10
+
+            if attempt.isRetryable {
+                let imageView = UIImageView(image: UIImage(systemName: "arrow.clockwise"))
+                imageView.tintColor = .white
+                accessoryView = imageView
+            } else {
+                accessoryView = nil
+            }
+
+            contentView.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 6, leading: 0, bottom: 13, trailing: 0)
+        }
+    }
+
+    /// Retries only the insulin. The carbs were saved before the bolus was requested, so this
+    /// never routes back to the meal screen — that route is what doubled people's carb entries.
+    private func bolusRecoveryBannerTapped() {
+        guard let attempt = deviceManager.manualBolusRecovery.attempt else { return }
+
+        switch attempt.outcome {
+        case .delivering:
+            break
+
+        case .uncertain:
+            let alert = UIAlertController(
+                title: NSLocalizedString("Delivery Is Uncertain", comment: "Banner title when Loop cannot tell whether a bolus was delivered"),
+                message: NSLocalizedString("Loop lost contact with the pod before it could confirm this bolus, so it may or may not have been delivered. Delivering it again could give a double dose. Keep your phone near the pod — Loop reads the pod's own record as soon as it reconnects, and insulin delivery will show what happened.", comment: "Explanation shown when a bolus outcome is uncertain"),
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "The title of the OK action"), style: .default) { _ in
+                self.deviceManager.manualBolusRecovery.dismiss()
+            })
+            present(alert, animated: true)
+
+        case .notDelivered:
+            let units = NumberFormatter.localizedString(from: NSNumber(value: attempt.units), number: .decimal)
+            let alert = UIAlertController(
+                title: String(format: NSLocalizedString("Deliver %1$@ U again?", comment: "Confirmation title for retrying a failed bolus (1: bolus amount)"), units),
+                message: NSLocalizedString("This delivers only the insulin. Any carbs from this meal are already saved and will not be entered a second time.", comment: "Confirmation message for retrying a failed bolus"),
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: NSLocalizedString("Not Now", comment: "Button dismissing the failed bolus banner without retrying"), style: .cancel) { _ in
+                self.deviceManager.manualBolusRecovery.dismiss()
+            })
+            alert.addAction(UIAlertAction(title: NSLocalizedString("Deliver", comment: "Button text to deliver a bolus"), style: .default) { _ in
+                self.deviceManager.retryManualBolus()
+            })
+            present(alert, animated: true)
+        }
+    }
+
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         switch Section(rawValue: indexPath.section)! {
+        case .bolusRecovery:
+            let cell = tableView.dequeueReusableCell(withIdentifier: BolusRecoveryBannerCell.className, for: indexPath) as! BolusRecoveryBannerCell
+            cell.attempt = deviceManager.manualBolusRecovery.attempt
+            cell.setNeedsUpdateConfiguration()
+            return cell
         case .alertWarning:
             if alertPermissionsChecker.showWarning {
                 let cell = tableView.dequeueReusableCell(withIdentifier: AlertPermissionsDisabledWarningCell.className, for: indexPath) as! AlertPermissionsDisabledWarningCell
@@ -1505,7 +1662,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     cell.setSubtitleLabel(label: nil)
                 }
             }
-        case .hud, .status, .alertWarning:
+        case .hud, .status, .alertWarning, .bolusRecovery:
             break
         }
     }
@@ -1542,6 +1699,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 if shouldShowBannerWarning {
                     remaining -= Self.bannerRowEstimatedHeight
                 }
+                if deviceManager.manualBolusRecovery.attempt != nil {
+                    remaining -= Self.bannerRowEstimatedHeight
+                }
                 for row in visibleChartRows where row != .glucose {
                     remaining -= fixedChartRowHeight(row)
                 }
@@ -1551,13 +1711,16 @@ final class StatusTableViewController: LoopChartsTableViewController {
             case .iob, .dose, .cob:
                 return max(106, 0.21 * availableSize)
             }
-        case .hud, .status, .alertWarning:
+        case .hud, .status, .alertWarning, .bolusRecovery:
             return UITableView.automaticDimension
         }
     }
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         switch Section(rawValue: indexPath.section)! {
+        case .bolusRecovery:
+            tableView.deselectRow(at: indexPath, animated: true)
+            bolusRecoveryBannerTapped()
         case .alertWarning:
             if alertPermissionsChecker.showWarning {
                 tableView.deselectRow(at: indexPath, animated: true)

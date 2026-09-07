@@ -41895,6 +41895,149 @@
           }
         }
       }
+    },
+    "Delivering Bolus" : {
+      "comment" : "Banner title while a manual bolus is being sent to the pump",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gir bolus"
+          }
+        }
+      }
+    },
+    "%1$@ U — keep your phone near the pod." : {
+      "comment" : "Banner detail while a manual bolus is being sent (1: bolus amount)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ E — hold telefonen inntil poden."
+          }
+        }
+      }
+    },
+    "Insulin Was Not Delivered" : {
+      "comment" : "Banner title when a manual bolus definitely failed",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insulinet ble ikke gitt"
+          }
+        }
+      }
+    },
+    "%1$@ U did not reach the pod." : {
+      "comment" : "Banner detail naming the bolus that failed (1: bolus amount)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ E nådde ikke poden."
+          }
+        }
+      }
+    },
+    "%1$@ g of carbs are already saved — do not enter the meal again." : {
+      "comment" : "Banner detail warning against re-entering a meal whose carbs were saved (1: carb amount)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ g karbohydrater er allerede lagret — ikke registrer måltidet på nytt."
+          }
+        }
+      }
+    },
+    "Tap to deliver the insulin again." : {
+      "comment" : "Banner detail inviting a retry of a failed bolus",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trykk for å gi insulinet på nytt."
+          }
+        }
+      }
+    },
+    "Delivery Is Uncertain" : {
+      "comment" : "Banner title when Loop cannot tell whether a bolus was delivered",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usikker levering"
+          }
+        }
+      }
+    },
+    "Loop cannot tell whether %1$@ U was delivered. Do not bolus again." : {
+      "comment" : "Banner detail for an uncertain bolus (1: bolus amount)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop vet ikke om %1$@ E ble gitt. Ikke gi bolus på nytt."
+          }
+        }
+      }
+    },
+    "Keep your phone near the pod until Loop reconnects." : {
+      "comment" : "Banner detail asking the user to stay near the pod",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold telefonen inntil poden til Loop får kontakt igjen."
+          }
+        }
+      }
+    },
+    "Loop lost contact with the pod before it could confirm this bolus, so it may or may not have been delivered. Delivering it again could give a double dose. Keep your phone near the pod — Loop reads the pod's own record as soon as it reconnects, and insulin delivery will show what happened." : {
+      "comment" : "Explanation shown when a bolus outcome is uncertain",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop mistet kontakten med poden før den rakk å bekrefte denne bolusen, så den kan ha blitt gitt eller ikke. Gir du den på nytt, risikerer du dobbel dose. Hold telefonen inntil poden — Loop leser podens egen logg så snart den får kontakt, og insulinleveringen viser hva som faktisk skjedde."
+          }
+        }
+      }
+    },
+    "Deliver %1$@ U again?" : {
+      "comment" : "Confirmation title for retrying a failed bolus (1: bolus amount)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gi %1$@ E på nytt?"
+          }
+        }
+      }
+    },
+    "This delivers only the insulin. Any carbs from this meal are already saved and will not be entered a second time." : {
+      "comment" : "Confirmation message for retrying a failed bolus",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette gir bare insulinet. Karbohydratene fra måltidet er allerede lagret og blir ikke registrert en gang til."
+          }
+        }
+      }
+    },
+    "Not Now" : {
+      "comment" : "Button dismissing the failed bolus banner without retrying",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke nå"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
