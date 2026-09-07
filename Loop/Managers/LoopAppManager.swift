@@ -223,6 +223,13 @@ class LoopAppManager: NSObject {
         
         setWhitelistedDevices()
 
+        #if DEBUG && targetEnvironment(simulator)
+        // No-op unless launched with LOOP_SEED_PLACEHOLDER_DATA=1. Has to run
+        // before OnboardingManager, which decides at init whether onboarding
+        // is still outstanding.
+        PlaceholderDataSeeder.prepareIfRequested(deviceManager: deviceDataManager, userDefaults: UserDefaults.appGroup)
+        #endif
+
         onboardingManager = OnboardingManager(pluginManager: pluginManager,
                                               bluetoothProvider: bluetoothStateManager,
                                               deviceDataManager: deviceDataManager,
@@ -258,6 +265,10 @@ class LoopAppManager: NSObject {
         if FeatureFlags.scenariosEnabled {
             testingScenariosManager = LocalTestingScenariosManager(deviceManager: deviceDataManager, supportManager: supportManager)
         }
+
+        #if DEBUG && targetEnvironment(simulator)
+        PlaceholderDataSeeder.injectDataIfRequested(deviceManager: deviceDataManager)
+        #endif
 
         analyticsServicesManager.application(didFinishLaunchingWithOptions: launchOptions)
 

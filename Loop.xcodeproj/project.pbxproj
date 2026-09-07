@@ -597,6 +597,7 @@
 		463FA078B40C4E8390BC369E /* GlucoseStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9371035EA014E41A0153911 /* GlucoseStats.swift */; };
 		419377AE28624F63BC4F17B3 /* StatsDisplayModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2CBA4D5709B4F979F9CE8AB /* StatsDisplayModel.swift */; };
 		A5491D7A925C4BBAB991F6FF /* StatsDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7483155F1B5147B6964E1E87 /* StatsDisplayView.swift */; };
+		0E7581AAE73F45918914D143 /* PlaceholderDataSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4507F36516F44CF856EDD71 /* PlaceholderDataSeeder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1429,6 +1430,7 @@
 		D9371035EA014E41A0153911 /* GlucoseStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GlucoseStats.swift"; sourceTree = "<group>"; };
 		C2CBA4D5709B4F979F9CE8AB /* StatsDisplayModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StatsDisplayModel.swift"; sourceTree = "<group>"; };
 		7483155F1B5147B6964E1E87 /* StatsDisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StatsDisplayView.swift"; sourceTree = "<group>"; };
+		E4507F36516F44CF856EDD71 /* PlaceholderDataSeeder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PlaceholderDataSeeder.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2022,6 +2024,7 @@
 		43F5C2E41B93C5D4003EB13D /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				E4507F36516F44CF856EDD71 /* PlaceholderDataSeeder.swift */,
 				B42D124228D371C400E43D22 /* AlertMuter.swift */,
 				1D6B1B6626866D89009AC446 /* AlertPermissionsChecker.swift */,
 				439897361CD2F80600223065 /* AnalyticsServicesManager.swift */,
@@ -3414,6 +3417,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E7581AAE73F45918914D143 /* PlaceholderDataSeeder.swift in Sources */,
 				0D0A46F469F245AFA36D0EE7 /* BGChartModel.swift in Sources */,
 				5FCAE91DEFF4489DBD0A8ADB /* BGChartModel+Loop.swift in Sources */,
 				0B2C3907DBC04898A4D9C5AA /* BGChartSettings.swift in Sources */,
