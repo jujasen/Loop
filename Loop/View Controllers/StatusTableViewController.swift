@@ -768,12 +768,14 @@ final class StatusTableViewController: LoopChartsTableViewController {
     }
 
     private enum Section: Int, CaseIterable {
-        /// Outcome of the last manual bolus, shown while it is in flight and after it failed.
-        case bolusRecovery
         case alertWarning
         case hud
         case status
         case charts
+        /// Outcome of the last manual bolus, shown while it is in flight and after it failed.
+        /// Last on purpose: it sits under the statistics rather than pushing the glucose chart
+        /// down the screen.
+        case bolusRecovery
     }
 
     // MARK: - Chart Section Data
@@ -1304,21 +1306,27 @@ final class StatusTableViewController: LoopChartsTableViewController {
             return formatter
         }()
 
-        override func updateConfiguration(using state: UICellConfigurationState) {
-            super.updateConfiguration(using: state)
+        struct Content {
+            let title: String
+            let detail: String
+            let symbolName: String
+            let background: UIColor
+            // The yellow of .warning is light in both light and dark mode, so white text on it
+            // is unreadable. Each state carries its own foreground rather than assuming white.
+            let foreground: UIColor
+        }
 
-            guard let attempt else { return }
-
-            let adjustViewForNarrowDisplay = bounds.width < 350
-            let units = Self.unitsFormatter.string(from: NSNumber(value: attempt.units)) ?? ""
+        static func content(for attempt: ManualBolusRecovery.Attempt) -> Content {
+            let units = unitsFormatter.string(from: NSNumber(value: attempt.units)) ?? ""
             let carbsSentence: String? = attempt.carbGrams
-                .flatMap { Self.carbsFormatter.string(from: NSNumber(value: $0)) }
+                .flatMap { carbsFormatter.string(from: NSNumber(value: $0)) }
                 .map { String(format: NSLocalizedString("%1$@ g of carbs are already saved — do not enter the meal again.", comment: "Banner detail warning against re-entering a meal whose carbs were saved (1: carb amount)"), $0) }
 
             let title: String
             let detail: String
             let symbolName: String
             let background: UIColor
+            let foreground: UIColor
 
             switch attempt.outcome {
             case .delivering:
@@ -1326,6 +1334,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 detail = String(format: NSLocalizedString("%1$@ U — keep your phone near the pod.", comment: "Banner detail while a manual bolus is being sent (1: bolus amount)"), units)
                 symbolName = "arrow.triangle.2.circlepath"
                 background = .insulinTintColor
+                foreground = .white
 
             case .notDelivered(let reason):
                 title = NSLocalizedString("Insulin Was Not Delivered", comment: "Banner title when a manual bolus definitely failed")
@@ -1340,6 +1349,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 detail = sentences.joined(separator: " ")
                 symbolName = "exclamationmark.triangle.fill"
                 background = .critical
+                foreground = .white
 
             case .uncertain:
                 title = NSLocalizedString("Delivery Is Uncertain", comment: "Banner title when Loop cannot tell whether a bolus was delivered")
@@ -1351,30 +1361,68 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 detail = sentences.joined(separator: " ")
                 symbolName = "questionmark.circle.fill"
                 background = .warning
+                foreground = .black
             }
 
+            return Content(title: title, detail: detail, symbolName: symbolName, background: background, foreground: foreground)
+        }
+
+        /// The banner sits at the bottom of the table, where anything the glucose chart
+        /// over-claims gets clipped by the toolbar — so its height is measured, not assumed.
+        static func estimatedHeight(for attempt: ManualBolusRecovery.Attempt, width: CGFloat) -> CGFloat {
+            let content = content(for: attempt)
+            let narrow = width < 350
+            let titleFont = UIFont.systemFont(ofSize: narrow ? 16 : 18, weight: .bold)
+            let detailFont = UIFont.systemFont(ofSize: narrow ? 13 : 15)
+
+            // Background insets, the leading symbol, the trailing accessory and the gaps between.
+            let textWidth = max(80, width - 20 - 34 - 12 - 30 - 24)
+            let bounding = CGSize(width: textWidth, height: .greatestFiniteMagnitude)
+
+            func height(of text: String, font: UIFont) -> CGFloat {
+                ceil((text as NSString).boundingRect(
+                    with: bounding,
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    attributes: [.font: font],
+                    context: nil
+                ).height)
+            }
+
+            // 6 top margin + 13 bottom margin + 5 bottom background inset + 2 line gap.
+            return height(of: content.title, font: titleFont) + height(of: content.detail, font: detailFont) + 26
+        }
+
+        override func updateConfiguration(using state: UICellConfigurationState) {
+            super.updateConfiguration(using: state)
+
+            guard let attempt else { return }
+
+            let adjustViewForNarrowDisplay = bounds.width < 350
+            let content = Self.content(for: attempt)
+            let foreground = content.foreground
+
             var contentConfig = defaultContentConfiguration().updated(for: state)
-            contentConfig.image = UIImage(systemName: symbolName, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold, scale: .medium))
-            contentConfig.imageProperties.tintColor = .white
-            contentConfig.text = title
-            contentConfig.textProperties.color = .white
+            contentConfig.image = UIImage(systemName: content.symbolName, withConfiguration: UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold, scale: .medium))
+            contentConfig.imageProperties.tintColor = foreground
+            contentConfig.text = content.title
+            contentConfig.textProperties.color = foreground
             contentConfig.textProperties.font = .systemFont(ofSize: adjustViewForNarrowDisplay ? 16 : 18, weight: .bold)
             contentConfig.textProperties.adjustsFontSizeToFitWidth = true
-            contentConfig.secondaryText = detail
-            contentConfig.secondaryTextProperties.color = .white
+            contentConfig.secondaryText = content.detail
+            contentConfig.secondaryTextProperties.color = foreground
             contentConfig.secondaryTextProperties.font = .systemFont(ofSize: adjustViewForNarrowDisplay ? 13 : 15)
             contentConfig.secondaryTextProperties.numberOfLines = 0
             contentConfiguration = contentConfig
 
             var backgroundConfig = backgroundConfiguration?.updated(for: state)
-            backgroundConfig?.backgroundColor = background
+            backgroundConfig?.backgroundColor = content.background
             backgroundConfiguration = backgroundConfig
             backgroundConfiguration?.backgroundInsets = NSDirectionalEdgeInsets(top: 0, leading: 10, bottom: 5, trailing: 10)
             backgroundConfiguration?.cornerRadius = 10
 
             if attempt.isRetryable {
                 let imageView = UIImageView(image: UIImage(systemName: "arrow.clockwise"))
-                imageView.tintColor = .white
+                imageView.tintColor = foreground
                 accessoryView = imageView
             } else {
                 accessoryView = nil
@@ -1699,8 +1747,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 if shouldShowBannerWarning {
                     remaining -= Self.bannerRowEstimatedHeight
                 }
-                if deviceManager.manualBolusRecovery.attempt != nil {
-                    remaining -= Self.bannerRowEstimatedHeight
+                if let attempt = deviceManager.manualBolusRecovery.attempt {
+                    remaining -= BolusRecoveryBannerCell.estimatedHeight(for: attempt, width: tableView.bounds.width)
                 }
                 for row in visibleChartRows where row != .glucose {
                     remaining -= fixedChartRowHeight(row)
