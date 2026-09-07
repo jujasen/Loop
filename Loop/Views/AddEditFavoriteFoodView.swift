@@ -21,8 +21,8 @@ struct AddEditFavoriteFoodView: View {
     private var isNewEntry = true
         
     /// Initializer for adding a new favorite food or editing a `StoredFavoriteFood`
-    init(originalFavoriteFood: StoredFavoriteFood? = nil, folders: [FavoriteFoodFolder] = [], initialFolderID: String? = nil, onSave: @escaping (NewFavoriteFood) -> Void) {
-        self._viewModel = StateObject(wrappedValue: AddEditFavoriteFoodViewModel(originalFavoriteFood: originalFavoriteFood, folders: folders, initialFolderID: initialFolderID, onSave: onSave))
+    init(originalFavoriteFood: StoredFavoriteFood? = nil, folders: [FavoriteFoodFolder] = [], initialFolderID: String? = nil, onSave: @escaping (NewFavoriteFood) -> Void, onDelete: ((StoredFavoriteFood) -> Void)? = nil) {
+        self._viewModel = StateObject(wrappedValue: AddEditFavoriteFoodViewModel(originalFavoriteFood: originalFavoriteFood, folders: folders, initialFolderID: initialFolderID, onSave: onSave, onDelete: onDelete))
         self.isNewEntry = originalFavoriteFood == nil
     }
     
@@ -76,8 +76,12 @@ struct AddEditFavoriteFoodView: View {
             ScrollView {
                 card
                     .padding(.top, 12)
-                
+
                 saveActionButton
+
+                if viewModel.canDelete {
+                    deleteButton
+                }
             }
         }
         .alert(item: $viewModel.alert, content: alert(for:))
@@ -170,7 +174,7 @@ struct AddEditFavoriteFoodView: View {
             .buttonStyle(.plain)
 
             if viewModel.hasMultiplePortions {
-                Text("Give each amount a name so you can tell them apart when logging carbs.", comment: "Hint shown when a favorite food has more than one serving size")
+                Text("Naming each amount makes it easier to tell them apart when logging carbs.", comment: "Hint shown when a favorite food has more than one serving size")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,6 +241,13 @@ struct AddEditFavoriteFoodView: View {
 
     private func alert(for alert: AddEditFavoriteFoodViewModel.Alert) -> SwiftUI.Alert {
         switch alert {
+        case .confirmDelete:
+            return SwiftUI.Alert(
+                title: Text("Delete \u{201C}\(viewModel.originalFavoriteFood?.name ?? "")\u{201D}?"),
+                message: Text("Are you sure you want to delete this food?"),
+                primaryButton: .cancel(Text("Cancel"), action: viewModel.clearAlert),
+                secondaryButton: .destructive(Text("Delete"), action: viewModel.confirmDelete)
+            )
         case .maxQuantityExceded:
             let message = String(
                 format: NSLocalizedString("The maximum allowed amount is %@ grams.", comment: "Alert body displayed for quantity greater than max (1: maximum quantity in grams)"),
@@ -271,12 +282,32 @@ extension AddEditFavoriteFoodView {
     }
     
     private var saveActionButton: some View {
-        Button(action: viewModel.save) {
-            Text("Save")
+        VStack(spacing: 6) {
+            Button(action: viewModel.save) {
+                Text("Save")
+            }
+            .buttonStyle(ActionButtonStyle())
+            .disabled(viewModel.updatedFavoriteFood == nil)
+
+            // A save button that will not light up is only fair if it says why.
+            if viewModel.updatedFavoriteFood == nil, let reason = viewModel.saveDisabledReason {
+                Text(reason)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
         }
-        .buttonStyle(ActionButtonStyle())
         .padding()
-        .disabled(viewModel.updatedFavoriteFood == nil)
+    }
+
+    private var deleteButton: some View {
+        Button(role: .destructive, action: viewModel.deleteTapped) {
+            Text("Delete Food")
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .padding(.horizontal)
+        .padding(.bottom)
     }
     
     private var saveButton: some View {

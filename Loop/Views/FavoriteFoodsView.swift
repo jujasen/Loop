@@ -70,11 +70,7 @@ struct FavoriteFoodsView: View {
                 .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: Text("Search foods", comment: "Placeholder for the favorite foods search field"))
                 
                 
-                NavigationLink(destination: AddEditFavoriteFoodView(originalFavoriteFood: viewModel.selectedFood, folders: viewModel.folders, onSave: viewModel.onFoodSave(_:)), isActive: $viewModel.isEditViewActive) {
-                    EmptyView()
-                }
-                
-                NavigationLink(destination: FavoriteFoodDetailView(food: viewModel.selectedFood, folderTitle: viewModel.folder(withID: viewModel.selectedFood?.folderID)?.title, onFoodDelete: viewModel.onFoodDelete(_:), carbFormatter: viewModel.carbFormatter, absorptionTimeFormatter: viewModel.absorptionTimeFormatter, preferredCarbUnit: viewModel.preferredCarbUnit), isActive: $viewModel.isDetailViewActive) {
+                NavigationLink(destination: editDestination, isActive: $viewModel.isEditViewActive) {
                     EmptyView()
                 }
             }
@@ -104,13 +100,26 @@ struct FavoriteFoodsView: View {
         }
     }
     
+    /// Tapping a food opens its editor directly. `editMode` is for the list itself —
+    /// reordering and deleting — so while it is on, a tap on the row does nothing.
     private func onFoodTap(_ food: StoredFavoriteFood) {
+        guard !editMode.isEditing else { return }
         viewModel.selectedFood = food
-        if editMode.isEditing {
-            viewModel.isEditViewActive = true
-        }
-        else {
-            viewModel.isDetailViewActive = true
+        viewModel.isEditViewActive = true
+    }
+
+    /// Keyed on the food's id, so editing a second food gets a fresh editor — and a fresh
+    /// view model — rather than the one built for the first.
+    @ViewBuilder
+    private var editDestination: some View {
+        if let food = viewModel.selectedFood {
+            AddEditFavoriteFoodView(
+                originalFavoriteFood: food,
+                folders: viewModel.folders,
+                onSave: viewModel.onFoodSave(_:),
+                onDelete: viewModel.onFoodDelete(_:)
+            )
+            .id(food.id)
         }
     }
 }

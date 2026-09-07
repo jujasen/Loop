@@ -29,7 +29,7 @@ final class FavoriteFoodsViewModel: ObservableObject {
     @Published var selectedFood: StoredFavoriteFood?
     @Published var searchText = ""
 
-    @Published var isDetailViewActive = false
+    /// True while a food's editor is pushed. A tap on a food goes straight there.
     @Published var isEditViewActive = false
     @Published var isAddViewActive = false
 
@@ -122,8 +122,9 @@ final class FavoriteFoodsViewModel: ObservableObject {
     }
     
     func onFoodDelete(_ food: StoredFavoriteFood) {
-        if isDetailViewActive {
-            isDetailViewActive = false
+        // A food deleted from its own editor has to pop that editor first.
+        if isEditViewActive {
+            isEditViewActive = false
         }
         withAnimation {
             _ = favoriteFoods.remove(food)

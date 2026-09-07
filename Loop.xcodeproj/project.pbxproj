@@ -21,7 +21,6 @@
 		1481F9BB28DA26F4004C5AEB /* LoopUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4F75288B1DFE1DC600C322D6 /* LoopUI.framework */; };
 		149A28BB2A853E5100052EDF /* CarbEntryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149A28BA2A853E5100052EDF /* CarbEntryViewModel.swift */; };
 		149A28BD2A853E6C00052EDF /* CarbEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149A28BC2A853E6C00052EDF /* CarbEntryView.swift */; };
-		149A28E42A8A63A700052EDF /* FavoriteFoodDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149A28E32A8A63A700052EDF /* FavoriteFoodDetailView.swift */; };
 		14B1735E28AED9EC006CCD7C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B1735D28AED9EC006CCD7C /* WidgetKit.framework */; };
 		14B1736028AED9EC006CCD7C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 14B1735F28AED9EC006CCD7C /* SwiftUI.framework */; };
 		14B1736928AED9EE006CCD7C /* Loop Widget Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 14B1735C28AED9EC006CCD7C /* Loop Widget Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -778,7 +777,6 @@
 		147EFE912A8BCD8A00272438 /* DerivedAssetsBase.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = DerivedAssetsBase.xcassets; sourceTree = "<group>"; };
 		149A28BA2A853E5100052EDF /* CarbEntryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbEntryViewModel.swift; sourceTree = "<group>"; };
 		149A28BC2A853E6C00052EDF /* CarbEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbEntryView.swift; sourceTree = "<group>"; };
-		149A28E32A8A63A700052EDF /* FavoriteFoodDetailView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FavoriteFoodDetailView.swift; sourceTree = "<group>"; };
 		14B1735C28AED9EC006CCD7C /* Loop Widget Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Loop Widget Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		14B1735D28AED9EC006CCD7C /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		14B1735F28AED9EC006CCD7C /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -1993,7 +1991,6 @@
 				431A8C3F1EC6E8AB00823B9C /* CircleMaskView.swift */,
 				A9A056B224B93C62007CF06D /* CriticalEventLogExportView.swift */,
 				C191D2A025B3ACAA00C26C0B /* DosingStrategySelectionView.swift */,
-				149A28E32A8A63A700052EDF /* FavoriteFoodDetailView.swift */,
 				142CB75A2A60BFC30075748A /* FavoriteFoodsView.swift */,
 				43D381611EBD9759007F8C8F /* HeaderValuesTableViewCell.swift */,
 				1452F4AC2A851F8800F8B9E4 /* HowAbsorptionTimeWorksView.swift */,
@@ -3508,7 +3505,6 @@
 				1DB1065124467E18005542BD /* AlertManager.swift in Sources */,
 				1D9650C82523FBA100A1370B /* DeviceDataManager+BolusEntryViewModelDelegate.swift in Sources */,
 				43C0944A1CACCC73001F6403 /* NotificationManager.swift in Sources */,
-				149A28E42A8A63A700052EDF /* FavoriteFoodDetailView.swift in Sources */,
 				1DDE274024AEA4F200796622 /* NotificationsCriticalAlertPermissionsView.swift in Sources */,
 				A9A056B524B94123007CF06D /* CriticalEventLogExportViewModel.swift in Sources */,
 				434FF1EE1CF27EEF000DB779 /* UITableViewCell.swift in Sources */,
