@@ -3142,6 +3142,248 @@
         }
       }
     },
+    "Avg BG:" : {
+      "comment" : "Statistics label for average glucose",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snitt BS:"
+          }
+        }
+      }
+    },
+    "Custom" : {
+      "comment" : "Chart band label for a custom preset",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilpasset"
+          }
+        }
+      }
+    },
+    "CV:" : {
+      "comment" : "Statistics label for the coefficient of variation",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CV:"
+          }
+        }
+      }
+    },
+    "Disable" : {
+      "comment" : "Title for the button that disables a preset",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slå av"
+          }
+        }
+      }
+    },
+    "Disable Pre-Meal Preset?" : {
+      "comment" : "Title of the alert confirming that the pre-meal preset is turned off",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slå av pre-måltid?"
+          }
+        }
+      }
+    },
+    "Disable Preset?" : {
+      "comment" : "Title of the alert confirming that a preset is turned off",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slå av forhåndsinnstilling?"
+          }
+        }
+      }
+    },
+    "Enter the carbs for every serving size." : {
+      "comment" : "Reason the save button is disabled on the favorite food screen when one serving size has no carb quantity",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fyll inn karbo for hver mengde."
+          }
+        }
+      }
+    },
+    "Enter the carbs for this food." : {
+      "comment" : "Reason the save button is disabled on the favorite food screen when the carb quantity is missing",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fyll inn karbo for denne maten."
+          }
+        }
+      }
+    },
+    "Error" : {
+      "comment" : "The title of the error alert",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feil"
+          }
+        }
+      }
+    },
+    "Est. A1C:" : {
+      "comment" : "Statistics label for estimated A1C",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Est. HbA1c:"
+          }
+        }
+      }
+    },
+    "Give this food a name to save it." : {
+      "comment" : "Reason the save button is disabled on the favorite food screen when the name is missing",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gi maten et navn for å lagre den."
+          }
+        }
+      }
+    },
+    "GMI:" : {
+      "comment" : "Statistics label for the glucose management indicator",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GMI:"
+          }
+        }
+      }
+    },
+    "High:" : {
+      "comment" : "Statistics label for the share of readings above range",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Høy:"
+          }
+        }
+      }
+    },
+    "In Range:" : {
+      "comment" : "Statistics label for the share of readings in range",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I mål:"
+          }
+        }
+      }
+    },
+    "Insulin & Carbohydrates" : {
+      "comment" : "Header of the collapsible section holding the insulin and carbohydrate charts",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insulin og karbohydrater"
+          }
+        }
+      }
+    },
+    "Low:" : {
+      "comment" : "Statistics label for the share of readings below range",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lav:"
+          }
+        }
+      }
+    },
+    "Naming each amount makes it easier to tell them apart when logging carbs." : {
+      "comment" : "Hint shown when a favorite food has more than one serving size",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når hver mengde har et navn, er de lettere å skille når du registrerer karbo."
+          }
+        }
+      }
+    },
+    "Pick a food type to save it." : {
+      "comment" : "Reason the save button is disabled on the favorite food screen when the food type emoji is missing",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg type mat for å lagre den."
+          }
+        }
+      }
+    },
+    "Pre-Meal" : {
+      "comment" : "Chart band label for the pre-meal preset",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pre-måltid"
+          }
+        }
+      }
+    },
+    "Predicted Glucose" : {
+      "comment" : "Row that opens the predicted glucose breakdown",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forventet blodsukker"
+          }
+        }
+      }
+    },
+    "Std Dev:" : {
+      "comment" : "Statistics label for standard deviation",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Std.avvik:"
+          }
+        }
+      }
+    },
+    "Workout" : {
+      "comment" : "Chart band label for the workout preset",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trening"
+          }
+        }
+      }
+    },
     "⚠️" : {
       "localizations" : {
         "da" : {
@@ -5355,6 +5597,12 @@
             "value" : "Ajouter un élément à la ligne inférieure"
           }
         },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til element i nederste rad"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5366,6 +5614,12 @@
     "Add item to Lock Screen / CarPlay display" : {
       "comment" : "Title for Add item",
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til element på låseskjerm/CarPlay"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -5513,6 +5767,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ajouter une ligne prédictive"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til prediksjonslinje"
           }
         },
         "ro" : {
@@ -9948,6 +10208,12 @@
             "value" : "Ligne inférieure"
           }
         },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nederste rad"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9976,6 +10242,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Configuration de la ligne inférieure"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oppsett av nederste rad"
           }
         },
         "ro" : {
@@ -13266,6 +13538,12 @@
     "Configure Display" : {
       "comment" : "Title for the view to configure the lock screen display",
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfigurer visning"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -13284,6 +13562,12 @@
       "comment" : "A link that takes the user to a view where they can configure the display of the live activity screen on their lock screen and in CarPlay.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfigurer rad for låseskjerm/CarPlay"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -14400,6 +14684,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Préréglage personnalisé"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilpasset forhåndsinnstilling"
           }
         },
         "ro" : {
@@ -16377,6 +16667,12 @@
     "Display colors for glucose" : {
       "comment" : "Title for glucose coloring",
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fargelegg blodsukkerverdier"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16395,6 +16691,12 @@
       "comment" : "A section header in the live activity settings view, describing the control options for displaying glucose levels on the live activity screen.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alternativer for visning"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16406,6 +16708,12 @@
     "Display prediction in plot" : {
       "comment" : "Title for prediction line toggle",
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis prediksjon i grafen"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16423,6 +16731,12 @@
     "Display up to 4 items. Display label is in parentheses." : {
       "comment" : "Indicates the maximum number of items that can be displayed and how the label for each item is shortened.",
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis opptil fire elementer. Visningsnavnet står i parentes."
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16988,6 +17302,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Activé"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivert"
           }
         },
         "ro" : {
@@ -21020,7 +21340,15 @@
       }
     },
     "I'm a tester" : {
-      "comment" : "Button that dismisses the development build warning"
+      "comment" : "Button that dismisses the development build warning",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeg er tester"
+          }
+        }
+      }
     },
     "If iOS Focus Mode is ON and Mute Alerts is OFF, Critical Alerts will still be delivered and non-Critical Alerts will be silenced until %1$@ is added to each Focus mode as an Allowed App." : {
       "comment" : "Focus modes descriptive text (1: app name)",
@@ -23880,6 +24208,12 @@
             "value" : "Activité en direct"
           }
         },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direkteaktivitet"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24017,6 +24351,12 @@
       "comment" : "The title of a section in the live activity settings view, related to lock screen, dynamic island, or carplay.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Låseskjerm / Dynamic Island / CarPlay"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26318,6 +26658,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mode"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modus"
           }
         },
         "ro" : {
@@ -33495,6 +33841,12 @@
       "comment" : "A section header for the lock screen display options.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg visning for låseskjermen"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -35143,7 +35495,15 @@
       }
     },
     "Switch to main" : {
-      "comment" : "Button on the development build warning that opens documentation about switching branches"
+      "comment" : "Button on the development build warning that opens documentation about switching branches",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bytt til main"
+          }
+        }
+      }
     },
     "Tap here to set up a CGM" : {
       "comment" : "Descriptive text for button to add CGM device",
@@ -37022,7 +37382,15 @@
       }
     },
     "This is the development version of Loop, built from the dev branch. Any updates on this branch may contain new, untested features, and may be unsafe. If you are not a tester, please do not use this branch, and switch to main." : {
-      "comment" : "Body of the warning shown at launch on development builds"
+      "comment" : "Body of the warning shown at launch on development builds",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette er utviklingsversjonen av Loop, bygd fra dev-grenen. Oppdateringer på denne grenen kan inneholde nye funksjoner som ikke er testet, og kan være utrygge. Er du ikke tester, bør du ikke bruke denne grenen — bytt til main."
+          }
+        }
+      }
     },
     "This option only applies when Loop's Dosing Strategy is set to Automatic Bolus." : {
       "comment" : "String shown when glucose based partial application cannot be enabled because dosing strategy is not set to Automatic Bolus",
@@ -39064,6 +39432,12 @@
             "value" : "Utiliser la coloration de glycémie"
           }
         },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bruk farger for blodsukker"
+          }
+        },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39568,7 +39942,15 @@
       }
     },
     "Warning" : {
-      "comment" : "Title of the warning shown at launch on development builds"
+      "comment" : "Title of the warning shown at launch on development builds",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Advarsel"
+          }
+        }
+      }
     },
     "Warning! Safety notifications are turned OFF" : {
       "comment" : "Alert Permissions Need Attention alert title",
