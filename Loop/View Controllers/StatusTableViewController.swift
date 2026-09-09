@@ -128,6 +128,15 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     self?.reloadData(animated: true)
                 }
             },
+            // The chart and statistics rows are sized from the text they hold, so a change
+            // to the text size in iOS Settings has to re-measure them.
+            notificationCenter.addObserver(forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: nil) { [weak self] _ in
+                DispatchQueue.main.async {
+                    guard let self, self.isViewLoaded else { return }
+                    self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
+                    self.updateScrollEnabled()
+                }
+            },
         ]
 
         automaticDosingStatus.$automaticDosingEnabled
@@ -840,14 +849,17 @@ final class StatusTableViewController: LoopChartsTableViewController {
     private static let statusRowEstimatedHeight: CGFloat = 54
     private static let bannerRowEstimatedHeight: CGFloat = 74
 
+    /// Rows whose content is text grow with the text size chosen in iOS Settings, so a
+    /// larger setting makes the row taller instead of clipping what is in it. The main
+    /// chart gives up the difference, which is what it is there for.
     private func fixedChartRowHeight(_ row: ChartRow) -> CGFloat {
         switch row {
         case .glucoseOverview:
             return Self.smallChartRowHeight
         case .stats:
-            return Self.statsRowHeight
+            return UIFontMetrics(forTextStyle: .subheadline).scaledValue(for: Self.statsRowHeight)
         case .detailsHeader, .prediction:
-            return Self.detailsHeaderRowHeight
+            return UIFontMetrics(forTextStyle: .body).scaledValue(for: Self.detailsHeaderRowHeight)
         case .glucose, .iob, .dose, .cob:
             return 0
         }

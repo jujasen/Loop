@@ -1521,6 +1521,10 @@ private struct StaticYAxisOverlay: View, Equatable {
         return Array(ticks)
     }
 
+    private var glucoseTicks: [Double] {
+        BGChartGlucoseDisplay.axisTicks(upToMGDL: maxBG)
+    }
+
     var body: some View {
         Chart {
             // Invisible content at the domain corners so the scales resolve
@@ -1541,11 +1545,14 @@ private struct StaticYAxisOverlay: View, Equatable {
             }
         }
         .chartYAxis {
-            AxisMarks(position: .trailing) { value in
+            AxisMarks(position: .trailing, values: glucoseTicks) { value in
                 AxisTick()
+                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 3]))
+                    .foregroundStyle(Color(.tertiaryLabel))
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
                         Text(BGChartGlucoseDisplay.string(fromMGDL: v))
+                            .font(.caption2)
                     }
                 }
             }
@@ -1555,6 +1562,7 @@ private struct StaticYAxisOverlay: View, Equatable {
                     if let v = value.as(Double.self) {
                         let rate = basalScale > 0 ? v / basalScale : 0
                         Text(String(format: "%.1fU", rate))
+                            .font(.caption2)
                     }
                 }
             }

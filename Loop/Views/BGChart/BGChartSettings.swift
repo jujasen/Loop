@@ -197,6 +197,36 @@ enum BGChartGlucoseDisplay {
         return formatter
     }()
 
+    /// Values to label the glucose axis with, in mg/dL, spaced so that the numbers come
+    /// out round in the *display* unit — 4, 6, 8 rather than 3.9, 5.6, 7.2 — and so the
+    /// axis carries enough of them to read a level off the curve at a glance.
+    ///
+    /// Zero is left out: the axis starts there and a "0" reads as a glucose value that
+    /// never happens.
+    static func axisTicks(upToMGDL maxMGDL: Double, targetCount: Int = 7) -> [Double] {
+        let inMMOLL = unit == .millimolesPerLiter
+        // Steps that read as round numbers in the unit on screen.
+        let steps: [Double] = inMMOLL ? [1, 2, 3, 4, 5, 10] : [20, 25, 50, 100, 200]
+        let maxInUnit = inMMOLL
+            ? HKQuantity(unit: .milligramsPerDeciliter, doubleValue: maxMGDL).doubleValue(for: .millimolesPerLiter)
+            : maxMGDL
+        guard maxInUnit > 0 else { return [] }
+
+        // The coarsest step still gives the fewest labels, so this is the first step that
+        // keeps the count reasonable.
+        let step = steps.first(where: { maxInUnit / $0 <= Double(targetCount) }) ?? steps[steps.count - 1]
+
+        var ticks: [Double] = []
+        var value = step
+        while value <= maxInUnit {
+            ticks.append(inMMOLL
+                ? HKQuantity(unit: .millimolesPerLiter, doubleValue: value).doubleValue(for: .milligramsPerDeciliter)
+                : value)
+            value += step
+        }
+        return ticks
+    }
+
     /// Formats an mg/dL value in the display unit, without a unit suffix.
     static func string(fromMGDL value: Double) -> String {
         if unit == .millimolesPerLiter {
