@@ -137,8 +137,12 @@ final class StatusTableViewController: LoopChartsTableViewController {
 
         deviceManager.manualBolusRecovery.$attempt
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self, self.isViewLoaded else { return }
+            .sink { [weak self] attempt in
+                guard let self else { return }
+                // Take the snapshot and tell the table in the same turn — see
+                // `bolusRecoveryAttempt`.
+                self.bolusRecoveryAttempt = attempt
+                guard self.isViewLoaded else { return }
                 self.tableView.reloadSections(IndexSet(integer: Section.bolusRecovery.rawValue), with: .automatic)
                 // The main chart sizes itself from what the fixed rows leave over.
                 self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
@@ -988,6 +992,17 @@ final class StatusTableViewController: LoopChartsTableViewController {
         return statusRowMode
     }
 
+    /// What the bolus-recovery section is currently showing.
+    ///
+    /// Deliberately a snapshot rather than a read straight through to
+    /// `deviceManager.manualBolusRecovery.attempt`: that value changes whenever a bolus
+    /// starts or finishes, on whatever turn of the run loop the pump replies on, and a
+    /// UITableView aborts the app if a row count it has already been given changes without
+    /// an accompanying update ("invalid batch updates" — any later reload, from any source,
+    /// is the one that crashes). This only changes in the same turn as the reload that
+    /// tells the table about it, so the data source and the table never disagree.
+    private var bolusRecoveryAttempt: ManualBolusRecovery.Attempt?
+
     private var shouldShowBannerWarning: Bool {
         alertPermissionsChecker.showWarning || alertMuter.configuration.shouldMute
     }
@@ -998,7 +1013,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             tableView.deleteRows(at: [IndexPath(row: 0, section: Section.alertWarning.rawValue)], with: animated ? .top : .none)
         } else if shouldShowBannerWarning && !warningWasVisible {
             tableView.insertRows(at: [IndexPath(row: 0, section: Section.alertWarning.rawValue)], with: animated ? .top : .none)
-        } else {
+        } else if warningWasVisible {
             tableView.reloadRows(at: [IndexPath(row: 0, section: Section.alertWarning.rawValue)], with: .none)
         }
     }
@@ -1193,7 +1208,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch Section(rawValue: section)! {
         case .bolusRecovery:
-            return deviceManager.manualBolusRecovery.attempt != nil ? 1 : 0
+            return bolusRecoveryAttempt != nil ? 1 : 0
         case .alertWarning:
             return shouldShowBannerWarning ? 1 : 0
         case .hud:
@@ -1435,7 +1450,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
     /// Retries only the insulin. The carbs were saved before the bolus was requested, so this
     /// never routes back to the meal screen — that route is what doubled people's carb entries.
     private func bolusRecoveryBannerTapped() {
-        guard let attempt = deviceManager.manualBolusRecovery.attempt else { return }
+        guard let attempt = bolusRecoveryAttempt else { return }
 
         switch attempt.outcome {
         case .delivering:
@@ -1473,7 +1488,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         switch Section(rawValue: indexPath.section)! {
         case .bolusRecovery:
             let cell = tableView.dequeueReusableCell(withIdentifier: BolusRecoveryBannerCell.className, for: indexPath) as! BolusRecoveryBannerCell
-            cell.attempt = deviceManager.manualBolusRecovery.attempt
+            cell.attempt = bolusRecoveryAttempt
             cell.setNeedsUpdateConfiguration()
             return cell
         case .alertWarning:
@@ -1747,7 +1762,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 if shouldShowBannerWarning {
                     remaining -= Self.bannerRowEstimatedHeight
                 }
-                if let attempt = deviceManager.manualBolusRecovery.attempt {
+                if let attempt = bolusRecoveryAttempt {
                     remaining -= BolusRecoveryBannerCell.estimatedHeight(for: attempt, width: tableView.bounds.width)
                 }
                 for row in visibleChartRows where row != .glucose {
