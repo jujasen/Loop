@@ -194,14 +194,20 @@ enum PlaceholderDataSeeder {
             return NewPumpEvent(date: dose.startDate, dose: dose, raw: identifier("basal-\(step)"), title: "Temp Basal", type: .tempBasal)
         }
 
-        let boluses: [(units: Double, offset: TimeInterval, duration: TimeInterval)] = [
-            (4.5, -19 * 3600 + 300, 120),
-            (6.2, -12 * 3600 + 300, 150),
-            (1.1, -8 * 3600, 60),
+        // `automatic` is what the chart draws as a triangle rather than a dot, so the
+        // day holds both kinds: meal boluses the user gave, and small corrections Loop
+        // gave on its own.
+        let boluses: [(units: Double, offset: TimeInterval, duration: TimeInterval, automatic: Bool)] = [
+            (4.5, -19 * 3600 + 300, 120, false),
+            (0.35, -17 * 3600, 30, true),
+            (6.2, -12 * 3600 + 300, 150, false),
+            (1.1, -8 * 3600, 60, false),
+            (0.55, -6 * 3600, 30, true),
             // Same minute as the third meal's carb entry, the way a meal bolus
             // usually is — the case where the two symbols must not collide.
-            (3.4, -4 * 3600, 120),
-            (0.9, -70 * 60, 60),
+            (3.4, -4 * 3600, 120, false),
+            (0.2, -2 * 3600, 30, true),
+            (0.9, -70 * 60, 60, false),
         ]
 
         events += boluses.enumerated().map { index, bolus in
@@ -211,7 +217,8 @@ enum PlaceholderDataSeeder {
                 startDate: start,
                 endDate: start.addingTimeInterval(bolus.duration),
                 value: bolus.units,
-                unit: .units
+                unit: .units,
+                automatic: bolus.automatic
             )
             return NewPumpEvent(date: dose.startDate, dose: dose, raw: identifier("bolus-\(index)"), title: "Bolus", type: .bolus)
         }

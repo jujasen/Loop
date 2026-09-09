@@ -169,7 +169,9 @@ final class BGChartModel: ObservableObject {
 
     @Published var boluses: [TreatmentPoint] = []
     @Published var carbs: [TreatmentPoint] = []
-    @Published var smbs: [TreatmentPoint] = []
+    /// Boluses Loop gave on its own. Drawn as a downward triangle rather than a dot,
+    /// the way LoopFollow separates a dose the algorithm gave from one a person did.
+    @Published var automaticBoluses: [TreatmentPoint] = []
     @Published var bgChecks: [TreatmentPoint] = []
     @Published var suspends: [TreatmentPoint] = []
     @Published var resumes: [TreatmentPoint] = []
@@ -330,9 +332,9 @@ final class BGChartModel: ObservableObject {
     /// Minimum drawn spacing between two treatments of the same population, and
     /// the furthest a treatment may be moved from its true time to reach it.
     /// Only treatments sharing a lane can collide, so each lane is decluttered
-    /// on its own: boluses and SMBs share the insulin lane and its symbol
-    /// footprint, while carbs carry a wider "30 3h" label, so they need — and
-    /// are allowed — more room in theirs.
+    /// on its own: manual and automatic boluses share the insulin lane and its
+    /// symbol footprint, while carbs carry a wider "30 3h" label, so they need —
+    /// and are allowed — more room in theirs.
     enum Spread {
         static let bolusGap: TimeInterval = 240
         static let bolusShift: TimeInterval = 240
@@ -351,8 +353,8 @@ final class BGChartModel: ObservableObject {
     }
 
     /// Spreads two treatment kinds as a single population — a bolus dot and an
-    /// SMB triangle drawn at the same minute overlap just like two dots would —
-    /// then hands each kind back its own points.
+    /// automatic-bolus triangle drawn at the same minute overlap just like two dots
+    /// would — then hands each kind back its own points.
     static func spreadTogether(_ first: [TreatmentPoint], _ second: [TreatmentPoint], minGap: TimeInterval, maxShift: TimeInterval) -> ([TreatmentPoint], [TreatmentPoint]) {
         let tagged = (first.map { (isFirst: true, point: $0) } + second.map { (isFirst: false, point: $0) })
             .sorted { $0.point.date < $1.point.date }

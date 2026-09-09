@@ -64,7 +64,7 @@ extension BGChartModel {
                     value: mgdl,
                     sgv: mgdl,
                     label: "",
-                    pillText: "BG Check\n\(BGChartGlucoseDisplay.string(fromMGDL: mgdl))\n\(pillTimeString(for: sample.startDate))",
+                    pillText: "\(NSLocalizedString("BG Check", comment: "Chart label for a manually entered glucose reading"))\n\(BGChartGlucoseDisplay.string(fromMGDL: mgdl))\n\(pillTimeString(for: sample.startDate))",
                     lane: .onCurve
                 ))
             } else {
@@ -98,8 +98,6 @@ extension BGChartModel {
         cobPrediction = []
         uamPrediction = []
         cone = []
-        // Loop has no super-micro-bolus concept.
-        smbs = []
         // Nightscout notes and sensor-start records have no local equivalent.
         notes = []
         sensorStarts = []
@@ -111,20 +109,33 @@ extension BGChartModel {
         // are both readable instead of one hiding the other.
         let interpolator = GlucoseInterpolator(points: readings, fallback: thresholds.low)
 
-        boluses = Self.spread(data.doseEntries.compactMap { dose -> TreatmentPoint? in
-            guard dose.type == .bolus else { return nil }
+        // A dose Loop gave on its own reads differently from one the user asked for, so
+        // they are drawn as different symbols — triangle and dot, as in LoopFollow. They
+        // share the insulin lane, so they are also decluttered as one population.
+        func bolusPoint(_ dose: DoseEntry, isAutomatic: Bool) -> TreatmentPoint? {
             let units = dose.deliveredUnits ?? dose.programmedUnits
             guard units > 0 else { return nil }
             let label = Self.doseString(units)
+            let title = isAutomatic
+                ? NSLocalizedString("Automatic Bolus", comment: "Chart label for a bolus Loop gave on its own")
+                : NSLocalizedString("Bolus", comment: "Chart label for a bolus the user asked for")
             return TreatmentPoint(
                 date: dose.startDate,
                 value: units,
                 sgv: interpolator.value(at: dose.startDate),
                 label: label,
-                pillText: "Bolus\n\(label)U\n\(pillTimeString(for: dose.startDate))",
+                pillText: "\(title)\n\(label) \(BGChartInsulinDisplay.unitString)\n\(pillTimeString(for: dose.startDate))",
                 lane: .insulin
             )
-        }, minGap: Spread.bolusGap, maxShift: Spread.bolusShift)
+        }
+
+        let bolusDoses = data.doseEntries.filter { $0.type == .bolus }
+        (boluses, automaticBoluses) = Self.spreadTogether(
+            bolusDoses.filter { $0.automatic != true }.compactMap { bolusPoint($0, isAutomatic: false) },
+            bolusDoses.filter { $0.automatic == true }.compactMap { bolusPoint($0, isAutomatic: true) },
+            minGap: Spread.bolusGap,
+            maxShift: Spread.bolusShift
+        )
 
         carbs = Self.spread(data.carbEntries.compactMap { entry -> TreatmentPoint? in
             guard entry.startDate >= domainStart else { return nil }
@@ -138,7 +149,7 @@ extension BGChartModel {
                 value: Double(grams),
                 sgv: interpolator.value(at: entry.startDate),
                 label: label,
-                pillText: "Carbs\n\(grams)g\n\(pillTimeString(for: entry.startDate))",
+                pillText: "\(NSLocalizedString("Carbs", comment: "Chart label for a carb entry"))\n\(grams)g\n\(pillTimeString(for: entry.startDate))",
                 lane: .carbs
             )
         }, minGap: Spread.carbGap, maxShift: Spread.carbShift)
@@ -149,7 +160,7 @@ extension BGChartModel {
                 value: 0,
                 sgv: interpolator.value(at: dose.startDate),
                 label: "",
-                pillText: "Suspend\n\(pillTimeString(for: dose.startDate))",
+                pillText: "\(NSLocalizedString("Insulin Suspended", comment: "Chart label for the point insulin delivery was suspended"))\n\(pillTimeString(for: dose.startDate))",
                 lane: .pumpEvent
             )
         }
@@ -159,7 +170,7 @@ extension BGChartModel {
                 value: 0,
                 sgv: interpolator.value(at: dose.startDate),
                 label: "",
-                pillText: "Resume\n\(pillTimeString(for: dose.startDate))",
+                pillText: "\(NSLocalizedString("Insulin Resumed", comment: "Chart label for the point insulin delivery resumed"))\n\(pillTimeString(for: dose.startDate))",
                 lane: .pumpEvent
             )
         }
@@ -225,7 +236,7 @@ extension BGChartModel {
                 yBottom: overrideStripBottom,
                 yTop: overrideStripTop,
                 label: name,
-                pillText: "Override\n\(name)\n\(pillTimeString(for: start))"
+                pillText: "\(NSLocalizedString("Override", comment: "Chart label for an override band"))\n\(name)\n\(pillTimeString(for: start))"
             ))
 
             // An override that moves the correction range is Loop's version of
@@ -241,8 +252,8 @@ extension BGChartModel {
                     end: end,
                     yBottom: min(lower, upper) - 2,
                     yTop: max(upper, lower) + 2,
-                    label: "Target",
-                    pillText: "Target\n\(label)\n\(pillTimeString(for: start))"
+                    label: NSLocalizedString("Target", comment: "Chart label for a correction range band"),
+                    pillText: "\(NSLocalizedString("Target", comment: "Chart label for a correction range band"))\n\(label)\n\(pillTimeString(for: start))"
                 ))
             }
         }
@@ -303,7 +314,8 @@ extension BGChartModel {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.usesGroupingSeparator = false
-        formatter.minimumIntegerDigits = 0
+        // A leading zero: "0,2", not ",2".
+        formatter.minimumIntegerDigits = 1
         formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 2
         return formatter

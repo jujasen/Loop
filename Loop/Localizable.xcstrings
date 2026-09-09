@@ -3142,6 +3142,17 @@
         }
       }
     },
+    "Automatic Bolus" : {
+      "comment" : "Chart label for a bolus Loop gave on its own",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisk bolus"
+          }
+        }
+      }
+    },
     "Avg BG:" : {
       "comment" : "Statistics label for average glucose",
       "localizations" : {
@@ -3149,6 +3160,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Snitt BS:"
+          }
+        }
+      }
+    },
+    "BG" : {
+      "comment" : "Chart label for a glucose reading",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BS"
+          }
+        }
+      }
+    },
+    "BG Check" : {
+      "comment" : "Chart label for a manually entered glucose reading",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BS-måling"
           }
         }
       }
@@ -3307,6 +3340,17 @@
         }
       }
     },
+    "Insulin Resumed" : {
+      "comment" : "Chart label for the point insulin delivery resumed",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insulintilførsel startet"
+          }
+        }
+      }
+    },
     "Low:" : {
       "comment" : "Statistics label for the share of readings below range",
       "localizations" : {
@@ -3325,6 +3369,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Når hver mengde har et navn, er de lettere å skille når du registrerer karbo."
+          }
+        }
+      }
+    },
+    "Override" : {
+      "comment" : "Chart label for an override band",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overstyring"
           }
         }
       }
@@ -3369,6 +3424,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Std.avvik:"
+          }
+        }
+      }
+    },
+    "Target" : {
+      "comment" : "Chart label for a correction range band",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mål"
           }
         }
       }

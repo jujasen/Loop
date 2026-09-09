@@ -192,6 +192,32 @@ final class BGChartSettings {
     var minBasalScale: Double { 5 }
 }
 
+// MARK: - Insulin unit display
+
+/// The short insulin unit as this app writes it — "U", or "E" in Norwegian.
+///
+/// Taken from Loop's own catalogue, which is where the HUD and the reservoir rows get
+/// theirs; LoopKit's copy of the same string has no Norwegian, so formatting a quantity
+/// through `QuantityFormatter` would put "U" on a screen that says "E" everywhere else.
+enum BGChartInsulinDisplay {
+    static let unitString = NSLocalizedString("U", comment: "The short unit display string for international units of insulin")
+
+    private static let rateFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 1
+        formatter.maximumFractionDigits = 1
+        return formatter
+    }()
+
+    /// A basal rate as the axis labels it — one decimal in the local notation, with the
+    /// unit against it to keep the label narrow ("2,5E").
+    static func axisString(rate: Double) -> String {
+        let number = rateFormatter.string(from: NSNumber(value: rate)) ?? String(format: "%.1f", rate)
+        return number + unitString
+    }
+}
+
 // MARK: - Glucose unit display
 
 /// Converts the chart's internal mg/dL values into the user's display unit.

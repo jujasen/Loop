@@ -668,7 +668,7 @@ private struct MainBGChart: View {
     /// Feeds every treatment mark to `body` as (drawnDate, value, pillText).
     /// Single source for both the scrub lookup and the tap hit test.
     private func forEachTreatmentAnchor(_ body: (Date, Double, String) -> Void) {
-        for group in [model.boluses, model.carbs, model.smbs, model.bgChecks,
+        for group in [model.boluses, model.carbs, model.automaticBoluses, model.bgChecks,
                       model.notes, model.suspends, model.resumes, model.sensorStarts]
         {
             for t in group {
@@ -679,7 +679,7 @@ private struct MainBGChart: View {
 
     /// Pill entry for a BG reading. Shared by the scrub lookup and the tap hit test.
     private func bgPillText(for point: BGChartModel.BGPoint) -> String {
-        "BG\n\(BGChartGlucoseDisplay.string(fromMGDL: point.value))\n\(model.pillTimeString(for: point.date))"
+        "\(NSLocalizedString("BG", comment: "Chart label for a glucose reading"))\n\(BGChartGlucoseDisplay.string(fromMGDL: point.value))\n\(model.pillTimeString(for: point.date))"
     }
 
     private func bandPillTexts(at date: Date) -> [String] {
@@ -1394,7 +1394,7 @@ private struct BGChartCanvas: View, Equatable {
             }
         }
 
-        ForEach(windowed(model.smbs) { $0.drawnDate }) { pt in
+        ForEach(windowed(model.automaticBoluses) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
                 y: .value("sgv", lanedValue(pt, maxBG: model.maxBG))
@@ -1571,7 +1571,7 @@ private struct StaticYAxisOverlay: View, Equatable {
                 AxisValueLabel {
                     if let v = value.as(Double.self) {
                         let rate = basalScale > 0 ? v / basalScale : 0
-                        Text(String(format: "%.1fU", rate))
+                        Text(BGChartInsulinDisplay.axisString(rate: rate))
                             .font(.caption2)
                     }
                 }
