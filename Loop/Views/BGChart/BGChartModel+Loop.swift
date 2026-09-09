@@ -150,7 +150,10 @@ extension BGChartModel {
                 sgv: interpolator.value(at: entry.startDate),
                 label: label,
                 pillText: "\(NSLocalizedString("Carbs", comment: "Chart label for a carb entry"))\n\(grams)g\n\(pillTimeString(for: entry.startDate))",
-                lane: .carbs
+                lane: .carbs,
+                // Only an entry this app wrote can be edited, the same rule the carb
+                // list applies.
+                carbEntryID: entry.createdByCurrentApp ? Self.carbEntryID(for: entry) : nil
             )
         }, minGap: Spread.carbGap, maxShift: Spread.carbShift)
 
@@ -320,6 +323,13 @@ extension BGChartModel {
         formatter.maximumFractionDigits = 2
         return formatter
     }()
+
+    /// Stable identity for a carb entry, so a tapped mark can be resolved back to the
+    /// entry it came from. HealthKit-backed entries carry a sync identifier; anything
+    /// without one falls back to its object id.
+    static func carbEntryID(for entry: StoredCarbEntry) -> String? {
+        entry.syncIdentifier ?? entry.uuid?.uuidString
+    }
 
     private static func doseString(_ units: Double) -> String {
         doseFormatter.string(from: NSNumber(value: units)) ?? String(units)

@@ -21,11 +21,13 @@ import UIKit
 /// view.
 @available(iOS 17.0, *)
 final class BGChartTableViewCell: UITableViewCell {
-    func configure(model: BGChartModel, config: BGChartView.Config) {
+    /// - Parameter onEditCarbEntry: called with a carb entry's id when the user taps the
+    ///   pill of a carb mark, which is how the chart leads into the carb editor.
+    func configure(model: BGChartModel, config: BGChartView.Config, onEditCarbEntry: ((String) -> Void)? = nil) {
         selectionStyle = .none
         backgroundColor = .secondarySystemBackground
         contentConfiguration = UIHostingConfiguration {
-            BGChartView(model: model, config: config)
+            BGChartView(model: model, config: config, onEditCarbEntry: onEditCarbEntry)
         }
         .margins(.all, 0)
     }

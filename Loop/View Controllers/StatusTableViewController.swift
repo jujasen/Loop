@@ -1525,7 +1525,13 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 switch chartRow {
                 case .glucose, .glucoseOverview:
                     let cell = tableView.dequeueReusableCell(withIdentifier: Self.bgChartCellIdentifier, for: indexPath) as! BGChartTableViewCell
-                    cell.configure(model: bgChartModel, config: chartRow == .glucose ? .main : .small)
+                    cell.configure(
+                        model: bgChartModel,
+                        config: chartRow == .glucose ? .main : .small,
+                        onEditCarbEntry: { [weak self] id in
+                            self?.presentCarbEntryEditor(carbEntryID: id)
+                        }
+                    )
                     return cell
                 case .stats:
                     let cell = tableView.dequeueReusableCell(withIdentifier: Self.glucoseStatsCellIdentifier, for: indexPath) as! GlucoseStatsTableViewCell
@@ -1970,6 +1976,30 @@ final class StatusTableViewController: LoopChartsTableViewController {
 
     @IBAction func userTappedAddCarbs() {
         presentCarbEntryScreen(nil)
+    }
+
+    /// Opens the carb editor for a mark tapped in the glucose chart. Same editor the carb
+    /// list uses; the id comes back from the chart, so it is resolved against the entries
+    /// the chart was last given.
+    private func presentCarbEntryEditor(carbEntryID: String) {
+        guard let entry = cachedChartCarbEntries.first(where: {
+            BGChartModel.carbEntryID(for: $0) == carbEntryID
+        }), entry.createdByCurrentApp else {
+            return
+        }
+
+        let viewModel = CarbEntryViewModel(delegate: deviceManager, originalCarbEntry: entry)
+        let carbEntryView = CarbEntryView(viewModel: viewModel)
+            .environmentObject(deviceManager.displayGlucosePreference)
+        let hostingController = DismissibleHostingController(rootView: carbEntryView, isModalInPresentation: false)
+        hostingController.title = NSLocalizedString("Edit Carb Entry", comment: "Title of the carb entry editor when changing an existing entry")
+        let navigationWrapper = UINavigationController(rootViewController: hostingController)
+        hostingController.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .cancel,
+            target: navigationWrapper,
+            action: #selector(dismissWithAnimation)
+        )
+        present(navigationWrapper, animated: true)
     }
 
     func presentCarbEntryScreen(_ activity: NSUserActivity?) {

@@ -90,18 +90,22 @@ final class BGChartModel: ObservableObject {
         let pillText: String
         /// Which vertical band the symbol is drawn in; see `TreatmentLane`.
         let lane: TreatmentLane
+        /// The carb entry this mark stands for, when it is one the user may edit. The
+        /// chart offers a way into the carb editor for marks that have it.
+        let carbEntryID: String?
         /// Where the symbol is drawn. Equals `date` unless `spread` nudged it
         /// left to keep a crowded run of treatments from stacking up.
         var drawnDate: Date
         var id: Double { date.timeIntervalSince1970 }
 
-        init(date: Date, value: Double, sgv: Double, label: String, pillText: String, lane: TreatmentLane = .onCurve) {
+        init(date: Date, value: Double, sgv: Double, label: String, pillText: String, lane: TreatmentLane = .onCurve, carbEntryID: String? = nil) {
             self.date = date
             self.value = value
             self.sgv = sgv
             self.label = label
             self.pillText = pillText
             self.lane = lane
+            self.carbEntryID = carbEntryID
             drawnDate = date
         }
     }

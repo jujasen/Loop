@@ -102,12 +102,14 @@ struct BGChartView: View {
 
     let model: BGChartModel
     let config: Config
+    /// Called with a carb entry's id when the user asks to edit it from the chart.
+    var onEditCarbEntry: ((String) -> Void)?
 
     var body: some View {
         if config == .small {
             SmallBGChart(model: model, interaction: model.interaction)
         } else {
-            MainBGChart(model: model, interaction: model.interaction)
+            MainBGChart(model: model, interaction: model.interaction, onEditCarbEntry: onEditCarbEntry)
         }
     }
 }
@@ -131,6 +133,7 @@ struct BGChartView: View {
 private struct MainBGChart: View {
     @ObservedObject var model: BGChartModel
     @ObservedObject var interaction: BGChartInteraction
+    var onEditCarbEntry: ((String) -> Void)?
 
     @State private var didInitialize = false
 
@@ -241,8 +244,9 @@ private struct MainBGChart: View {
                 .frame(width: viewportWidth, height: viewport.height)
                 .allowsHitTesting(false)
 
+            // Not hit-test-disabled as a whole: the pill takes taps when it is offering
+            // to open a carb entry. Everything else inside it opts out on its own.
             selectionOverlay(viewportWidth: viewportWidth)
-                .allowsHitTesting(false)
 
             overrideBandLabelsOverlay(viewportWidth: viewportWidth)
                 .allowsHitTesting(false)
@@ -663,16 +667,19 @@ private struct MainBGChart: View {
         let value: Double
         /// One pill entry per item under the selector (see PillLabel).
         let texts: [String]
+        /// Set when one of the selected marks is an editable carb entry; the pill then
+        /// becomes a way into the carb editor.
+        var carbEntryID: String?
     }
 
-    /// Feeds every treatment mark to `body` as (drawnDate, value, pillText).
+    /// Feeds every treatment mark to `body` as (drawnDate, value, pillText, carbEntryID).
     /// Single source for both the scrub lookup and the tap hit test.
-    private func forEachTreatmentAnchor(_ body: (Date, Double, String) -> Void) {
+    private func forEachTreatmentAnchor(_ body: (Date, Double, String, String?) -> Void) {
         for group in [model.boluses, model.carbs, model.automaticBoluses, model.bgChecks,
                       model.notes, model.suspends, model.resumes, model.sensorStarts]
         {
             for t in group {
-                body(t.drawnDate, lanedValue(t, maxBG: model.maxBG), t.pillText)
+                body(t.drawnDate, lanedValue(t, maxBG: model.maxBG), t.pillText, t.carbEntryID)
             }
         }
     }
@@ -737,12 +744,13 @@ private struct MainBGChart: View {
             let value: Double
             let text: String
             let distance: TimeInterval
+            var carbEntryID: String? = nil
         }
 
         var captured: [Item] = []
         var nearestTreatment: Item?
-        forEachTreatmentAnchor { date, value, text in
-            let item = Item(date: date, value: value, text: text, distance: abs(date.timeIntervalSince(selected)))
+        forEachTreatmentAnchor { date, value, text, carbEntryID in
+            let item = Item(date: date, value: value, text: text, distance: abs(date.timeIntervalSince(selected)), carbEntryID: carbEntryID)
             if item.distance <= captureWindow {
                 captured.append(item)
             }
@@ -766,7 +774,12 @@ private struct MainBGChart: View {
         }
         if let primary = items.min(by: { $0.distance < $1.distance }) {
             let texts = items.map(\.text) + bandPillTexts(at: selected)
-            return SelectionAnchor(date: primary.date, value: primary.value, texts: texts)
+            return SelectionAnchor(
+                date: primary.date,
+                value: primary.value,
+                texts: texts,
+                carbEntryID: items.compactMap(\.carbEntryID).first
+            )
         }
 
         // Nothing under the finger. Reach for the nearest treatment (data gaps
@@ -774,7 +787,12 @@ private struct MainBGChart: View {
         // at the scrub time.
         if let nearestTreatment, nearestTreatment.distance <= BGChartConfig.selectionTolerance {
             let texts = [nearestTreatment.text] + bandPillTexts(at: selected)
-            return SelectionAnchor(date: nearestTreatment.date, value: nearestTreatment.value, texts: texts)
+            return SelectionAnchor(
+                date: nearestTreatment.date,
+                value: nearestTreatment.value,
+                texts: texts,
+                carbEntryID: nearestTreatment.carbEntryID
+            )
         }
         for band in model.overrides where selected >= band.start && selected <= band.end {
             let midY = (band.yTop + band.yBottom) / 2
@@ -796,20 +814,20 @@ private struct MainBGChart: View {
         var best: SelectionAnchor?
         var bestDistance2 = radius * radius
 
-        func consider(_ date: Date, _ value: Double, _ text: String) {
+        func consider(_ date: Date, _ value: Double, _ text: String, _ carbEntryID: String?) {
             let dx = xPosition(for: date, viewportWidth: viewportWidth) - location.x
             let dy = yPosition(forValue: value) - location.y
             let d2 = dx * dx + dy * dy
             if d2 <= bestDistance2 {
                 bestDistance2 = d2
-                best = SelectionAnchor(date: date, value: value, texts: [text])
+                best = SelectionAnchor(date: date, value: value, texts: [text], carbEntryID: carbEntryID)
             }
         }
 
         forEachTreatmentAnchor(consider)
         if best == nil {
             for p in model.bg {
-                consider(p.date, p.value, bgPillText(for: p))
+                consider(p.date, p.value, bgPillText(for: p), nil)
             }
         }
         if best == nil {
@@ -820,7 +838,7 @@ private struct MainBGChart: View {
         }
         if let best {
             let texts = best.texts + bandPillTexts(at: best.date)
-            return SelectionAnchor(date: best.date, value: best.value, texts: texts)
+            return SelectionAnchor(date: best.date, value: best.value, texts: texts, carbEntryID: best.carbEntryID)
         }
         return nil
     }
@@ -908,6 +926,7 @@ private struct MainBGChart: View {
                     .fill(Color.primary.opacity(0.5))
                     .frame(width: 1, height: plotFrame.height)
                     .position(x: x, y: plotFrame.midY)
+                    .allowsHitTesting(false)
 
                 // Measured size lags the text by one frame; fall back to a
                 // small nominal size until the first measurement lands.
@@ -918,8 +937,19 @@ private struct MainBGChart: View {
                 let above = y - 14 - pillH / 2
                 let fitsBelow = below + pillH / 2 <= plotFrame.maxY - 4
                 let labelY = fitsBelow ? below : max(above, plotFrame.minY + pillH / 2 + 4)
-                PillLabel(texts: anchor.texts, maxWidth: min(300, viewportWidth - 16))
-                    .position(x: labelX, y: labelY)
+                let editableCarbEntryID = onEditCarbEntry == nil ? nil : anchor.carbEntryID
+                PillLabel(
+                    texts: anchor.texts,
+                    maxWidth: min(300, viewportWidth - 16),
+                    isEditable: editableCarbEntryID != nil
+                )
+                .position(x: labelX, y: labelY)
+                .allowsHitTesting(editableCarbEntryID != nil)
+                .onTapGesture {
+                    guard let editableCarbEntryID else { return }
+                    tapped = nil
+                    onEditCarbEntry?(editableCarbEntryID)
+                }
             }
         }
     }
@@ -1627,9 +1657,11 @@ private struct PillLabel: View {
     /// readable over a busy cluster.
     let texts: [String]
     let maxWidth: CGFloat
+    /// Draws the pencil that says the pill can be tapped to edit what it describes.
+    var isEditable: Bool = false
 
     var body: some View {
-        content
+        pill
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(
@@ -1648,6 +1680,20 @@ private struct PillLabel: View {
             // Transparent flexible container: it caps the width the text can
             // wrap to, while the visible pill above still hugs its content.
             .frame(maxWidth: maxWidth)
+    }
+
+    @ViewBuilder
+    private var pill: some View {
+        if isEditable {
+            HStack(spacing: 5) {
+                content
+                Image(systemName: "square.and.pencil")
+                    .font(.caption2)
+                    .foregroundColor(.accentColor)
+            }
+        } else {
+            content
+        }
     }
 
     @ViewBuilder
