@@ -41,6 +41,8 @@ final class BGChartSettings {
         static let historyHours = "BGChart.historyHours"
         static let useGMI = "BGChart.useGMI"
         static let useCoefficientOfVariation = "BGChart.useCoefficientOfVariation"
+        static let inRangeLow = "BGChart.inRangeLow"
+        static let inRangeHigh = "BGChart.inRangeHigh"
     }
 
     private init() {
@@ -61,6 +63,8 @@ final class BGChartSettings {
             Key.historyHours: 24.0,
             Key.useGMI: false,
             Key.useCoefficientOfVariation: false,
+            Key.inRangeLow: 70.0,
+            Key.inRangeHigh: 180.0,
         ])
     }
 
@@ -154,6 +158,25 @@ final class BGChartSettings {
     var useCoefficientOfVariation: Bool {
         get { bool(Key.useCoefficientOfVariation) }
         set { defaults.set(newValue, forKey: Key.useCoefficientOfVariation) }
+    }
+
+    /// The range the chart shades, colours readings by and counts time in, in mg/dL.
+    ///
+    /// This is deliberately *not* Loop's correction range. The correction range is the
+    /// narrow window Loop doses toward — often little more than 1 mmol/L wide — and
+    /// shading only that turns almost every reading yellow or red and makes time in range
+    /// meaningless. LoopFollow keeps the two apart: its chart draws the low and high
+    /// lines from a time-in-range mode — 70–180 mg/dL as standard (3.9–10.0 mmol/L), or
+    /// 70–140 for "tight" — or from the user's own lines. These default to the standard
+    /// range, and Loop's correction range is still drawn, as a darker band inside it.
+    var inRangeLowMGDL: Double {
+        get { double(Key.inRangeLow) }
+        set { defaults.set(newValue, forKey: Key.inRangeLow) }
+    }
+
+    var inRangeHighMGDL: Double {
+        get { double(Key.inRangeHigh) }
+        set { defaults.set(newValue, forKey: Key.inRangeHigh) }
     }
 
     /// Time zone for the x-axis and midnight markers. Loop has no time-zone

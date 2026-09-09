@@ -1175,8 +1175,18 @@ private struct BGChartCanvas: View, Equatable {
 
     @ChartContentBuilder
     private var bgBandMarks: some ChartContent {
-        // Correction range sits behind everything, the way Loop's own glucose
-        // chart draws it.
+        // The range readings are counted in: one band across the whole window, the way
+        // LoopFollow shades it.
+        RectangleMark(
+            xStart: .value("start", windowStart),
+            xEnd: .value("end", windowEnd),
+            yStart: .value("low", model.lowLine),
+            yEnd: .value("high", model.highLine)
+        )
+        .foregroundStyle(Color(.glucoseTintColor).opacity(0.18))
+
+        // Loop's correction range on top of it, so the narrow window Loop doses toward
+        // reads as a darker core inside the wider range rather than replacing it.
         ForEach(model.targetRanges.filter { $0.end >= windowStart && $0.start <= windowEnd }) { band in
             RectangleMark(
                 xStart: .value("start", band.start),

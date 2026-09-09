@@ -1143,17 +1143,17 @@ final class StatusTableViewController: LoopChartsTableViewController {
         return overrides
     }
 
-    /// Time in range over the last 24 hours, using the correction range in
-    /// force now as the boundary — the same thresholds the chart colours by.
+    /// Time in range over the last 24 hours, counted against the same thresholds the
+    /// chart shades and colours by — the in-range range, not the correction range.
     private func updateGlucoseStats(now: Date) {
         let windowStart = now.addingTimeInterval(-.hours(24))
         let samples = cachedChartGlucoseSamples.filter { $0.startDate >= windowStart }
 
-        let range = deviceManager.loopManager.settings.glucoseTargetRangeSchedule?.quantityRange(at: now)
-        let low = range?.lowerBound.doubleValue(for: .milligramsPerDeciliter) ?? 70
-        let high = range?.upperBound.doubleValue(for: .milligramsPerDeciliter) ?? 180
-
-        let stats = GlucoseStats(samples: samples, low: low, high: high)
+        let stats = GlucoseStats(
+            samples: samples,
+            low: BGChartSettings.shared.inRangeLowMGDL,
+            high: BGChartSettings.shared.inRangeHighMGDL
+        )
         statsDisplayModel.update(
             with: stats,
             useGMI: BGChartSettings.shared.useGMI,

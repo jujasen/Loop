@@ -45,7 +45,10 @@ extension BGChartModel {
         // prediction does.
         let domainEnd = max(data.predictionEnd ?? now, now.addingTimeInterval(15 * 60))
 
-        let thresholds = Self.thresholds(for: data.targetRangeSchedule, at: now)
+        // The shaded range, the reading colours and the statistics all come from the
+        // in-range thresholds — not from the correction range, which is a much narrower
+        // window and is drawn separately. See `BGChartSettings.inRangeLowMGDL`.
+        let thresholds = (low: settings.inRangeLowMGDL, high: settings.inRangeHighMGDL)
         lowLine = thresholds.low
         highLine = thresholds.high
 
@@ -276,18 +279,6 @@ extension BGChartModel {
     }
 
     // MARK: - Derivations
-
-    /// Colour thresholds, taken from the correction range in force right now so
-    /// the chart agrees with what Loop is aiming for. Falls back to the usual
-    /// 70–180 mg/dL when no schedule is set up yet.
-    private static func thresholds(for schedule: GlucoseRangeSchedule?, at date: Date) -> (low: Double, high: Double) {
-        guard let schedule else { return (70, 180) }
-        let range = schedule.quantityRange(at: date)
-        return (
-            range.lowerBound.doubleValue(for: .milligramsPerDeciliter),
-            range.upperBound.doubleValue(for: .milligramsPerDeciliter)
-        )
-    }
 
     private static func color(forMGDL value: Double, thresholds: (low: Double, high: Double)) -> Color {
         if value >= thresholds.high { return .yellow }
