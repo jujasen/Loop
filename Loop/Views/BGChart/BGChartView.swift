@@ -1205,18 +1205,11 @@ private struct BGChartCanvas: View, Equatable {
 
     @ChartContentBuilder
     private var bgBandMarks: some ChartContent {
-        // The range readings are counted in: one band across the whole window, the way
-        // LoopFollow shades it.
-        RectangleMark(
-            xStart: .value("start", windowStart),
-            xEnd: .value("end", windowEnd),
-            yStart: .value("low", model.lowLine),
-            yEnd: .value("high", model.highLine)
-        )
-        .foregroundStyle(Color(.glucoseTintColor).opacity(0.18))
-
-        // Loop's correction range on top of it, so the narrow window Loop doses toward
-        // reads as a darker core inside the wider range rather than replacing it.
+        // The range readings are counted in is marked by the two lines at its edges and
+        // by the colour of the readings themselves — see `ruleMarks`. It is deliberately
+        // not shaded: a tint over that much of the plot competes with the curve.
+        //
+        // Loop's correction range is, since it is narrow enough to read as a target.
         ForEach(model.targetRanges.filter { $0.end >= windowStart && $0.start <= windowEnd }) { band in
             RectangleMark(
                 xStart: .value("start", band.start),
