@@ -82,7 +82,7 @@ final class BolusEntryViewModel: ObservableObject {
 
     var authenticationHandler: (String) async -> Bool = { message in
         return await withCheckedContinuation { continuation in
-            LocalAuthentication.deviceOwnerCheck(message) { result in
+            LocalAuthentication.devicePasscodeCheck(message) { result in
                 switch result {
                 case .success:
                     continuation.resume(returning: true)

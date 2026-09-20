@@ -46,7 +46,7 @@ protocol ManualDoseViewModelDelegate: AnyObject {
 
 final class ManualEntryDoseViewModel: ObservableObject {
 
-    var authenticate: AuthenticationChallenge = LocalAuthentication.deviceOwnerCheck
+    var authenticate: AuthenticationChallenge = LocalAuthentication.devicePasscodeCheck
 
     // MARK: - State
 

@@ -40,7 +40,7 @@ protocol SimpleBolusViewModelDelegate: AnyObject {
 
 class SimpleBolusViewModel: ObservableObject {
     
-    var authenticate: AuthenticationChallenge = LocalAuthentication.deviceOwnerCheck
+    var authenticate: AuthenticationChallenge = LocalAuthentication.devicePasscodeCheck
 
     enum Alert: Int {
         case carbEntryPersistenceFailure
