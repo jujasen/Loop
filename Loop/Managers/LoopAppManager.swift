@@ -281,6 +281,12 @@ class LoopAppManager: NSObject {
             .assign(to: \.automaticDosingStatus.automaticDosingEnabled, on: self)
             .store(in: &cancellables)
 
+        // Shares favorite foods with the caregiver app through Nightscout. It listens for the
+        // end of each loop cycle, so it keeps working while the app is in the background.
+        Task { @MainActor in
+            FavoriteFoodSyncManager.shared.start()
+        }
+
         state = state.next
     }
 

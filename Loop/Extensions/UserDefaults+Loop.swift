@@ -18,6 +18,7 @@ extension UserDefaults {
         case inFlightAutomaticDose = "com.loopkit.Loop.inFlightAutomaticDose"
         case favoriteFoods = "com.loopkit.Loop.favoriteFoods"
         case favoriteFoodFolders = "com.loopkit.Loop.favoriteFoodFolders"
+        case favoriteFoodTombstones = "com.loopkit.Loop.favoriteFoodTombstones"
     }
 
     var legacyPumpManagerRawValue: PumpManager.RawValue? {
@@ -101,13 +102,69 @@ extension UserDefaults {
             return (try? decoder.decode([StoredFavoriteFood].self, from: data)) ?? []
         }
         set {
-            do {
-                let encoder = JSONEncoder()
-                let data = try encoder.encode(newValue)
-                set(data, forKey: Key.favoriteFoods.rawValue)
-            } catch {
-                assertionFailure("Unable to encode stored favorite foods")
+            // Every screen that edits favorites writes the whole list back through here, so this
+            // is where an edit gets its timestamp and a removal leaves a tombstone behind. Both
+            // are what lets Nightscout tell this phone's changes apart from the caregiver's.
+            let stamped = FavoriteFoodEditJournal.stamp(newValue, previous: favoriteFoods)
+            let tombstones = FavoriteFoodEditJournal.tombstones(
+                previous: favoriteFoods,
+                next: stamped,
+                existing: favoriteFoodTombstones
+            )
+
+            writeFavoriteFoods(stamped)
+            if tombstones != favoriteFoodTombstones {
+                favoriteFoodTombstones = tombstones
             }
+
+            NotificationCenter.default.post(name: .favoriteFoodsEditedLocally, object: nil)
+        }
+    }
+
+    /// Favorites deleted here, kept until the deletion has reached Nightscout.
+    var favoriteFoodTombstones: [FavoriteFoodTombstone] {
+        get {
+            guard let data = object(forKey: Key.favoriteFoodTombstones.rawValue) as? Data else {
+                return []
+            }
+            return (try? JSONDecoder().decode([FavoriteFoodTombstone].self, from: data)) ?? []
+        }
+        set {
+            do {
+                set(try JSONEncoder().encode(newValue), forKey: Key.favoriteFoodTombstones.rawValue)
+            } catch {
+                assertionFailure("Unable to encode favorite food tombstones")
+            }
+        }
+    }
+
+    /// Stores what the Nightscout sync worked out, which already carries the right timestamps —
+    /// stamping it again would make every sync look like a local edit.
+    func applySyncedFavoriteFoods(foods: [StoredFavoriteFood], folders: [FavoriteFoodFolder], tombstones: [FavoriteFoodTombstone]) {
+        writeFavoriteFoods(foods)
+        // Written past the folder setter: a folder renamed on the other phone is not an edit
+        // made here, and must not be stamped as one.
+        if folders != favoriteFoodFolders {
+            writeFavoriteFoodFolders(folders)
+        }
+        if tombstones != favoriteFoodTombstones {
+            favoriteFoodTombstones = tombstones
+        }
+    }
+
+    private func writeFavoriteFoods(_ foods: [StoredFavoriteFood]) {
+        do {
+            set(try JSONEncoder().encode(foods), forKey: Key.favoriteFoods.rawValue)
+        } catch {
+            assertionFailure("Unable to encode stored favorite foods")
+        }
+    }
+
+    private func writeFavoriteFoodFolders(_ folders: [FavoriteFoodFolder]) {
+        do {
+            set(try JSONEncoder().encode(folders), forKey: Key.favoriteFoodFolders.rawValue)
+        } catch {
+            assertionFailure("Unable to encode favorite food folders")
         }
     }
 
@@ -120,12 +177,21 @@ extension UserDefaults {
             return (try? decoder.decode([FavoriteFoodFolder].self, from: data)) ?? []
         }
         set {
-            do {
-                let encoder = JSONEncoder()
-                let data = try encoder.encode(newValue)
-                set(data, forKey: Key.favoriteFoodFolders.rawValue)
-            } catch {
-                assertionFailure("Unable to encode favorite food folders")
+            // Renaming a folder changes how its foods read, and a folder only travels to
+            // Nightscout as part of them, so the rename rides along on the foods.
+            let currentFoods = favoriteFoods
+            let stampedFoods = FavoriteFoodEditJournal.stampFoods(
+                currentFoods,
+                inFoldersChangedFrom: favoriteFoodFolders,
+                to: newValue
+            )
+
+            writeFavoriteFoodFolders(newValue)
+
+            // `StoredFavoriteFood` compares by id alone, so the timestamps are checked directly.
+            if zip(currentFoods, stampedFoods).contains(where: { $0.updatedAt != $1.updatedAt }) {
+                writeFavoriteFoods(stampedFoods)
+                NotificationCenter.default.post(name: .favoriteFoodsEditedLocally, object: nil)
             }
         }
     }

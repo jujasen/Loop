@@ -14,6 +14,7 @@ struct FavoriteFoodsView: View {
     @Environment(\.dismissAction) private var dismiss
     
     @StateObject private var viewModel = FavoriteFoodsViewModel()
+    @ObservedObject private var syncManager = FavoriteFoodSyncManager.shared
 
     @State private var foodToConfirmDeleteId: String? = nil
     @State private var editMode: EditMode = .inactive
@@ -65,6 +66,10 @@ struct FavoriteFoodsView: View {
                             .listRowInsets(EdgeInsets())
                             .listRowSeparator(.hidden)
                     }
+
+                    if syncManager.isConfigured {
+                        sharingSection
+                    }
                 }
                 .insetGroupedListStyle()
                 .searchable(text: $viewModel.searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: Text("Search foods", comment: "Placeholder for the favorite foods search field"))
@@ -98,6 +103,10 @@ struct FavoriteFoodsView: View {
                 foodToConfirmDeleteId = nil
             }
         }
+        .task {
+            // Opening the list is the moment to show what the caregiver app has been up to.
+            await syncManager.sync()
+        }
     }
     
     /// Tapping a food opens its editor directly. `editMode` is for the list itself —
@@ -125,6 +134,43 @@ struct FavoriteFoodsView: View {
 }
 
 extension FavoriteFoodsView {
+    /// This list is shared with the caregiver app through Nightscout, so it is worth saying so —
+    /// and worth showing when the two last agreed.
+    private var sharingSection: some View {
+        Section {
+            HStack {
+                Label(String(localized: "Shared with caregiver app", comment: "Row title for favorite food sharing through Nightscout"), systemImage: "arrow.triangle.2.circlepath")
+
+                Spacer()
+
+                Group {
+                    if syncManager.isSyncing {
+                        Text("Syncing…", comment: "Status shown while favorite foods are being shared")
+                    }
+                    else if let error = syncManager.lastError {
+                        Text(error)
+                            .foregroundColor(.red)
+                    }
+                    else if let lastSync = syncManager.lastSync {
+                        Text(lastSync, format: .dateTime.hour().minute())
+                    }
+                    else {
+                        Text("Not synced yet", comment: "Status shown before favorite foods have been shared once")
+                    }
+                }
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.trailing)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                Task { await syncManager.sync() }
+            }
+        } footer: {
+            Text("Favorite foods are kept in step with your caregiver's app through your Nightscout site.", comment: "Footer explaining favorite food sharing")
+        }
+    }
+
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 10) {
             Image(systemName: "takeoutbag.and.cup.and.straw.fill")

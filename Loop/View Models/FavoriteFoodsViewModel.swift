@@ -53,6 +53,7 @@ final class FavoriteFoodsViewModel: ObservableObject {
     init() {
         observeFavoriteFoodChange()
         observeFolderChange()
+        observeSyncChange()
     }
 
     // MARK: - Grouping & search
@@ -243,6 +244,30 @@ final class FavoriteFoodsViewModel: ObservableObject {
             .removeDuplicates()
             .sink { newValue in
                 UserDefaults.standard.favoriteFoodFolders = newValue
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Picks up foods the caregiver app changed while this screen is open.
+    private func observeSyncChange() {
+        NotificationCenter.default.publisher(for: .favoriteFoodsChangedBySync)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+
+                let stored = UserDefaults.standard.favoriteFoods
+                let storedFolders = UserDefaults.standard.favoriteFoodFolders
+
+                // Assigning would echo straight back out through the persistence sinks above,
+                // so only a real difference is worth taking.
+                if self.favoriteFoods.map(\.id) != stored.map(\.id)
+                    || zip(self.favoriteFoods, stored).contains(where: { !$0.hasSameContent(as: $1) })
+                {
+                    self.favoriteFoods = stored
+                }
+                if self.folders != storedFolders {
+                    self.folders = storedFolders
+                }
             }
             .store(in: &cancellables)
     }
