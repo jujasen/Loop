@@ -2533,6 +2533,19 @@ extension LoopDataManager: ServicesManagerDelegate {
         }
     }
     
+    //Therapy Settings
+
+    func updateTherapySchedules(carbRatioSchedule: CarbRatioSchedule?, insulinSensitivitySchedule: InsulinSensitivitySchedule?) async {
+        mutateSettings { settings in
+            if let carbRatioSchedule {
+                settings.carbRatioSchedule = carbRatioSchedule
+            }
+            if let insulinSensitivitySchedule {
+                settings.insulinSensitivitySchedule = insulinSensitivitySchedule
+            }
+        }
+    }
+
     //Carb Entry
     
     func deliverCarbs(amountInGrams: Double, absorptionTime: TimeInterval?, foodType: String?, startDate: Date?) async throws {

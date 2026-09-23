@@ -201,6 +201,49 @@ extension NotificationManager {
         UNUserNotificationCenter.current().add(request)
     }
     
+    @MainActor
+    static func sendRemoteTherapySettingsNotification(for change: RemoteTherapySettingsChange) {
+        let notification = UNMutableNotificationContent()
+        notification.title = remoteTherapySettingsNotificationTitle(for: change)
+        notification.body = "Success!"
+        notification.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: LoopNotificationCategory.remoteTherapySettings.rawValue,
+            content: notification,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    @MainActor
+    static func sendRemoteTherapySettingsFailureNotification(for error: Error, change: RemoteTherapySettingsChange) {
+        let notification = UNMutableNotificationContent()
+        notification.title = remoteTherapySettingsNotificationTitle(for: change)
+        notification.body = error.localizedDescription
+        notification.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: LoopNotificationCategory.remoteTherapySettingsFailure.rawValue,
+            content: notification,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private static func remoteTherapySettingsNotificationTitle(for change: RemoteTherapySettingsChange) -> String {
+        switch (change.carbRatioItems != nil, change.insulinSensitivityItems != nil) {
+        case (true, true):
+            return NSLocalizedString("Remote Change: Carb Ratios and Insulin Sensitivities", comment: "The notification title for a remote change of both carb ratio and insulin sensitivity schedules.")
+        case (true, false):
+            return NSLocalizedString("Remote Change: Carb Ratios", comment: "The notification title for a remote change of the carb ratio schedule.")
+        default:
+            return NSLocalizedString("Remote Change: Insulin Sensitivities", comment: "The notification title for a remote change of the insulin sensitivity schedule.")
+        }
+    }
+
     static func sendMissedMealNotification(mealStart: Date, amountInGrams: Double, delay: TimeInterval? = nil) {
         let notification = UNMutableNotificationContent()
         /// Notifications should expire after the missed meal is no longer relevant

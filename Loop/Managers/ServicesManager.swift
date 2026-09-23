@@ -7,6 +7,7 @@
 //
 
 import os.log
+import HealthKit
 import LoopKit
 import LoopKitUI
 import LoopCore
@@ -239,6 +240,7 @@ public protocol ServicesManagerDelegate: AnyObject {
     func enactOverride(name: String, duration: TemporaryScheduleOverride.Duration?, remoteAddress: String) async throws
     func cancelCurrentOverride() async throws
     func deliverCarbs(amountInGrams: Double, absorptionTime: TimeInterval?, foodType: String?, startDate: Date?) async throws
+    func updateTherapySchedules(carbRatioSchedule: CarbRatioSchedule?, insulinSensitivitySchedule: InsulinSensitivitySchedule?) async
 }
 
 // MARK: - StatefulPluggableDelegate
@@ -354,6 +356,83 @@ extension ServicesManager: ServiceDelegate {
         }
     }
     
+    func applyRemoteTherapySettings(_ change: RemoteTherapySettingsChange) async throws {
+        do {
+            let (carbRatioSchedule, insulinSensitivitySchedule) = try Self.schedules(for: change, replacing: settingsManager.loopSettings)
+            await servicesManagerDelegate?.updateTherapySchedules(carbRatioSchedule: carbRatioSchedule, insulinSensitivitySchedule: insulinSensitivitySchedule)
+            log.default("Applied remote therapy settings (carb ratios: %{public}@, insulin sensitivities: %{public}@)",
+                        String(describing: carbRatioSchedule?.items.count), String(describing: insulinSensitivitySchedule?.items.count))
+            await NotificationManager.sendRemoteTherapySettingsNotification(for: change)
+            await remoteDataServicesManager.triggerUpload(for: .settings)
+        } catch {
+            await NotificationManager.sendRemoteTherapySettingsFailureNotification(for: error, change: change)
+            throw error
+        }
+    }
+
+    /// Builds the schedules a remote change asks for, holding each value to the same absolute limits
+    /// as Loop's own settings editors. A schedule keeps the time zone — and, for insulin sensitivity,
+    /// the glucose unit — of the schedule it replaces.
+    static func schedules(for change: RemoteTherapySettingsChange, replacing current: LoopSettings) throws -> (CarbRatioSchedule?, InsulinSensitivitySchedule?) {
+        var carbRatioSchedule: CarbRatioSchedule?
+        if let items = change.carbRatioItems {
+            let gramsPerUnit = HKUnit.gram().unitDivided(by: .internationalUnit())
+            for item in items {
+                let quantity = HKQuantity(unit: gramsPerUnit, doubleValue: item.value)
+                guard Guardrail.carbRatio.absoluteBounds.contains(quantity) else {
+                    throw TherapySettingsActionError.carbRatioOutOfRange(item.value)
+                }
+            }
+            carbRatioSchedule = CarbRatioSchedule(unit: .gram(), dailyItems: items, timeZone: current.carbRatioSchedule?.timeZone)
+            guard carbRatioSchedule != nil else { throw RemoteTherapySettingsError.invalidSchedule }
+        }
+
+        var insulinSensitivitySchedule: InsulinSensitivitySchedule?
+        if let items = change.insulinSensitivityItems, let sentUnit = change.insulinSensitivityUnit {
+            let storedUnit = current.insulinSensitivitySchedule?.unit ?? sentUnit
+            let storedItems = try items.map { item -> RepeatingScheduleValue<Double> in
+                let quantity = HKQuantity(unit: sentUnit.unitDivided(by: .internationalUnit()), doubleValue: item.value)
+                guard Guardrail.insulinSensitivity.absoluteBounds.contains(quantity) else {
+                    throw TherapySettingsActionError.insulinSensitivityOutOfRange(item.value, sentUnit)
+                }
+                let value = HKQuantity(unit: sentUnit, doubleValue: item.value).doubleValue(for: storedUnit, withRounding: sentUnit != storedUnit)
+                return RepeatingScheduleValue(startTime: item.startTime, value: value)
+            }
+            insulinSensitivitySchedule = InsulinSensitivitySchedule(unit: storedUnit, dailyItems: storedItems, timeZone: current.insulinSensitivitySchedule?.timeZone)
+            guard insulinSensitivitySchedule != nil else { throw RemoteTherapySettingsError.invalidSchedule }
+        }
+
+        return (carbRatioSchedule, insulinSensitivitySchedule)
+    }
+
+    enum TherapySettingsActionError: LocalizedError, Equatable {
+
+        case carbRatioOutOfRange(Double)
+        case insulinSensitivityOutOfRange(Double, HKUnit)
+
+        var errorDescription: String? {
+            switch self {
+            case .carbRatioOutOfRange(let value):
+                let bounds = Guardrail.carbRatio.absoluteBounds
+                let gramsPerUnit = HKUnit.gram().unitDivided(by: .internationalUnit())
+                return String(format: NSLocalizedString("Carb ratio %1$@ g/U is outside the allowed %2$@–%3$@ g/U", comment: "Therapy settings error description: carb ratio outside guardrails (1: value, 2: minimum, 3: maximum)."),
+                              Self.format(value), Self.format(bounds.lowerBound.doubleValue(for: gramsPerUnit)), Self.format(bounds.upperBound.doubleValue(for: gramsPerUnit)))
+            case .insulinSensitivityOutOfRange(let value, let unit):
+                let bounds = Guardrail.insulinSensitivity.absoluteBounds
+                let perUnit = unit.unitDivided(by: .internationalUnit())
+                return String(format: NSLocalizedString("Insulin sensitivity %1$@ %4$@/U is outside the allowed %2$@–%3$@ %4$@/U", comment: "Therapy settings error description: insulin sensitivity outside guardrails (1: value, 2: minimum, 3: maximum, 4: glucose unit)."),
+                              Self.format(value), Self.format(bounds.lowerBound.doubleValue(for: perUnit)), Self.format(bounds.upperBound.doubleValue(for: perUnit)), unit.shortLocalizedUnitString(avoidLineBreaking: false))
+            }
+        }
+
+        private static func format(_ value: Double) -> String {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.maximumFractionDigits = 1
+            return formatter.string(from: value as NSNumber) ?? "\(value)"
+        }
+    }
+
     enum BolusActionError: LocalizedError {
         
         case invalidBolus
