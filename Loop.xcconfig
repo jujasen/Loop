@@ -51,6 +51,10 @@ URL_SCHEME_NAME = $(MAIN_APP_DISPLAY_NAME)
 // Version [DEFAULT]
 #include? "Version.xcconfig"
 
+// OpenAI key for estimating a described meal on the carb entry screen. Empty hides the feature.
+// CI writes it into LoopConfigOverride.xcconfig from the OPENAI_API_KEY secret.
+OPENAI_API_KEY =
+
 // Optional overrides
 #include? "LoopOverride.xcconfig"
 #include? "../LoopConfigOverride.xcconfig"

@@ -27,8 +27,8 @@ struct AddEditFavoriteFoodView: View {
     }
     
     /// Initializer for presenting the `AddEditFavoriteFoodView` prepopulated from the `CarbEntryView`
-    init(carbsQuantity: Double?, foodType: String, absorptionTime: TimeInterval, folders: [FavoriteFoodFolder] = [], onSave: @escaping (NewFavoriteFood) -> Void) {
-        self._viewModel = StateObject(wrappedValue: AddEditFavoriteFoodViewModel(carbsQuantity: carbsQuantity, foodType: foodType, absorptionTime: absorptionTime, folders: folders, onSave: onSave))
+    init(name: String = "", carbsQuantity: Double?, foodType: String, absorptionTime: TimeInterval, folders: [FavoriteFoodFolder] = [], onSave: @escaping (NewFavoriteFood) -> Void) {
+        self._viewModel = StateObject(wrappedValue: AddEditFavoriteFoodViewModel(name: name, carbsQuantity: carbsQuantity, foodType: foodType, absorptionTime: absorptionTime, folders: folders, onSave: onSave))
     }
     
     var body: some View {

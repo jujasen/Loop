@@ -85,6 +85,17 @@ final class CarbEntryViewModel: ObservableObject {
     /// `id` of the amount applied from the selected favorite food, for foods that have several.
     @Published var selectedPortionID: String? = nil
 
+    /// Nil when the app was built without an OpenAI key; the meal estimate card is then hidden.
+    let mealEstimator: MealCarbEstimator?
+    @Published var mealDescription = ""
+    @Published var mealFollowUp = ""
+    @Published private(set) var mealEstimate: MealCarbEstimate?
+    @Published private(set) var isEstimatingMeal = false
+    @Published var mealEstimateError: String?
+    /// Everything said about this meal so far, so a follow-up re-evaluates the whole meal.
+    private var mealConversation: [MealCarbEstimator.Message] = []
+    private var mealEstimateTask: Task<Void, Never>?
+
     lazy var carbFormatter = QuantityFormatter(for: preferredCarbUnit)
     lazy var absorptionTimeFormatter: DateComponentsFormatter = {
         let formatter = DateComponentsFormatter()
@@ -98,8 +109,9 @@ final class CarbEntryViewModel: ObservableObject {
     private lazy var cancellables = Set<AnyCancellable>()
     
     /// Initalizer for when`CarbEntryView` is presented from the home screen
-    init(delegate: CarbEntryViewModelDelegate) {
+    init(delegate: CarbEntryViewModelDelegate, mealEstimator: MealCarbEstimator? = MealCarbEstimator.shared) {
         self.delegate = delegate
+        self.mealEstimator = mealEstimator
         self.absorptionTime = delegate.defaultAbsorptionTimes.medium
         self.defaultAbsorptionTimes = delegate.defaultAbsorptionTimes
         self.shouldBeginEditingQuantity = true
@@ -110,8 +122,9 @@ final class CarbEntryViewModel: ObservableObject {
     }
     
     /// Initalizer for when`CarbEntryView` has an entry to edit
-    init(delegate: CarbEntryViewModelDelegate, originalCarbEntry: StoredCarbEntry) {
+    init(delegate: CarbEntryViewModelDelegate, originalCarbEntry: StoredCarbEntry, mealEstimator: MealCarbEstimator? = MealCarbEstimator.shared) {
         self.delegate = delegate
+        self.mealEstimator = mealEstimator
         self.originalCarbEntry = originalCarbEntry
         self.defaultAbsorptionTimes = delegate.defaultAbsorptionTimes
 
@@ -315,6 +328,78 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionTime = food.absorptionTime
         self.absorptionTimeWasEdited = true
         self.usesCustomFoodType = true
+    }
+
+    // MARK: - Meal Estimate
+    var canEstimateMeal: Bool {
+        !isEstimatingMeal && !mealDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var canRefineMealEstimate: Bool {
+        !isEstimatingMeal && mealEstimate != nil && !mealFollowUp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Starts a fresh estimate from the description, forgetting any earlier follow-ups.
+    func estimateMeal() {
+        let description = mealDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !description.isEmpty else { return }
+        requestMealEstimate(conversation: [MealCarbEstimator.Message(role: "user", content: description)])
+    }
+
+    /// Adds what the caregiver forgot and asks for a new estimate of the whole meal.
+    func refineMealEstimate() {
+        let followUp = mealFollowUp.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !followUp.isEmpty, let mealEstimate else { return }
+        requestMealEstimate(conversation: mealConversation + [
+            MealCarbEstimator.assistantMessage(for: mealEstimate),
+            MealCarbEstimator.Message(role: "user", content: "More information about the same meal: \(followUp)"),
+        ])
+    }
+
+    /// Forgets the estimate. The fields it filled in stay as they are.
+    func clearMealEstimate() {
+        mealEstimateTask?.cancel()
+        mealEstimateTask = nil
+        isEstimatingMeal = false
+        mealEstimate = nil
+        mealEstimateError = nil
+        mealConversation = []
+        mealDescription = ""
+        mealFollowUp = ""
+    }
+
+    private func requestMealEstimate(conversation: [MealCarbEstimator.Message]) {
+        guard let mealEstimator else { return }
+        mealEstimateTask?.cancel()
+        isEstimatingMeal = true
+        mealEstimateError = nil
+
+        mealEstimateTask = Task { @MainActor [weak self] in
+            do {
+                let estimate = try await mealEstimator.estimate(conversation: conversation)
+                guard let self, !Task.isCancelled else { return }
+                self.mealConversation = conversation
+                self.mealEstimate = estimate
+                self.mealFollowUp = ""
+                self.isEstimatingMeal = false
+                self.apply(estimate)
+            } catch {
+                guard let self, !Task.isCancelled else { return }
+                self.isEstimatingMeal = false
+                self.mealEstimateError = error.localizedDescription
+            }
+        }
+    }
+
+    func apply(_ estimate: MealCarbEstimate) {
+        selectedFavoriteFoodIndex = -1
+        selectedPortionID = nil
+        absorptionEditIsProgrammatic = true
+        carbsQuantity = estimate.roundedCarbs
+        foodType = estimate.foodTypeEmoji
+        usesCustomFoodType = true
+        absorptionTime = estimate.absorptionTime(in: absorptionRimesRange)
+        absorptionTimeWasEdited = true
     }
 
     // MARK: - Utility

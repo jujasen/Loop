@@ -94,8 +94,9 @@ final class AddEditFavoriteFoodViewModel: ObservableObject {
         }
     }
     
-    init(carbsQuantity: Double?, foodType: String, absorptionTime: TimeInterval, folders: [FavoriteFoodFolder] = [], onSave: @escaping (NewFavoriteFood) -> ()) {
+    init(name: String = "", carbsQuantity: Double?, foodType: String, absorptionTime: TimeInterval, folders: [FavoriteFoodFolder] = [], onSave: @escaping (NewFavoriteFood) -> ()) {
         self.onSave = onSave
+        self.name = name
         self.onDelete = nil
         self.folders = folders
         self.foodType = foodType

@@ -3172,6 +3172,28 @@
         }
       }
     },
+    "Add or correct something…" : {
+      "comment" : "Placeholder for adding more information to a meal estimate",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til eller rett noe …"
+          }
+        }
+      }
+    },
+    "AI estimate — check the numbers before you continue." : {
+      "comment" : "Reminder under the meal estimate that the numbers must be reviewed",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-anslag – sjekk tallene før du går videre."
+          }
+        }
+      }
+    },
     "Automatic Bolus" : {
       "comment" : "Chart label for a bolus Loop gave on its own",
       "localizations" : {
@@ -3234,6 +3256,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "CV:"
+          }
+        }
+      }
+    },
+    "DESCRIBE THE MEAL" : {
+      "comment" : "Section title for the meal estimate card on the carb entry screen",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BESKRIV MÅLTIDET"
           }
         }
       }
@@ -3326,6 +3359,28 @@
         }
       }
     },
+    "Estimate carbs" : {
+      "comment" : "Button label asking AI to estimate the carbs of the described meal",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beregn karbo"
+          }
+        }
+      }
+    },
+    "Fairly sure" : {
+      "comment" : "Meal estimate confidence: medium",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganske sikker"
+          }
+        }
+      }
+    },
     "Give this food a name to save it." : {
       "comment" : "Reason the save button is disabled on the favorite food screen when the name is missing",
       "localizations" : {
@@ -3344,6 +3399,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "GMI:"
+          }
+        }
+      }
+    },
+    "Hide calculation" : {
+      "comment" : "Button hiding the item breakdown of a meal estimate",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skjul utregning"
           }
         }
       }
@@ -3458,6 +3524,28 @@
         }
       }
     },
+    "Show calculation" : {
+      "comment" : "Button showing the item breakdown of a meal estimate",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis utregning"
+          }
+        }
+      }
+    },
+    "Start over" : {
+      "comment" : "Button label clearing the meal estimate on the carb entry screen",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start på nytt"
+          }
+        }
+      }
+    },
     "Std Dev:" : {
       "comment" : "Statistics label for standard deviation",
       "localizations" : {
@@ -3469,6 +3557,17 @@
         }
       }
     },
+    "Sure" : {
+      "comment" : "Meal estimate confidence: high",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sikker"
+          }
+        }
+      }
+    },
     "Target" : {
       "comment" : "Chart label for a correction range band",
       "localizations" : {
@@ -3476,6 +3575,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mål"
+          }
+        }
+      }
+    },
+    "The estimate could not be read. Try again." : {
+      "comment" : "Error shown when the meal estimate response could not be parsed",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klarte ikke å lese beregningen. Prøv igjen."
+          }
+        }
+      }
+    },
+    "Unsure" : {
+      "comment" : "Meal estimate confidence: low",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usikker"
+          }
+        }
+      }
+    },
+    "Update estimate" : {
+      "comment" : "Button label asking AI to re-evaluate the meal with the added information",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oppdater beregning"
+          }
+        }
+      }
+    },
+    "E.g. fish gratin with potatoes" : {
+      "comment" : "Placeholder for the free-text meal description on the carb entry screen",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "F.eks. fiskegrateng med poteter"
           }
         }
       }

@@ -70,6 +70,11 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
 
                 mainCard
                     .padding(.top, 8)
+
+                if viewModel.mealEstimator != nil {
+                    MealEstimateCard(viewModel: viewModel)
+                        .padding(.top, 16)
+                }
                 
                 continueActionButton
                 
@@ -88,7 +93,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         }
         .alert(item: $viewModel.alert, content: alert(for:))
         .sheet(isPresented: $showAddFavoriteFood, onDismiss: clearExpandedRow) {
-            AddEditFavoriteFoodView(carbsQuantity: $viewModel.carbsQuantity.wrappedValue, foodType: $viewModel.foodType.wrappedValue, absorptionTime: $viewModel.absorptionTime.wrappedValue, folders: viewModel.favoriteFoodFolders, onSave: onFavoriteFoodSave(_:))
+            AddEditFavoriteFoodView(name: viewModel.mealEstimate?.name ?? "", carbsQuantity: $viewModel.carbsQuantity.wrappedValue, foodType: $viewModel.foodType.wrappedValue, absorptionTime: $viewModel.absorptionTime.wrappedValue, folders: viewModel.favoriteFoodFolders, onSave: onFavoriteFoodSave(_:))
         }
         .sheet(isPresented: $showFavoriteFoodPicker) {
             FavoriteFoodPickerView(
