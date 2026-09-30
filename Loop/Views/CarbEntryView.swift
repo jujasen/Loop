@@ -93,7 +93,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         }
         .alert(item: $viewModel.alert, content: alert(for:))
         .sheet(isPresented: $showAddFavoriteFood, onDismiss: clearExpandedRow) {
-            AddEditFavoriteFoodView(name: viewModel.mealEstimate?.name ?? "", carbsQuantity: $viewModel.carbsQuantity.wrappedValue, foodType: $viewModel.foodType.wrappedValue, absorptionTime: $viewModel.absorptionTime.wrappedValue, folders: viewModel.favoriteFoodFolders, onSave: onFavoriteFoodSave(_:))
+            AddEditFavoriteFoodView(name: viewModel.foodName, carbsQuantity: $viewModel.carbsQuantity.wrappedValue, foodType: $viewModel.foodType.wrappedValue, absorptionTime: $viewModel.absorptionTime.wrappedValue, folders: viewModel.favoriteFoodFolders, onSave: onFavoriteFoodSave(_:))
         }
         .sheet(isPresented: $showFavoriteFoodPicker) {
             FavoriteFoodPickerView(

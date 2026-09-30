@@ -68,6 +68,9 @@ final class CarbEntryViewModel: ObservableObject {
     @Published var foodType = ""
     @Published var selectedDefaultAbsorptionTimeEmoji: String = ""
     @Published var usesCustomFoodType = false
+    /// The dish's name, when a favorite food or an AI meal estimate filled in the entry. It is
+    /// saved after the emoji in `foodType` (see `CarbFoodLabel`), so the chart can show it.
+    @Published var foodName = ""
     @Published var absorptionTimeWasEdited = false // if true, selecting an emoji will not alter the absorption time
     private var absorptionEditIsProgrammatic = false // needed for when absorption time is changed due to favorite food selection, so that absorptionTimeWasEdited does not get set to true
 
@@ -130,7 +133,9 @@ final class CarbEntryViewModel: ObservableObject {
 
         self.carbsQuantity = originalCarbEntry.quantity.doubleValue(for: preferredCarbUnit)
         self.time = originalCarbEntry.startDate
-        self.foodType = originalCarbEntry.foodType ?? ""
+        let label = CarbFoodLabel(foodType: originalCarbEntry.foodType)
+        self.foodType = label.emoji
+        self.foodName = label.name
         self.absorptionTime = originalCarbEntry.absorptionTime ?? .hours(3)
         self.absorptionTimeWasEdited = true
         self.usesCustomFoodType = true
@@ -144,7 +149,8 @@ final class CarbEntryViewModel: ObservableObject {
     
     private var updatedCarbEntry: NewCarbEntry? {
         if let quantity = carbsQuantity, quantity != 0 {
-            if let o = originalCarbEntry, o.quantity.doubleValue(for: preferredCarbUnit) == quantity && o.startDate == time && o.foodType == foodType && o.absorptionTime == absorptionTime {
+            let savedFoodType = CarbFoodLabel(emoji: usesCustomFoodType ? foodType : selectedDefaultAbsorptionTimeEmoji, name: foodName).foodType
+            if let o = originalCarbEntry, o.quantity.doubleValue(for: preferredCarbUnit) == quantity && o.startDate == time && CarbFoodLabel(foodType: o.foodType).foodType == savedFoodType && o.absorptionTime == absorptionTime {
                 return nil  // No changes were made
             }
             
@@ -152,7 +158,7 @@ final class CarbEntryViewModel: ObservableObject {
                 date: date,
                 quantity: HKQuantity(unit: preferredCarbUnit, doubleValue: quantity),
                 startDate: time,
-                foodType: usesCustomFoodType ? foodType : selectedDefaultAbsorptionTimeEmoji,
+                foodType: savedFoodType,
                 absorptionTime: absorptionTime
             )
         }
@@ -316,6 +322,7 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionEditIsProgrammatic = true
         self.carbsQuantity = 0
         self.foodType = ""
+        self.foodName = ""
         self.absorptionTime = defaultAbsorptionTimes.medium
         self.absorptionTimeWasEdited = false
         self.usesCustomFoodType = false
@@ -325,6 +332,7 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionEditIsProgrammatic = true
         self.carbsQuantity = portion.carbsQuantity.doubleValue(for: preferredCarbUnit)
         self.foodType = food.foodType
+        self.foodName = food.name
         self.absorptionTime = food.absorptionTime
         self.absorptionTimeWasEdited = true
         self.usesCustomFoodType = true
@@ -397,6 +405,7 @@ final class CarbEntryViewModel: ObservableObject {
         absorptionEditIsProgrammatic = true
         carbsQuantity = estimate.roundedCarbs
         foodType = estimate.foodTypeEmoji
+        foodName = estimate.name
         usesCustomFoodType = true
         absorptionTime = estimate.absorptionTime(in: absorptionRimesRange)
         absorptionTimeWasEdited = true
@@ -409,7 +418,9 @@ final class CarbEntryViewModel: ObservableObject {
             carbsQuantity = entry.quantity.doubleValue(for: preferredCarbUnit)
 
             if let foodType = entry.foodType {
-                self.foodType = foodType
+                let label = CarbFoodLabel(foodType: foodType)
+                self.foodType = label.emoji
+                self.foodName = label.name
                 usesCustomFoodType = true
             }
 

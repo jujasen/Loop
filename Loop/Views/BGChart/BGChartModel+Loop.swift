@@ -149,7 +149,7 @@ extension BGChartModel {
                 value: Double(grams),
                 sgv: interpolator.value(at: entry.startDate),
                 label: label,
-                pillText: "\(NSLocalizedString("Carbs", comment: "Chart label for a carb entry"))\n\(grams)g\n\(pillTimeString(for: entry.startDate))",
+                pillText: Self.carbPillText(food: CarbFoodLabel(foodType: entry.foodType), grams: grams, time: pillTimeString(for: entry.startDate)),
                 lane: .carbs,
                 // Only an entry this app wrote can be edited, the same rule the carb
                 // list applies.
@@ -323,6 +323,16 @@ extension BGChartModel {
         formatter.maximumFractionDigits = 2
         return formatter
     }()
+
+    /// "Carbs 🍕", then the dish's name when a favorite food or a meal estimate gave one, then
+    /// grams and time — one line each, so a stacked pill still reads "Carbs 🍕 Pizza 30g 12:30".
+    static func carbPillText(food: CarbFoodLabel, grams: Int, time: String) -> String {
+        var heading = NSLocalizedString("Carbs", comment: "Chart label for a carb entry")
+        if !food.emoji.isEmpty {
+            heading += " \(food.emoji)"
+        }
+        return ([heading, food.name, "\(grams)g", time].filter { !$0.isEmpty }).joined(separator: "\n")
+    }
 
     /// Stable identity for a carb entry, so a tapped mark can be resolved back to the
     /// entry it came from. HealthKit-backed entries carry a sync identifier; anything
