@@ -2535,15 +2535,8 @@ extension LoopDataManager: ServicesManagerDelegate {
     
     //Therapy Settings
 
-    func updateTherapySchedules(carbRatioSchedule: CarbRatioSchedule?, insulinSensitivitySchedule: InsulinSensitivitySchedule?) async {
-        mutateSettings { settings in
-            if let carbRatioSchedule {
-                settings.carbRatioSchedule = carbRatioSchedule
-            }
-            if let insulinSensitivitySchedule {
-                settings.insulinSensitivitySchedule = insulinSensitivitySchedule
-            }
-        }
+    func updateTherapySettings(_ changes: (_ settings: inout LoopSettings) -> Void) async {
+        mutateSettings(changes)
     }
 
     //Carb Entry
