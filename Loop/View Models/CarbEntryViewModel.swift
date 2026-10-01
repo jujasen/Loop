@@ -92,6 +92,8 @@ final class CarbEntryViewModel: ObservableObject {
     let mealEstimator: MealCarbEstimator?
     @Published var mealDescription = ""
     @Published var mealFollowUp = ""
+    /// Photos waiting to go with the next description or follow-up, already prepared for upload.
+    @Published private(set) var mealPhotos: [Data] = []
     @Published private(set) var mealEstimate: MealCarbEstimate?
     @Published private(set) var isEstimatingMeal = false
     @Published var mealEstimateError: String?
@@ -340,27 +342,55 @@ final class CarbEntryViewModel: ObservableObject {
 
     // MARK: - Meal Estimate
     var canEstimateMeal: Bool {
-        !isEstimatingMeal && !mealDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !isEstimatingMeal && (!mealDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !mealPhotos.isEmpty)
     }
 
     var canRefineMealEstimate: Bool {
-        !isEstimatingMeal && mealEstimate != nil && !mealFollowUp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !isEstimatingMeal && mealEstimate != nil && (!mealFollowUp.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !mealPhotos.isEmpty)
     }
 
-    /// Starts a fresh estimate from the description, forgetting any earlier follow-ups.
+    var canAddMealPhoto: Bool {
+        !isEstimatingMeal && mealPhotos.count < MealCarbEstimator.maxPhotosPerMessage
+    }
+
+    /// Photos behind the current estimate, counting every message of the conversation.
+    var mealEstimatePhotoCount: Int {
+        mealConversation.reduce(0) { $0 + $1.images.count }
+    }
+
+    func addMealPhoto(_ image: UIImage) {
+        guard canAddMealPhoto, let photo = MealCarbEstimator.preparedPhoto(image) else { return }
+        mealPhotos.append(photo)
+    }
+
+    func removeMealPhoto(at index: Int) {
+        guard mealPhotos.indices.contains(index) else { return }
+        mealPhotos.remove(at: index)
+    }
+
+    /// Starts a fresh estimate from the description and any photos, forgetting earlier follow-ups.
     func estimateMeal() {
+        guard canEstimateMeal else { return }
         let description = mealDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !description.isEmpty else { return }
-        requestMealEstimate(conversation: [MealCarbEstimator.Message(role: "user", content: description)])
+        requestMealEstimate(conversation: [MealCarbEstimator.Message(
+            role: "user",
+            content: description.isEmpty ? "Estimate the meal in the photos." : description,
+            images: mealPhotos
+        )])
     }
 
-    /// Adds what the caregiver forgot and asks for a new estimate of the whole meal.
+    /// Adds what the caregiver forgot — in words, photos or both — and asks for a new estimate
+    /// of the whole meal.
     func refineMealEstimate() {
+        guard canRefineMealEstimate, let mealEstimate else { return }
         let followUp = mealFollowUp.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !followUp.isEmpty, let mealEstimate else { return }
         requestMealEstimate(conversation: mealConversation + [
             MealCarbEstimator.assistantMessage(for: mealEstimate),
-            MealCarbEstimator.Message(role: "user", content: "More information about the same meal: \(followUp)"),
+            MealCarbEstimator.Message(
+                role: "user",
+                content: followUp.isEmpty ? "More photos of the same meal." : "More information about the same meal: \(followUp)",
+                images: mealPhotos
+            ),
         ])
     }
 
@@ -374,6 +404,7 @@ final class CarbEntryViewModel: ObservableObject {
         mealConversation = []
         mealDescription = ""
         mealFollowUp = ""
+        mealPhotos = []
     }
 
     private func requestMealEstimate(conversation: [MealCarbEstimator.Message]) {
@@ -389,6 +420,7 @@ final class CarbEntryViewModel: ObservableObject {
                 self.mealConversation = conversation
                 self.mealEstimate = estimate
                 self.mealFollowUp = ""
+                self.mealPhotos = []
                 self.isEstimatingMeal = false
                 self.apply(estimate)
             } catch {

@@ -2,8 +2,8 @@
 //  MealEstimateCard.swift
 //  Loop
 //
-//  The "describe the meal" card on the carb entry screen: free text in, carbs, absorption time
-//  and an emoji filled into the entry above. The breakdown and the guesses behind the numbers
+//  The "describe the meal" card on the carb entry screen: free text and/or photos of the meal in,
+//  carbs, absorption time and an emoji filled into the entry above. The breakdown and the guesses behind the numbers
 //  can be opened to check them, and a follow-up re-evaluates the whole meal.
 //
 
@@ -11,6 +11,7 @@ import SwiftUI
 import LoopKit
 import LoopKitUI
 import HealthKit
+import PhotosUI
 
 struct MealEstimateCard: View {
     @Environment(\.carbTintColor) private var carbTintColor
@@ -19,6 +20,12 @@ struct MealEstimateCard: View {
 
     @FocusState private var isInputFocused: Bool
     @State private var showsBreakdown = false
+    @State private var photoSource: PhotoSource?
+
+    private enum PhotoSource: Int, Identifiable {
+        case camera, library
+        var id: Int { rawValue }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -36,6 +43,8 @@ struct MealEstimateCard: View {
                             .transition(.opacity)
                     }
 
+                    photoStrip
+
                     promptField(
                         String(localized: "Add or correct something…", comment: "Placeholder for adding more information to a meal estimate"),
                         text: $viewModel.mealFollowUp,
@@ -45,8 +54,10 @@ struct MealEstimateCard: View {
                     )
                 }
                 else {
+                    photoStrip
+
                     promptField(
-                        String(localized: "E.g. fish gratin with potatoes", comment: "Placeholder for the free-text meal description on the carb entry screen"),
+                        String(localized: "E.g. fish gratin", comment: "Placeholder for the free-text meal description on the carb entry screen"),
                         text: $viewModel.mealDescription,
                         isEnabled: viewModel.canEstimateMeal,
                         accessibilityLabel: String(localized: "Estimate carbs", comment: "Button label asking AI to estimate the carbs of the described meal"),
@@ -65,6 +76,7 @@ struct MealEstimateCard: View {
             .padding(.horizontal)
             .animation(.easeInOut(duration: 0.2), value: showsBreakdown)
             .animation(.easeInOut(duration: 0.2), value: viewModel.mealEstimate)
+            .animation(.easeInOut(duration: 0.2), value: viewModel.mealPhotos)
 
             if viewModel.mealEstimate != nil {
                 Text("AI estimate — check the numbers before you continue.", comment: "Reminder under the meal estimate that the numbers must be reviewed")
@@ -73,9 +85,75 @@ struct MealEstimateCard: View {
                     .padding(.horizontal, 26)
             }
         }
+        .fullScreenCover(item: $photoSource) { source in
+            switch source {
+            case .camera:
+                CameraPicker { image in viewModel.addMealPhoto(image) }
+                    .ignoresSafeArea()
+            case .library:
+                PhotoLibraryPicker(limit: MealCarbEstimator.maxPhotosPerMessage - viewModel.mealPhotos.count) { images in
+                    images.forEach(viewModel.addMealPhoto)
+                }
+                .ignoresSafeArea()
+            }
+        }
     }
 
     // MARK: - Input
+
+    /// The photos that go with the next message, each with a button to take it out again.
+    @ViewBuilder
+    private var photoStrip: some View {
+        if !viewModel.mealPhotos.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(viewModel.mealPhotos.enumerated()), id: \.offset) { index, data in
+                        if let image = UIImage(data: data) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 64, height: 64)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .overlay(alignment: .topTrailing) {
+                                    Button(action: { viewModel.removeMealPhoto(at: index) }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 20))
+                                            .symbolRenderingMode(.palette)
+                                            .foregroundStyle(.white, Color.black.opacity(0.55))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(viewModel.isEstimatingMeal)
+                                    .padding(3)
+                                    .accessibilityLabel(Text("Remove photo", comment: "Button label removing a photo from the meal estimate"))
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Takes a photo or picks some from the library, up to what one message may carry.
+    private var photoButton: some View {
+        Menu {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button(action: { photoSource = .camera }) {
+                    Label(String(localized: "Take Photo", comment: "Menu item taking a photo of the meal for the meal estimate"), systemImage: "camera")
+                }
+            }
+            Button(action: { photoSource = .library }) {
+                Label(String(localized: "Choose Photos", comment: "Menu item choosing photos of the meal for the meal estimate"), systemImage: "photo.on.rectangle")
+            }
+        } label: {
+            Image(systemName: "camera")
+                .font(.system(size: 19))
+                .foregroundColor(viewModel.canAddMealPhoto ? .secondary : Color(.tertiaryLabel))
+                .frame(width: 30, height: 30)
+        }
+        .disabled(!viewModel.canAddMealPhoto)
+        .accessibilityLabel(Text("Add photo of the meal", comment: "Button label adding a photo to the meal estimate"))
+        .padding(.vertical, 5)
+    }
 
     /// A rounded, chat-style field with its send button inside.
     private func promptField(_ placeholder: String, text: Binding<String>, isEnabled: Bool, accessibilityLabel: String, action: @escaping () -> Void) -> some View {
@@ -88,6 +166,8 @@ struct MealEstimateCard: View {
             growingTextField(placeholder, text: text)
                 .focused($isInputFocused)
                 .padding(.vertical, 9)
+
+            photoButton
 
             Button(action: {
                 isInputFocused = false
@@ -141,7 +221,7 @@ struct MealEstimateCard: View {
                     .font(.headline)
                     .lineLimit(2)
 
-                Text(totals(for: estimate))
+                totals(for: estimate)
                     .font(.subheadline.monospacedDigit())
                     .foregroundColor(.secondary)
 
@@ -236,12 +316,102 @@ struct MealEstimateCard: View {
         }
     }
 
-    private func totals(for estimate: MealCarbEstimate) -> String {
+    /// "45 g · 3 h", and how many photos the estimate looked at, when it had any.
+    private func totals(for estimate: MealCarbEstimate) -> Text {
         let absorption = viewModel.absorptionTimeFormatter.string(from: estimate.absorptionTime(in: viewModel.absorptionRimesRange)) ?? ""
-        return "\(grams(estimate.roundedCarbs)) · \(absorption)"
+        let text = Text(verbatim: "\(grams(estimate.roundedCarbs)) · \(absorption)")
+        let photos = viewModel.mealEstimatePhotoCount
+        guard photos > 0 else { return text }
+        return text + Text(verbatim: " · ") + Text(Image(systemName: "photo")) + Text(verbatim: " \(photos)")
     }
 
     private func grams(_ value: Double) -> String {
         viewModel.carbFormatter.string(from: HKQuantity(unit: viewModel.preferredCarbUnit, doubleValue: value)) ?? "\(value) g"
+    }
+}
+
+// MARK: - Photo pickers
+
+/// The camera, for photographing the plate. Calls back once with the photo, and not at all when
+/// the caregiver cancels.
+private struct CameraPicker: UIViewControllerRepresentable {
+    let onPick: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        private let parent: CameraPicker
+
+        init(_ parent: CameraPicker) { self.parent = parent }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.onPick(image)
+            }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+    }
+}
+
+/// The photo library, for photos taken before the carb screen was opened. Needs no photo library
+/// permission: the system picker hands over only what was chosen.
+private struct PhotoLibraryPicker: UIViewControllerRepresentable {
+    let limit: Int
+    let onPick: ([UIImage]) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var configuration = PHPickerConfiguration()
+        configuration.filter = .images
+        configuration.selectionLimit = max(limit, 1)
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        private let parent: PhotoLibraryPicker
+
+        init(_ parent: PhotoLibraryPicker) { self.parent = parent }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            parent.dismiss()
+            let providers = results.map(\.itemProvider).filter { $0.canLoadObject(ofClass: UIImage.self) }
+            guard !providers.isEmpty else { return }
+
+            // Keep the order they were picked in, whatever order they finish loading in.
+            var images = [UIImage?](repeating: nil, count: providers.count)
+            let group = DispatchGroup()
+            for (index, provider) in providers.enumerated() {
+                group.enter()
+                provider.loadObject(ofClass: UIImage.self) { object, _ in
+                    DispatchQueue.main.async {
+                        images[index] = object as? UIImage
+                        group.leave()
+                    }
+                }
+            }
+            group.notify(queue: .main) { [parent] in
+                parent.onPick(images.compactMap { $0 })
+            }
+        }
     }
 }

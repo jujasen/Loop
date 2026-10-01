@@ -8,6 +8,7 @@
 
 import XCTest
 import LoopKit
+import UIKit
 @testable import Loop
 
 final class MealCarbEstimatorTests: XCTestCase {
@@ -89,6 +90,43 @@ final class MealCarbEstimatorTests: XCTestCase {
         let format = try XCTUnwrap(body["response_format"] as? [String: Any])
         XCTAssertEqual(format["type"] as? String, "json_schema")
         XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: body))
+    }
+
+    func testPhotosGoAfterTheTextAsImageParts() throws {
+        let photo = Data([0xFF, 0xD8, 0xFF])
+        let conversation = [MealCarbEstimator.Message(role: "user", content: "middag", images: [photo, photo])]
+        let body = MealCarbEstimator.requestBody(conversation: conversation)
+        let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
+        XCTAssertTrue(messages.first?["content"] is String, "the system prompt stays plain text")
+        let parts = try XCTUnwrap(messages.last?["content"] as? [[String: Any]])
+        XCTAssertEqual(parts.map { $0["type"] as? String }, ["text", "image_url", "image_url"])
+        XCTAssertEqual(parts.first?["text"] as? String, "middag")
+        let image = try XCTUnwrap(parts.last?["image_url"] as? [String: String])
+        XCTAssertEqual(image["url"], "data:image/jpeg;base64,\(photo.base64EncodedString())")
+        XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: body))
+    }
+
+    func testPhotosWithoutTextSendNoEmptyTextPart() throws {
+        let conversation = [MealCarbEstimator.Message(role: "user", content: "", images: [Data([1])])]
+        let messages = try XCTUnwrap(MealCarbEstimator.requestBody(conversation: conversation)["messages"] as? [[String: Any]])
+        let parts = try XCTUnwrap(messages.last?["content"] as? [[String: Any]])
+        XCTAssertEqual(parts.map { $0["type"] as? String }, ["image_url"])
+    }
+
+    func testPreparedPhotoIsScaledDownToJPEG() throws {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 4000, height: 3000), format: {
+            let format = UIGraphicsImageRendererFormat.default()
+            format.scale = 1
+            return format
+        }()).image { context in
+            UIColor.orange.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 4000, height: 3000))
+        }
+        let data = try XCTUnwrap(MealCarbEstimator.preparedPhoto(image))
+        XCTAssertEqual(Array(data.prefix(2)), [0xFF, 0xD8], "JPEG")
+        let prepared = try XCTUnwrap(UIImage(data: data))
+        XCTAssertEqual(prepared.size.width * prepared.scale, 1024)
+        XCTAssertEqual(prepared.size.height * prepared.scale, 768)
     }
 
     func testServerErrorMessageIsShown() async {

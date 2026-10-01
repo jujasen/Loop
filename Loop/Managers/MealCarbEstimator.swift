@@ -2,16 +2,17 @@
 //  MealCarbEstimator.swift
 //  Loop
 //
-//  Turns a free-text meal description ("en brødskive med leverpostei og et glass melk") into the
-//  three things the carb entry screen needs — grams, absorption time and an emoji — by asking
-//  OpenAI. The caregiver can add details afterwards ("he only ate half"), and the whole meal is
-//  re-evaluated with everything said so far, so the conversation is kept here.
+//  Turns a free-text meal description ("en brødskive med leverpostei og et glass melk"), photos
+//  of the plate, or both, into the three things the carb entry screen needs — grams, absorption
+//  time and an emoji — by asking OpenAI. The caregiver can add details afterwards ("he only ate
+//  half"), and the whole meal is re-evaluated with everything said so far, so the conversation is
+//  kept here.
 //
 //  The estimate only fills in the carb entry. Nothing is saved and no insulin is recommended until
 //  the caregiver reviews the numbers and continues to the bolus screen as usual.
 //
 
-import Foundation
+import UIKit
 
 /// One estimate for the whole meal, as returned by the model.
 struct MealCarbEstimate: Codable, Equatable {
@@ -84,6 +85,31 @@ final class MealCarbEstimator {
     struct Message: Codable, Equatable {
         var role: String
         var content: String
+        /// JPEG photos of the meal sent along with `content` (see `preparedPhoto(_:)`). They are
+        /// kept with the message so a follow-up still shows the model the same plate.
+        var images: [Data] = []
+
+        enum CodingKeys: String, CodingKey {
+            case role, content
+        }
+    }
+
+    /// How many photos one message may carry.
+    static let maxPhotosPerMessage = 4
+
+    /// Scales a photo down to what the model needs to read a plate and re-encodes it as JPEG, so a
+    /// few photos stay well within the request size and upload quickly on a phone connection.
+    static func preparedPhoto(_ image: UIImage, maxDimension: CGFloat = 1024) -> Data? {
+        let longest = max(image.size.width, image.size.height)
+        guard longest > 0 else { return nil }
+        let scale = min(1, maxDimension / longest)
+        let size = CGSize(width: (image.size.width * scale).rounded(), height: (image.size.height * scale).rounded())
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let resized = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        return resized.jpegData(compressionQuality: 0.7)
     }
 
     static let model = "gpt-5.4-mini"
@@ -110,7 +136,8 @@ final class MealCarbEstimator {
     func estimate(conversation: [Message]) async throws -> MealCarbEstimate {
         var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
         request.httpMethod = "POST"
-        request.timeoutInterval = 45
+        // Photos make the model take noticeably longer.
+        request.timeoutInterval = conversation.contains { !$0.images.isEmpty } ? 90 : 45
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: Self.requestBody(conversation: conversation))
@@ -136,7 +163,7 @@ final class MealCarbEstimator {
         return [
             "model": model,
             "reasoning_effort": "low",
-            "messages": messages.map { ["role": $0.role, "content": $0.content] },
+            "messages": messages.map { ["role": $0.role, "content": content(of: $0)] },
             "response_format": [
                 "type": "json_schema",
                 "json_schema": [
@@ -146,6 +173,23 @@ final class MealCarbEstimator {
                 ] as [String: Any],
             ] as [String: Any],
         ]
+    }
+
+    /// Plain text, or — when the message carries photos — the text followed by the photos as
+    /// image parts.
+    private static func content(of message: Message) -> Any {
+        guard !message.images.isEmpty else { return message.content }
+        var parts: [[String: Any]] = []
+        if !message.content.isEmpty {
+            parts.append(["type": "text", "text": message.content])
+        }
+        for image in message.images {
+            parts.append([
+                "type": "image_url",
+                "image_url": ["url": "data:image/jpeg;base64,\(image.base64EncodedString())", "detail": "high"],
+            ])
+        }
+        return parts
     }
 
     static func parseResponse(_ data: Data) throws -> MealCarbEstimate {
@@ -232,6 +276,8 @@ final class MealCarbEstimator {
         - items: each component with the amount you assumed and its carbs. The item carbs must add up to carbs_grams.
         - assumptions: short notes, in the caregiver's language, on anything you had to guess — portion size, brand, recipe. Empty when nothing was guessed.
         - confidence: high when amounts and foods are clear, medium when portions had to be guessed, low when the description is vague.
+
+        The caregiver may attach one or more photos of the meal, with or without text. Use them to identify the foods and judge the portions — the plate, cutlery, a glass or a hand gives the scale. Several photos are of the same meal, from different angles or at different moments; do not count food twice. When a photo shows a nutrition label, use its carbohydrate values. When the text and the photos disagree, the text wins, since the caregiver knows what was actually eaten. Name in assumptions anything in the photos you could not identify.
 
         When no amount is given, assume a typical portion for a small child and say so in assumptions. Use Norwegian products and recipes when the food is Norwegian. When the caregiver adds more information later, re-evaluate the whole meal from scratch with everything you know, and return a complete new estimate, not just the change. Never give insulin or dosing advice.
         """

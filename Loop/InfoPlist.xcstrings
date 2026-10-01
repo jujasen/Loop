@@ -608,7 +608,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Camera is used to scan barcodes of devices."
+            "value" : "Camera is used to scan barcodes of devices and to photograph meals for carb estimates."
           }
         },
         "es" : {
@@ -638,7 +638,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kamera brukes til å skanne strekkoder på enheter."
+            "value" : "Kameraet brukes til å skanne strekkoder på enheter og til å ta bilder av måltider for karboberegning."
           }
         },
         "nl" : {

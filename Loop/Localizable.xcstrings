@@ -3260,6 +3260,50 @@
         }
       }
     },
+    "Add photo of the meal" : {
+      "comment" : "Button label adding a photo to the meal estimate",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til bilde av måltidet"
+          }
+        }
+      }
+    },
+    "Choose Photos" : {
+      "comment" : "Menu item choosing photos of the meal for the meal estimate",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg bilder"
+          }
+        }
+      }
+    },
+    "Remove photo" : {
+      "comment" : "Button label removing a photo from the meal estimate",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fjern bilde"
+          }
+        }
+      }
+    },
+    "Take Photo" : {
+      "comment" : "Menu item taking a photo of the meal for the meal estimate",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bilde"
+          }
+        }
+      }
+    },
     "DESCRIBE THE MEAL" : {
       "comment" : "Section title for the meal estimate card on the carb entry screen",
       "localizations" : {
@@ -3612,13 +3656,13 @@
         }
       }
     },
-    "E.g. fish gratin with potatoes" : {
+    "E.g. fish gratin" : {
       "comment" : "Placeholder for the free-text meal description on the carb entry screen",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "F.eks. fiskegrateng med poteter"
+            "value" : "F.eks. fiskegrateng"
           }
         }
       }
