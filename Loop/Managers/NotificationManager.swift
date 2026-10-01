@@ -233,7 +233,10 @@ extension NotificationManager {
         UNUserNotificationCenter.current().add(request)
     }
 
-    private static func remoteTherapySettingsNotificationTitle(for change: RemoteTherapySettingsChange) -> String {
+    static func remoteTherapySettingsNotificationTitle(for change: RemoteTherapySettingsChange) -> String {
+        guard change.onlyChangesCarbRatioOrInsulinSensitivity else {
+            return NSLocalizedString("Remote Change: Therapy Settings", comment: "The notification title for a remote change of therapy settings beyond carb ratios and insulin sensitivities.")
+        }
         switch (change.carbRatioItems != nil, change.insulinSensitivityItems != nil) {
         case (true, true):
             return NSLocalizedString("Remote Change: Carb Ratios and Insulin Sensitivities", comment: "The notification title for a remote change of both carb ratio and insulin sensitivity schedules.")

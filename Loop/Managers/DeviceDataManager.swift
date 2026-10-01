@@ -1563,7 +1563,34 @@ extension DeviceDataManager: ServicesManagerDosingDelegate {
     func deliverBolus(amountInUnits: Double) async throws {
         try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation)
     }
-    
+
+    func remoteTherapySettingsPumpIncrements() -> RemoteTherapySettingsPumpIncrements? {
+        return pumpManager.map {
+            RemoteTherapySettingsPumpIncrements(basalRates: $0.supportedBasalRates,
+                                                maximumBolusVolumes: $0.supportedMaximumBolusVolumes,
+                                                maximumBasalScheduleEntryCount: $0.maximumBasalScheduleEntryCount)
+        }
+    }
+
+    func syncRemoteDeliveryLimits(_ deliveryLimits: DeliveryLimits) async throws -> DeliveryLimits {
+        return try await withCheckedThrowingContinuation { continuation in
+            syncDeliveryLimits(deliveryLimits: deliveryLimits) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
+
+    func syncRemoteBasalRateSchedule(items: [RepeatingScheduleValue<Double>]) async throws -> BasalRateSchedule {
+        // `syncBasalRateSchedule(items:completion:)` never completes without a pump.
+        guard let pumpManager else {
+            throw ServicesManager.TherapySettingsActionError.noPump
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            pumpManager.syncBasalRateSchedule(items: items) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
 }
 
 // MARK: - Critical Event Log Export
