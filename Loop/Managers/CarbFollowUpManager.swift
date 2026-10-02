@@ -32,20 +32,50 @@ struct CarbFollowUpRule: Codable, Equatable {
 
 /// Who decided a meal's later carbs.
 enum CarbFollowUpSource: String, Codable {
-    /// The favorite food's own rule, set by hand.
+    /// A favorite food's fixed amount, set by hand.
     case favorite
-    /// Suggested by the meal estimate, for the meal or for the favorite food.
+    /// Worked out from the fat and protein the meal estimate found.
     case ai
-    /// Added by hand to this one meal.
+    /// Set by hand for this one meal.
     case manual
 }
 
-/// What was decided for one meal on this phone, kept by the meal's carb entry. It wins over the
-/// favorite food's rule, so a meal can be given other amounts or none at all.
+/// The fat and protein in an amount of food that has `carbGrams` of carbs.
+///
+/// Kept per amount of carbs, so a smaller or larger serving of the same food scales with it.
+struct MealNutrition: Codable, Equatable {
+    var fatGrams: Double
+    var proteinGrams: Double
+    /// The carbs of the amount the fat and protein were estimated for.
+    var carbGrams: Double
+
+    /// Fat-protein units: 100 kcal from fat and protein each.
+    var fatProteinUnits: Double {
+        (fatGrams * 9 + proteinGrams * 4) / 100
+    }
+
+    /// The same food at another amount of carbs. Held within a factor of four either way, so a
+    /// mistyped amount cannot turn a glass of milk into a pot of cream.
+    func scaled(toCarbs carbs: Double) -> MealNutrition {
+        guard carbGrams > 0, carbs > 0 else { return self }
+        let factor = min(max(carbs / carbGrams, 0.25), 4)
+        return MealNutrition(fatGrams: fatGrams * factor, proteinGrams: proteinGrams * factor, carbGrams: carbs)
+    }
+
+    static func + (lhs: MealNutrition, rhs: MealNutrition) -> MealNutrition {
+        MealNutrition(fatGrams: lhs.fatGrams + rhs.fatGrams, proteinGrams: lhs.proteinGrams + rhs.proteinGrams, carbGrams: lhs.carbGrams + rhs.carbGrams)
+    }
+
+    static let zero = MealNutrition(fatGrams: 0, proteinGrams: 0, carbGrams: 0)
+}
+
+/// What was decided for one meal on this phone, kept by the meal's carb entry. It wins over what
+/// would otherwise be worked out, so a meal can be given other amounts or none at all.
 struct MealCarbFollowUp: Codable, Equatable {
     /// `nil` when the later carbs were turned down for this meal.
     var rule: CarbFollowUpRule?
     var source: CarbFollowUpSource
+    /// How the amount came about, shown under it.
     var reason: String?
     var date: Date = Date()
 
@@ -54,16 +84,18 @@ struct MealCarbFollowUp: Codable, Equatable {
     }
 }
 
-/// What the meal estimate made of a favorite food, so each food is looked at once and again only
+/// What the meal estimate found in a favorite food, so each food is looked at once and again only
 /// after it is edited.
 struct FavoriteCarbFollowUpAssessment: Codable, Equatable {
     /// `FavoriteCarbFollowUpAssessment.contentKey(for:)` of the food as it was assessed.
     var contentKey: String
-    /// The suggestion, or `nil` when no late rise is expected.
+    /// Fat and protein of the food's first serving size, or `nil` from an assessment made before
+    /// later carbs were worked out from them.
+    var nutrition: MealNutrition?
+    /// The amount earlier builds suggested. Read only to retire rules they wrote.
     var suggestion: CarbFollowUpRule?
     var reason: String?
-    /// True once the rule on the food was changed or turned off by hand, which the next
-    /// assessment then leaves alone.
+    /// True once the food's fixed amount was set or turned off by hand.
     var userChanged: Bool = false
 
     static func contentKey(for food: StoredFavoriteFood) -> String {
@@ -74,11 +106,11 @@ struct FavoriteCarbFollowUpAssessment: Codable, Equatable {
 
 /// Later carbs waiting for their meal's dip to end.
 struct PlannedCarbFollowUp: Equatable {
-    /// `syncIdentifier` of the meal's carb entry.
+    /// `syncIdentifier` of the meal's last carb entry; the later carbs are timed from it.
     var triggerID: String
-    /// The favorite food the meal was logged as, if any.
+    /// The favorite food the last entry was logged as, if any.
     var favoriteID: String?
-    /// The meal's name — the favorite's or the estimate's — or empty for a meal without one.
+    /// The meal's name — its foods' names joined — or empty for a meal without any.
     var mealName: String
     var emoji: String
     var mealStart: Date
@@ -100,7 +132,17 @@ struct PlannedCarbFollowUp: Equatable {
     /// `foodType` of the entry the later carbs add. Its name differs from the meal's, so the later
     /// carbs never count as the meal itself.
     var foodType: String? {
-        CarbFoodLabel(emoji: emoji, name: String(format: NSLocalizedString("%@ (later carbs)", comment: "Name of the carb entry that later carbs add (1: name of the meal)"), mealDescription)).foodType
+        CarbFoodLabel(emoji: emoji, name: Self.laterCarbName(for: mealDescription)).foodType
+    }
+
+    static func laterCarbName(for meal: String) -> String {
+        String(format: NSLocalizedString("%@ (later carbs)", comment: "Name of the carb entry that later carbs add (1: name of the meal)"), meal)
+    }
+
+    /// True for the name of an entry that later carbs added.
+    static func isLaterCarbName(_ name: String) -> Bool {
+        let suffix = laterCarbName(for: "")
+        return !name.isEmpty && name.hasSuffix(suffix.trimmingCharacters(in: .whitespaces))
     }
 }
 
@@ -145,11 +187,17 @@ enum CarbFollowUpPlanner {
     /// The trend compares the latest reading with one roughly this long before it.
     static let trendSpan = TimeInterval.minutes(15)
 
-    /// Suggestions are capped at this many grams, and at half of the meal's own carbs.
-    static let maximumSuggestion = 15.0
-    static let maximumSuggestionShareOfMeal = 0.5
-    /// Below this, a suggestion is not worth the noise.
-    static let minimumSuggestion = 3.0
+    /// Entries this close to the one before belong to the same meal: porridge, then milk.
+    static let mealGap = TimeInterval.minutes(60)
+
+    /// Below one fat-protein unit there is no second wave worth covering, only slower absorption.
+    static let minimumUnits = 1.0
+    /// Carbs per fat-protein unit: half the usual 10 g, because the full amount overestimates
+    /// for a small child.
+    static let gramsPerUnit = 5.0
+    static let maximumGrams = 15.0
+    /// When the rise from fat and protein starts, after the last part of the meal.
+    static let delay = TimeInterval.minutes(90)
 
     enum Decision: Equatable {
         case wait
@@ -163,100 +211,147 @@ enum CarbFollowUpPlanner {
 
     /// How far back a meal can be and still have later carbs to add or drop.
     static func lookback(rules: [CarbFollowUpRule]) -> TimeInterval {
-        (rules.map { max(window, $0.delay + .hours(1)) }.max() ?? window) + dropGrace
+        let longest = rules.map { max(window, $0.delay + .hours(1)) }.max() ?? window
+        return max(longest, delay + .hours(1), window) + dropGrace + mealGap * 2
     }
 
-    /// Turns the meal estimate's late-rise guess into a rule: rounded, kept within the steppers'
-    /// ranges and capped, or `nil` when it is too small to matter.
-    static func suggestion(grams: Double, delayMinutes: Double, absorptionHours: Double, mealCarbs: Double) -> CarbFollowUpRule? {
-        guard grams.isFinite, delayMinutes.isFinite, absorptionHours.isFinite else { return nil }
-        let capped = min(grams, maximumSuggestion, mealCarbs * maximumSuggestionShareOfMeal).rounded()
-        guard capped >= minimumSuggestion else { return nil }
+    // MARK: Working out the amount
 
-        let delay = (delayMinutes / 15).rounded() * 15 * 60
-        let absorption = (absorptionHours * 2).rounded() / 2 * 3600
-        return CarbFollowUpRule(
-            carbGrams: capped,
-            absorptionTime: min(max(absorption, CarbFollowUpRule.absorptionRange.lowerBound), CarbFollowUpRule.absorptionRange.upperBound),
-            delay: min(max(delay, CarbFollowUpRule.delayRange.lowerBound), CarbFollowUpRule.delayRange.upperBound)
-        )
+    /// Later carbs for a meal of this much fat and protein, or `nil` below one unit. More units
+    /// last longer, the way the rise from a bigger meal does.
+    static func rule(for nutrition: MealNutrition) -> CarbFollowUpRule? {
+        let units = nutrition.fatProteinUnits
+        guard units.isFinite, units >= minimumUnits else { return nil }
+        let grams = min((units * gramsPerUnit).rounded(), maximumGrams)
+        let absorption: TimeInterval = units < 2 ? .hours(4) : units < 3 ? .hours(5) : .hours(6)
+        return CarbFollowUpRule(carbGrams: grams, absorptionTime: absorption, delay: delay)
     }
 
-    /// The later carbs not yet added, dropped or cancelled.
-    ///
-    /// A meal has later carbs when this phone decided them for that meal, or else when it was
-    /// logged as a favorite food with a rule — which covers meals logged by the caregiver app or
-    /// the watch. Meals of the same favorite share one: the most recent, unless one of them was
-    /// already followed up. Includes plans that have just expired, for `decide` to drop.
+    /// "9 g fat + 11 g protein = 1.3 units → 7 g", or with a meal below the limit, why it gets none.
+    static func explanation(for nutrition: MealNutrition, foods: [String] = []) -> String {
+        let number: (Double) -> String = { NumberFormatter.localizedString(from: NSNumber(value: ($0 * 10).rounded() / 10), number: .decimal) }
+        let whole: (Double) -> String = { NumberFormatter.localizedString(from: NSNumber(value: $0.rounded()), number: .decimal) }
+        var text = String(format: NSLocalizedString("%1$@ g fat + %2$@ g protein = %3$@ fat-protein units", comment: "How later carbs are worked out (1: grams of fat)(2: grams of protein)(3: units)"), whole(nutrition.fatGrams), whole(nutrition.proteinGrams), number(nutrition.fatProteinUnits))
+        if let rule = rule(for: nutrition) {
+            text += String(format: NSLocalizedString(" → %@ g", comment: "Result of the later carbs calculation (1: grams), appended to it"), whole(rule.carbGrams))
+        } else {
+            text += NSLocalizedString(", below 1: no later carbs", comment: "Appended to the later carbs calculation when the meal is below the limit")
+        }
+        let names = foods.filter { !$0.isEmpty }
+        if names.count > 1 {
+            text = String(format: NSLocalizedString("%1$@ together: %2$@", comment: "Later carbs calculation for several foods eaten together (1: the foods)(2: the calculation)"), names.joined(separator: " + "), text)
+        }
+        return text
+    }
+
+    /// Fat and protein in one carb entry: what was found for this meal, or else what was found for
+    /// the favorite food it was logged as, scaled to the entry's carbs.
+    static func nutrition(of entry: StoredCarbEntry, favorite: StoredFavoriteFood?, assessments: [String: FavoriteCarbFollowUpAssessment], mealNutrition: [String: MealNutrition]) -> MealNutrition? {
+        let carbs = entry.quantity.doubleValue(for: .gram())
+        if let id = entry.syncIdentifier, let found = mealNutrition[id] {
+            return found.scaled(toCarbs: carbs)
+        }
+        if let favorite, let found = assessments[favorite.id]?.nutrition {
+            return found.scaled(toCarbs: carbs)
+        }
+        return nil
+    }
+
+    static func favorite(named name: String, in favorites: [StoredFavoriteFood]) -> StoredFavoriteFood? {
+        guard !name.isEmpty else { return nil }
+        return favorites.first { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(name) == .orderedSame }
+    }
+
+    /// One meal's worth of carb entries: each no more than `mealGap` after the one before.
+    static func meals(_ entries: [StoredCarbEntry]) -> [[StoredCarbEntry]] {
+        var meals: [[StoredCarbEntry]] = []
+        for entry in entries.sorted(by: { $0.startDate < $1.startDate }) {
+            if let last = meals.last?.last, entry.startDate.timeIntervalSince(last.startDate) <= mealGap {
+                meals[meals.count - 1].append(entry)
+            } else {
+                meals.append([entry])
+            }
+        }
+        return meals
+    }
+
+    /// What one meal's later carbs are, before anything was added: the latest decision made for
+    /// one of its entries on this phone, else a favorite's fixed amount, else the amount worked out
+    /// from the fat and protein of all its entries together. `nil` when it gets none.
+    static func followUp(
+        forMeal meal: [StoredCarbEntry],
+        favorites: [StoredFavoriteFood],
+        rules: [String: CarbFollowUpRule],
+        assessments: [String: FavoriteCarbFollowUpAssessment],
+        mealPlans: [String: MealCarbFollowUp],
+        mealNutrition: [String: MealNutrition]
+    ) -> MealCarbFollowUp? {
+        if let decided = meal.reversed().lazy.compactMap({ $0.syncIdentifier.flatMap { mealPlans[$0] } }).first {
+            return decided.rule == nil ? nil : decided
+        }
+
+        let foods = meal.map { CarbFoodLabel(foodType: $0.foodType).name }
+        let matched = foods.map { favorite(named: $0, in: favorites) }
+
+        if let fixed = matched.compactMap({ $0.flatMap { rules[$0.id] } }).max(by: { $0.carbGrams < $1.carbGrams }) {
+            return MealCarbFollowUp(rule: fixed, source: .favorite)
+        }
+
+        let total = zip(meal, matched).compactMap { nutrition(of: $0, favorite: $1, assessments: assessments, mealNutrition: mealNutrition) }.reduce(.zero, +)
+        guard let rule = rule(for: total) else { return nil }
+        return MealCarbFollowUp(rule: rule, source: .ai, reason: explanation(for: total, foods: unique(foods)))
+    }
+
+    /// The later carbs not yet added, dropped or cancelled, one per meal at most. Includes plans
+    /// that have just expired, for `decide` to drop.
     static func planned(
         entries: [StoredCarbEntry],
         favorites: [StoredFavoriteFood],
         rules: [String: CarbFollowUpRule],
         assessments: [String: FavoriteCarbFollowUpAssessment] = [:],
         mealPlans: [String: MealCarbFollowUp] = [:],
+        mealNutrition: [String: MealNutrition] = [:],
         records: [String: CarbFollowUpRecord],
         now: Date
     ) -> [PlannedCarbFollowUp] {
-        struct Candidate {
-            var groupKey: String
-            var followUp: PlannedCarbFollowUp
-        }
+        // Later carbs already added are not part of any meal.
+        let meals = meals(entries.filter { entry in
+            entry.syncIdentifier != nil && entry.startDate <= now
+                && !PlannedCarbFollowUp.isLaterCarbName(CarbFoodLabel(foodType: entry.foodType).name)
+        })
 
-        var candidates: [Candidate] = []
-        var handledGroups = Set<String>()
+        var planned: [PlannedCarbFollowUp] = []
+        for meal in meals {
+            // A meal is followed up once, even if more of it was logged afterwards.
+            guard let last = meal.last, let triggerID = last.syncIdentifier,
+                  !meal.contains(where: { records[$0.syncIdentifier!] != nil }),
+                  let followUp = followUp(forMeal: meal, favorites: favorites, rules: rules, assessments: assessments, mealPlans: mealPlans, mealNutrition: mealNutrition),
+                  let rule = followUp.rule, rule.carbGrams > 0,
+                  now < expiryDate(start: last.startDate, rule: rule) + dropGrace
+            else { continue }
 
-        for entry in entries {
-            guard let id = entry.syncIdentifier, entry.startDate <= now else { continue }
-            let label = CarbFoodLabel(foodType: entry.foodType)
-            let favorite = label.name.isEmpty ? nil : favorites.first {
-                $0.name.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(label.name) == .orderedSame
-            }
-            let groupKey = favorite?.id ?? id
-
-            if records[id] != nil {
-                handledGroups.insert(groupKey)
-                continue
-            }
-
-            let rule: CarbFollowUpRule
-            let source: CarbFollowUpSource
-            let reason: String?
-            if let plan = mealPlans[id] {
-                guard let planned = plan.rule else { continue }
-                (rule, source, reason) = (planned, plan.source, plan.reason)
-            } else if let favorite, let favoriteRule = rules[favorite.id] {
-                let assessment = assessments[favorite.id]
-                let suggested = assessment?.userChanged == false && assessment?.suggestion == favoriteRule
-                (rule, source, reason) = (favoriteRule, suggested ? .ai : .favorite, suggested ? assessment?.reason : nil)
-            } else {
-                continue
-            }
-
-            guard rule.carbGrams > 0,
-                  now < expiryDate(start: entry.startDate, rule: rule) + dropGrace else { continue }
-
-            candidates.append(Candidate(groupKey: groupKey, followUp: PlannedCarbFollowUp(
-                triggerID: id,
-                favoriteID: favorite?.id,
-                mealName: favorite?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? label.name,
-                emoji: label.emoji,
-                mealStart: entry.startDate,
+            let labels = meal.map { CarbFoodLabel(foodType: $0.foodType) }
+            let names = unique(labels.map { label in favorite(named: label.name, in: favorites)?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? label.name })
+            planned.append(PlannedCarbFollowUp(
+                triggerID: triggerID,
+                favoriteID: favorite(named: CarbFoodLabel(foodType: last.foodType).name, in: favorites)?.id,
+                mealName: names.joined(separator: " + "),
+                emoji: labels.first(where: { !$0.emoji.isEmpty })?.emoji ?? "",
+                mealStart: last.startDate,
                 rule: rule,
-                source: source,
-                reason: reason,
-                dueDate: entry.startDate.addingTimeInterval(rule.delay),
-                expiryDate: expiryDate(start: entry.startDate, rule: rule)
-            )))
+                source: followUp.source,
+                reason: followUp.reason,
+                dueDate: last.startDate.addingTimeInterval(rule.delay),
+                expiryDate: expiryDate(start: last.startDate, rule: rule)
+            ))
         }
 
-        // A second glass of the same milk is still the same evening's second wave.
-        var latestByGroup: [String: PlannedCarbFollowUp] = [:]
-        for candidate in candidates where !handledGroups.contains(candidate.groupKey) {
-            if let current = latestByGroup[candidate.groupKey], current.mealStart >= candidate.followUp.mealStart { continue }
-            latestByGroup[candidate.groupKey] = candidate.followUp
-        }
+        return planned.sorted { $0.dueDate < $1.dueDate }
+    }
 
-        return latestByGroup.values.sorted { $0.dueDate < $1.dueDate }
+    private static func unique(_ names: [String]) -> [String] {
+        var seen = Set<String>()
+        return names.filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
     }
 
     /// Where glucose stands against the conditions: at least 6 mmol/L, and no lower than about
@@ -427,7 +522,7 @@ final class CarbFollowUpManager {
         publish(planned.filter { $0.triggerID != followUp.triggerID })
     }
 
-    /// Gives one meal other later carbs than its favorite food's, or none.
+    /// Gives one meal other later carbs than worked out, or none.
     func setPlan(_ plan: MealCarbFollowUp, forMeal triggerID: String) {
         defaults.setCarbFollowUpMealPlan(plan, forMeal: triggerID, now: now())
     }
@@ -485,10 +580,6 @@ final class CarbFollowUpManager {
     private func fetchPlanned(now: Date, completion: @escaping ([PlannedCarbFollowUp]) -> Void) {
         let rules = defaults.carbFollowUpRules
         let mealPlans = defaults.carbFollowUpMealPlans
-        guard !rules.isEmpty || mealPlans.contains(where: { $0.value.rule != nil }) else {
-            completion([])
-            return
-        }
 
         let lookback = CarbFollowUpPlanner.lookback(rules: Array(rules.values) + mealPlans.values.compactMap(\.rule))
         fetchCarbEntries(now.addingTimeInterval(-lookback)) { result in
@@ -500,6 +591,7 @@ final class CarbFollowUpManager {
                     rules: rules,
                     assessments: self.defaults.carbFollowUpAssessments,
                     mealPlans: mealPlans,
+                    mealNutrition: self.defaults.carbFollowUpMealNutrition,
                     records: self.defaults.carbFollowUpRecords,
                     now: now
                 ))
@@ -539,6 +631,7 @@ extension UserDefaults {
         case records = "com.loopkit.Loop.carbFollowUpRecords"
         case mealPlans = "com.loopkit.Loop.carbFollowUpMealPlans"
         case assessments = "com.loopkit.Loop.carbFollowUpAssessments"
+        case mealNutrition = "com.loopkit.Loop.carbFollowUpMealNutrition"
     }
 
     /// Later-carb rules by favorite food `id`. Kept apart from the favorites themselves, so the
@@ -570,6 +663,23 @@ extension UserDefaults {
         var plans = CarbFollowUpPlanner.pruned(carbFollowUpMealPlans, now: now, date: \.date)
         plans[triggerID] = plan
         carbFollowUpMealPlans = plans
+    }
+
+    /// Fat and protein the meal estimate found in a meal, by the meal's carb entry `syncIdentifier`.
+    var carbFollowUpMealNutrition: [String: MealNutrition] {
+        get { decoded(forKey: CarbFollowUpKey.mealNutrition.rawValue) ?? [:] }
+        set {
+            set(try? JSONEncoder().encode(newValue), forKey: CarbFollowUpKey.mealNutrition.rawValue)
+            NotificationCenter.default.post(name: .carbFollowUpRulesDidChange, object: nil)
+        }
+    }
+
+    func setCarbFollowUpMealNutrition(_ nutrition: MealNutrition?, forMeal triggerID: String) {
+        // Only meals still in the window matter, so an overgrown list can simply start over.
+        var all = carbFollowUpMealNutrition
+        if all.count > 200 { all = [:] }
+        all[triggerID] = nutrition
+        carbFollowUpMealNutrition = all
     }
 
     /// What became of each meal's later carbs, by the meal's carb entry `syncIdentifier`.

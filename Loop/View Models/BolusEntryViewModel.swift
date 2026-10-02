@@ -112,8 +112,12 @@ final class BolusEntryViewModel: ObservableObject {
     let originalCarbEntry: StoredCarbEntry?
     let potentialCarbEntry: NewCarbEntry?
 
-    /// What happens later for the meal being saved; kept by the saved entry once it exists.
+    /// What happens later for the meal being saved, for the summary line.
     var laterCarbPlan: MealCarbFollowUp?
+    /// What was decided by hand for the meal, kept by the saved entry once it exists.
+    var laterCarbDecision: MealCarbFollowUp?
+    /// Fat and protein the meal estimate found, kept by the saved entry.
+    var mealNutrition: MealNutrition?
 
     /// "Later carbs: 6 g at 21:30", or `nil` when the meal has none.
     var laterCarbSummary: String? {
@@ -415,8 +419,13 @@ final class BolusEntryViewModel: ObservableObject {
                 }
             }
             if let storedCarbEntry = await saveCarbEntry(carbEntry, replacingEntry: originalCarbEntry) {
-                if let id = storedCarbEntry.syncIdentifier, let laterCarbPlan {
-                    UserDefaults.standard.setCarbFollowUpMealPlan(laterCarbPlan, forMeal: id)
+                if let id = storedCarbEntry.syncIdentifier {
+                    if let mealNutrition {
+                        UserDefaults.standard.setCarbFollowUpMealNutrition(mealNutrition, forMeal: id)
+                    }
+                    if let laterCarbDecision {
+                        UserDefaults.standard.setCarbFollowUpMealPlan(laterCarbDecision, forMeal: id)
+                    }
                 }
                 self.dosingDecision.carbEntry = storedCarbEntry
                 self.analyticsServicesManager?.didAddCarbs(source: "Phone", amount: storedCarbEntry.quantity.doubleValue(for: .gram()))

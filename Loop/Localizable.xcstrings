@@ -504,6 +504,16 @@
         }
       }
     },
+    " → %@ g" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " → %@ g"
+          }
+        }
+      }
+    },
     "%1$@ %2$@ g at %3$@" : {
       "comment" : "Status row title for a planned follow-up of a favorite food's carbs (1: food emoji)(2: grams)(3: time it is due)",
       "localizations" : {
@@ -515,12 +525,42 @@
         }
       }
     },
+    "%1$@ g fat + %2$@ g protein = %3$@ fat-protein units" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ g fett + %2$@ g protein = %3$@ fett-protein-enheter"
+          }
+        }
+      }
+    },
+    "%1$@ g · %2$@ g" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ g · %2$@ g"
+          }
+        }
+      }
+    },
     "%1$@ in %2$@" : {
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ om %2$@"
+          }
+        }
+      }
+    },
+    "%1$@ together: %2$@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ sammen: %2$@"
           }
         }
       }
@@ -541,6 +581,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ siste 15 min"
+          }
+        }
+      }
+    },
+    ", below 1: no later carbs" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", under 1: ingen senere karbo"
           }
         }
       }
@@ -3330,6 +3380,16 @@
         }
       }
     },
+    "Being estimated…" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anslås …"
+          }
+        }
+      }
+    },
     "Cancel Later Carbs" : {
       "localizations" : {
         "nb" : {
@@ -3424,13 +3484,32 @@
         }
       }
     },
-    "For food whose fat and protein raise glucose hours later, such as porridge and milk. Loop adds a small, slow carb entry by itself once the dip after the meal is over." : {
-      "comment" : "Explanation under the follow-up toggle when it is off",
+    "Fat and Protein" : {
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For mat der fett og protein får blodsukkeret til å stige flere timer senere, som grøt og melk. Loop legger selv inn litt langsom karbo når dippen etter måltidet er over."
+            "value" : "Fett og protein"
+          }
+        }
+      }
+    },
+    "Fixed Amount" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fast mengde"
+          }
+        }
+      }
+    },
+    "From fat and protein estimated by AI" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ut fra fett og protein anslått av AI"
           }
         }
       }
@@ -3536,6 +3615,16 @@
         }
       }
     },
+    "Later carbs are worked out for each meal from the fat and protein of everything eaten within an hour, so porridge and the milk after it count together. Below one fat-protein unit there are none." : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senere karbo regnes ut for hvert måltid fra fett og protein i alt som spises innen en time, så grøt og melka etterpå teller sammen. Under én fett-protein-enhet blir det ingen."
+          }
+        }
+      }
+    },
     "Later carbs wait for glucose to turn" : {
       "localizations" : {
         "nb" : {
@@ -3613,16 +3702,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fjern bilde"
-          }
-        }
-      }
-    },
-    "Suggested by AI" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Foreslått av AI"
           }
         }
       }

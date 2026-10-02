@@ -14,6 +14,16 @@ extension DeviceDataManager: CarbEntryViewModelDelegate {
     var defaultAbsorptionTimes: LoopKit.CarbStore.DefaultAbsorptionTimes {
         return carbStore.defaultAbsorptionTimes
     }
+
+    func recentCarbEntries(completion: @escaping ([StoredCarbEntry]) -> Void) {
+        carbStore.getCarbEntries(start: Date().addingTimeInterval(-.hours(3)), end: nil) { result in
+            if case .success(let entries) = result {
+                completion(entries)
+            } else {
+                completion([])
+            }
+        }
+    }
 }
 
 extension DeviceDataManager: BolusEntryViewModelDelegate, ManualDoseViewModelDelegate {

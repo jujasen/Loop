@@ -34,14 +34,14 @@ enum LaterCarbFormat {
     }
 }
 
-/// "Suggested by AI", with the estimate's reason underneath.
+/// Says the amount came from the estimate's fat and protein, with the calculation underneath.
 struct LaterCarbSuggestionLabel: View {
     var reason: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Label {
-                Text("Suggested by AI", comment: "Label on later carbs that the meal estimate suggested")
+                Text("From fat and protein estimated by AI", comment: "Label on later carbs worked out from the fat and protein the meal estimate found")
             } icon: {
                 Image(systemName: "sparkles")
             }
