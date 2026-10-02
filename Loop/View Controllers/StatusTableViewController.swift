@@ -103,6 +103,10 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 
                 WidgetCenter.shared.reloadAllTimelines()
             },
+            notificationCenter.addObserver(forName: .carbFollowUpsDidChange, object: deviceManager.carbFollowUps, queue: .main) { [weak self] _ in
+                self?.refreshContext.formUnion([.status, .carbs])
+                self?.reloadData(animated: true)
+            },
             notificationCenter.addObserver(forName: .LoopRunning, object: deviceManager.loopManager, queue: nil) { [weak self] _ in
                 DispatchQueue.main.async {
                     self?.hudView?.loopCompletionHUD.loopInProgress = true
@@ -989,6 +993,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case pumpSuspended(resuming: Bool)
         case onboardingSuspended
         case recommendManualGlucoseEntry
+        case carbFollowUpPlanned(PlannedCarbFollowUp)
 
         var hasRow: Bool {
             switch self {
@@ -1027,6 +1032,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
             !premealOverride.hasFinished()
         {
             statusRowMode = .scheduleOverrideEnabled(premealOverride)
+        } else if let followUp = deviceManager.carbFollowUps.planned.first {
+            statusRowMode = .carbFollowUpPlanned(followUp)
         } else {
             statusRowMode = .hidden
         }
@@ -1133,6 +1140,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         data.predictedGlucose = predictedGlucoseValues
         data.doseEntries = cachedChartDoseEntries
         data.carbEntries = cachedChartCarbEntries
+        data.plannedCarbs = deviceManager.carbFollowUps.planned
         data.basalSchedule = loopSettings.basalRateSchedule
         data.targetRangeSchedule = loopSettings.glucoseTargetRangeSchedule
         data.overrides = recentOverrides(relativeTo: now)
@@ -1723,6 +1731,19 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     cell.subtitleLabel.text = NSLocalizedString("Tap to Resume", comment: "The subtitle of the cell displaying an action to resume onboarding")
                     cell.accessoryView = nil
                     return cell
+                case .carbFollowUpPlanned(let followUp):
+                    let cell = getTitleSubtitleCell()
+                    let grams = NumberFormatter.localizedString(from: NSNumber(value: followUp.rule.carbGrams), number: .decimal)
+                    let dueTime = DateFormatter.localizedString(from: followUp.dueDate, dateStyle: .none, timeStyle: .short)
+                    // Title and subtitle share one line: the time matters more than the meal's name.
+                    cell.titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+                    cell.subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+                    cell.titleLabel.text = String(format: NSLocalizedString("%1$@ %2$@ g at %3$@", comment: "Status row title for a planned follow-up of a favorite food's carbs (1: food emoji)(2: grams)(3: time it is due)"), followUp.emoji, grams, dueTime).trimmingCharacters(in: .whitespaces)
+                    cell.subtitleLabel.text = followUp.dueDate > Date()
+                        ? String(format: NSLocalizedString("Later carbs after %@", comment: "Status row subtitle for later carbs that are not due yet (1: name of the meal)"), followUp.mealDescription)
+                        : NSLocalizedString("Later carbs wait for glucose to turn", comment: "Status row subtitle for due later carbs waiting for glucose to stop falling")
+                    cell.selectionStyle = .default
+                    return cell
                 case .recommendManualGlucoseEntry:
                     let cell = getTitleSubtitleCell()
                     cell.titleLabel.text = NSLocalizedString("No Recent Glucose", comment: "The title of the cell indicating that there is no recent glucose")
@@ -1898,6 +1919,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     onboardingManager.resume()
                 case .recommendManualGlucoseEntry:
                     presentBolusEntryView(enableManualGlucoseEntry: true)
+                case .carbFollowUpPlanned(let followUp):
+                    presentCarbFollowUpDetail(followUp)
                 default:
                     break
                 }
@@ -1941,6 +1964,31 @@ final class StatusTableViewController: LoopChartsTableViewController {
         alert.addAction(action)
         alert.addCancelAction { _ in }
         present(alert, animated: true, completion: nil)
+    }
+
+    private func presentCarbFollowUpDetail(_ followUp: PlannedCarbFollowUp) {
+        let manager = deviceManager.carbFollowUps!
+        let detail = LaterCarbDetailView(
+            followUp: followUp,
+            conditions: manager.conditions,
+            glucoseUnit: statusCharts.glucose.glucoseUnit,
+            onEdit: { [weak self] in self?.presentCarbFollowUpEditor(followUp) },
+            onCancel: { manager.cancel(followUp) },
+            onAddNow: { manager.addNow(followUp) }
+        )
+        present(UIHostingController(rootView: detail), animated: true)
+    }
+
+    private func presentCarbFollowUpEditor(_ followUp: PlannedCarbFollowUp) {
+        let manager = deviceManager.carbFollowUps!
+        let current = MealCarbFollowUp(rule: followUp.rule, source: followUp.source, reason: followUp.reason)
+        let editor = LaterCarbEditorView(plan: current, suggestion: current, mealStart: followUp.mealStart) { plan in
+            manager.setPlan(plan ?? MealCarbFollowUp(rule: nil, source: followUp.source), forMeal: followUp.triggerID)
+        }
+        // The detail sheet is still on its way down.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            self.present(UIHostingController(rootView: editor), animated: true)
+        }
     }
 
     private func presentErrorCancelingBolus(_ error: (Error)) {
@@ -2012,6 +2060,14 @@ final class StatusTableViewController: LoopChartsTableViewController {
     /// list uses; the id comes back from the chart, so it is resolved against the entries
     /// the chart was last given.
     private func presentCarbEntryEditor(carbEntryID: String) {
+        if carbEntryID.hasPrefix(BGChartModel.plannedCarbAnchorPrefix) {
+            let triggerID = String(carbEntryID.dropFirst(BGChartModel.plannedCarbAnchorPrefix.count))
+            if let followUp = deviceManager.carbFollowUps.planned.first(where: { $0.triggerID == triggerID }) {
+                presentCarbFollowUpDetail(followUp)
+            }
+            return
+        }
+
         guard let entry = cachedChartCarbEntries.first(where: {
             BGChartModel.carbEntryID(for: $0) == carbEntryID
         }), entry.createdByCurrentApp else {

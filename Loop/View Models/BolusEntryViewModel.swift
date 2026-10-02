@@ -111,6 +111,15 @@ final class BolusEntryViewModel: ObservableObject {
 
     let originalCarbEntry: StoredCarbEntry?
     let potentialCarbEntry: NewCarbEntry?
+
+    /// What happens later for the meal being saved; kept by the saved entry once it exists.
+    var laterCarbPlan: MealCarbFollowUp?
+
+    /// "Later carbs: 6 g at 21:30", or `nil` when the meal has none.
+    var laterCarbSummary: String? {
+        guard let rule = laterCarbPlan?.rule, let start = potentialCarbEntry?.startDate else { return nil }
+        return String(format: NSLocalizedString("Later carbs: %1$@ at %2$@ if glucose is rising", comment: "Line under the carb entry on the bolus screen (1: grams)(2: earliest time)"), LaterCarbFormat.grams(rule.carbGrams), LaterCarbFormat.time(start.addingTimeInterval(rule.delay)))
+    }
     let selectedCarbAbsorptionTimeEmoji: String?
 
     @Published var recommendedBolus: HKQuantity?
@@ -406,6 +415,9 @@ final class BolusEntryViewModel: ObservableObject {
                 }
             }
             if let storedCarbEntry = await saveCarbEntry(carbEntry, replacingEntry: originalCarbEntry) {
+                if let id = storedCarbEntry.syncIdentifier, let laterCarbPlan {
+                    UserDefaults.standard.setCarbFollowUpMealPlan(laterCarbPlan, forMeal: id)
+                }
                 self.dosingDecision.carbEntry = storedCarbEntry
                 self.analyticsServicesManager?.didAddCarbs(source: "Phone", amount: storedCarbEntry.quantity.doubleValue(for: .gram()))
             } else {

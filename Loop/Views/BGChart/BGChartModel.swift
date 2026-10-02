@@ -110,6 +110,14 @@ final class BGChartModel: ObservableObject {
         }
     }
 
+    /// Later carbs waiting to be added: a hollow ring at the due time and a dashed line to
+    /// the time they are given up on.
+    struct PlannedCarbPoint: Identifiable {
+        var point: TreatmentPoint
+        let expiresAt: Date
+        var id: String { point.carbEntryID ?? "\(point.date.timeIntervalSince1970)" }
+    }
+
     struct BasalStep: Identifiable {
         let start: Date
         let end: Date
@@ -173,6 +181,7 @@ final class BGChartModel: ObservableObject {
 
     @Published var boluses: [TreatmentPoint] = []
     @Published var carbs: [TreatmentPoint] = []
+    @Published var plannedCarbs: [PlannedCarbPoint] = []
     /// Boluses Loop gave on its own. Drawn as a downward triangle rather than a dot,
     /// the way LoopFollow separates a dose the algorithm gave from one a person did.
     @Published var automaticBoluses: [TreatmentPoint] = []

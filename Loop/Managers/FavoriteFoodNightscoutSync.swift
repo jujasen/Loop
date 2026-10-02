@@ -641,7 +641,7 @@ extension Notification.Name {
 extension KeychainManager {
     /// The Nightscout site and API secret the Nightscout service stored. Read directly, because
     /// the service lives in a plugin the app doesn't link against.
-    fileprivate func getNightscoutCredentials() throws -> (siteURL: URL, apiSecret: String) {
+    func getNightscoutCredentials() throws -> (siteURL: URL, apiSecret: String) {
         let credentials = try getInternetCredentials(account: "NightscoutAPI")
         return (siteURL: credentials.url, apiSecret: credentials.password)
     }

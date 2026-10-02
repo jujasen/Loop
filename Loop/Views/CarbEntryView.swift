@@ -22,6 +22,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     @State private var showHowAbsorptionTimeWorks = false
     @State private var showAddFavoriteFood = false
     @State private var showFavoriteFoodPicker = false
+    @State private var showLaterCarbEditor = false
     
     private let isNewEntry: Bool
 
@@ -111,6 +112,14 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         .sheet(isPresented: $showHowAbsorptionTimeWorks) {
             HowAbsorptionTimeWorksView()
         }
+        .sheet(isPresented: $showLaterCarbEditor) {
+            LaterCarbEditorView(
+                plan: viewModel.laterCarb,
+                suggestion: viewModel.laterCarbSuggestion,
+                mealStart: viewModel.laterCarbMealStart,
+                onDone: viewModel.setLaterCarb(_:)
+            )
+        }
     }
     
     private var mainCard: some View {
@@ -134,6 +143,14 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
             
             AbsorptionTimePickerRow(absorptionTime: $viewModel.absorptionTime, isFocused: absorptionTimeFocused, validDurationRange: viewModel.absorptionRimesRange, showHowAbsorptionTimeWorks: $showHowAbsorptionTimeWorks)
                 .padding(.bottom, 2)
+
+            CardSectionDivider()
+
+            LaterCarbRow(plan: viewModel.laterCarb) {
+                expandedRow = nil
+                showLaterCarbEditor = true
+            }
+            .padding(.bottom, 2)
         }
         .padding(.vertical, 12)
         .padding(.horizontal)

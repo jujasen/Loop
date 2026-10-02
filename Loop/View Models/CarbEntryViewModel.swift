@@ -83,6 +83,12 @@ final class CarbEntryViewModel: ObservableObject {
     }
     
     @Published var favoriteFoods = UserDefaults.standard.favoriteFoods
+
+    /// What happens later for this meal: `nil` for nothing, a plan without a rule when turned down.
+    @Published var laterCarb: MealCarbFollowUp?
+    /// What the favorite food or the meal estimate suggested, kept so a turned-down suggestion can
+    /// be taken up again.
+    @Published private(set) var laterCarbSuggestion: MealCarbFollowUp?
     @Published var favoriteFoodFolders = UserDefaults.standard.favoriteFoodFolders
     @Published var selectedFavoriteFoodIndex = -1
     /// `id` of the amount applied from the selected favorite food, for foods that have several.
@@ -142,7 +148,13 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionTimeWasEdited = true
         self.usesCustomFoodType = true
         self.shouldBeginEditingQuantity = false
-        
+
+        if let id = originalCarbEntry.syncIdentifier {
+            let suggestion = Self.favoriteLaterCarb(named: label.name)
+            self.laterCarbSuggestion = suggestion
+            self.laterCarb = UserDefaults.standard.carbFollowUpMealPlans[id] ?? suggestion
+        }
+
         observeLoopUpdates()
     }
     
@@ -220,6 +232,7 @@ final class CarbEntryViewModel: ObservableObject {
             potentialCarbEntry: updatedCarbEntry,
             selectedCarbAbsorptionTimeEmoji: selectedDefaultAbsorptionTimeEmoji
         )
+        viewModel.laterCarbPlan = laterCarb
         Task {
             await viewModel.generateRecommendationAndStartObserving()
         }
@@ -328,6 +341,7 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionTime = defaultAbsorptionTimes.medium
         self.absorptionTimeWasEdited = false
         self.usesCustomFoodType = false
+        setLaterCarbSuggestion(nil)
     }
 
     private func apply(food: StoredFavoriteFood, portion: FavoriteFoodPortion) {
@@ -338,6 +352,45 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionTime = food.absorptionTime
         self.absorptionTimeWasEdited = true
         self.usesCustomFoodType = true
+        setLaterCarbSuggestion(Self.favoriteLaterCarb(for: food))
+    }
+
+    // MARK: - Later Carbs
+
+    /// The favorite food's later carbs, as they would apply to a meal of it.
+    static func favoriteLaterCarb(for food: StoredFavoriteFood, defaults: UserDefaults = .standard) -> MealCarbFollowUp? {
+        guard let rule = defaults.carbFollowUpRules[food.id] else { return nil }
+        let assessment = defaults.carbFollowUpAssessments[food.id]
+        let suggested = assessment?.userChanged == false && assessment?.suggestion == rule
+        return MealCarbFollowUp(rule: rule, source: suggested ? .ai : .favorite, reason: suggested ? assessment?.reason : nil)
+    }
+
+    static func favoriteLaterCarb(named name: String, defaults: UserDefaults = .standard) -> MealCarbFollowUp? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let food = defaults.favoriteFoods.first(where: {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(trimmed) == .orderedSame
+        }) else { return nil }
+        return favoriteLaterCarb(for: food, defaults: defaults)
+    }
+
+    /// A new suggestion replaces whatever the meal had: it describes a different meal.
+    private func setLaterCarbSuggestion(_ suggestion: MealCarbFollowUp?) {
+        laterCarbSuggestion = suggestion
+        laterCarb = suggestion
+    }
+
+    /// The meal's later carbs as changed in the editor. An entry that already exists keeps the
+    /// change at once; a new one hands it to the bolus screen, which keeps it once the entry is saved.
+    func setLaterCarb(_ plan: MealCarbFollowUp?) {
+        laterCarb = plan
+        if let id = originalCarbEntry?.syncIdentifier {
+            UserDefaults.standard.setCarbFollowUpMealPlan(plan, forMeal: id)
+        }
+    }
+
+    /// When the meal starts, for the editor's earliest and latest times.
+    var laterCarbMealStart: Date {
+        time
     }
 
     // MARK: - Meal Estimate
@@ -405,6 +458,9 @@ final class CarbEntryViewModel: ObservableObject {
         mealDescription = ""
         mealFollowUp = ""
         mealPhotos = []
+        if selectedFavoriteFoodIndex == -1, laterCarbSuggestion?.source == .ai {
+            setLaterCarbSuggestion(nil)
+        }
     }
 
     private func requestMealEstimate(conversation: [MealCarbEstimator.Message]) {
@@ -441,6 +497,7 @@ final class CarbEntryViewModel: ObservableObject {
         usesCustomFoodType = true
         absorptionTime = estimate.absorptionTime(in: absorptionRimesRange)
         absorptionTimeWasEdited = true
+        setLaterCarbSuggestion(estimate.laterCarbRule.map { MealCarbFollowUp(rule: $0, source: .ai, reason: estimate.laterCarbs?.reason) })
     }
 
     // MARK: - Utility

@@ -242,6 +242,9 @@ final class DeviceDataManager {
 
     private(set) var loopManager: LoopDataManager!
 
+    /// Adds favorite foods' follow-up carbs once they are due, right before a loop.
+    private(set) var carbFollowUps: CarbFollowUpManager!
+
     init(pluginManager: PluginManager,
          alertManager: AlertManager,
          settingsManager: SettingsManager,
@@ -405,6 +408,31 @@ final class DeviceDataManager {
         cacheStore.delegate = loopManager
         loopManager.presetActivationObservers.append(alertManager)
         loopManager.presetActivationObservers.append(analyticsServicesManager)
+
+        let carbStore = self.carbStore
+        let glucoseStore = self.glucoseStore
+        let loopManager = self.loopManager!
+        carbFollowUps = CarbFollowUpManager(
+            fetchCarbEntries: { start, completion in
+                carbStore.getCarbEntries(start: start, end: nil) { result in
+                    switch result {
+                    case .success(let entries): completion(.success(entries))
+                    case .failure(let error): completion(.failure(error))
+                    }
+                }
+            },
+            fetchGlucose: { start, completion in
+                glucoseStore.getGlucoseSamples(start: start, end: nil, completion: completion)
+            },
+            addCarbEntry: { entry, completion in
+                loopManager.addCarbEntry(entry) { result in
+                    switch result {
+                    case .success(let stored): completion(.success(stored))
+                    case .failure(let error): completion(.failure(error))
+                    }
+                }
+            }
+        )
 
         watchManager = WatchDataManager(deviceManager: self, healthStore: healthStore)
 
@@ -571,12 +599,16 @@ final class DeviceDataManager {
         self.log.default("Asserting current pump data")
         guard let pumpManager = pumpManager else {
             // Run loop, even if pump is missing, to ensure stored dosing decision
-            self.loopManager.loop()
+            carbFollowUps.runDue {
+                self.loopManager.loop()
+            }
             return
         }
 
         pumpManager.ensureCurrentPumpData() { (lastSync) in
-            self.loopManager.loop()
+            self.carbFollowUps.runDue {
+                self.loopManager.loop()
+            }
         }
     }
 
