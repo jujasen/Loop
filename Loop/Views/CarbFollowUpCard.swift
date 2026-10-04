@@ -26,10 +26,15 @@ struct CarbFollowUpCard: View {
         self._assessment = State(initialValue: UserDefaults.standard.carbFollowUpAssessments[food.id])
     }
 
-    /// The fat and protein, when they describe the food as it is now.
+    /// The fat and protein, when they describe the food as it is now. A food with fast carbs never
+    /// rises late, as in `CarbFollowUpPlanner.nutrition(of:)`.
     private var nutrition: MealNutrition? {
         guard let assessment, assessment.contentKey == FavoriteCarbFollowUpAssessment.contentKey(for: food) else { return nil }
-        return assessment.nutrition
+        var nutrition = assessment.nutrition
+        if food.absorptionTime <= CarbFollowUpPlanner.fastAbsorption {
+            nutrition?.delayedRise = false
+        }
+        return nutrition
     }
 
     var body: some View {

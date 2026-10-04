@@ -43,6 +43,9 @@ struct MealCarbEstimate: Codable, Equatable {
     /// estimates made before later carbs existed.
     var fatGrams: Double? = nil
     var proteinGrams: Double? = nil
+    /// Whether the meal is expected to raise glucose again hours later. Absent from estimates made
+    /// before it was asked for, which then never give later carbs.
+    var delayedRise: Bool? = nil
 
     enum CodingKeys: String, CodingKey {
         case name, emoji, items, assumptions, confidence
@@ -50,12 +53,13 @@ struct MealCarbEstimate: Codable, Equatable {
         case absorptionHours = "absorption_hours"
         case fatGrams = "fat_grams"
         case proteinGrams = "protein_grams"
+        case delayedRise = "delayed_rise"
     }
 
     /// Fat and protein for the later carbs, or `nil` when the estimate gave none.
     var nutrition: MealNutrition? {
         guard let fatGrams, let proteinGrams, fatGrams.isFinite, proteinGrams.isFinite else { return nil }
-        return MealNutrition(fatGrams: max(0, fatGrams), proteinGrams: max(0, proteinGrams), carbGrams: roundedCarbs)
+        return MealNutrition(fatGrams: max(0, fatGrams), proteinGrams: max(0, proteinGrams), carbGrams: roundedCarbs, delayedRise: delayedRise ?? false)
     }
 
     /// Grams rounded to what the carb entry field shows (one decimal).
@@ -178,12 +182,12 @@ final class MealCarbEstimator {
         if portion.hasName {
             description += ", \(portion.name)"
         }
-        description += ". \(NumberFormatter.localizedString(from: NSNumber(value: grams), number: .decimal)) g karbo. Anslå fett og protein for akkurat denne mengden, slik den vanligvis lages for et lite barn."
+        description += ". \(NumberFormatter.localizedString(from: NSNumber(value: grams), number: .decimal)) g karbo. Anslå fett og protein for akkurat denne mengden, slik den vanligvis lages for et lite barn, og om maten gir en forsinket stigning (delayed_rise)."
 
         let estimate = try await estimate(conversation: [Message(role: "user", content: description)])
         guard let nutrition = estimate.nutrition else { return nil }
         guard estimate.roundedCarbs > 0, grams > 0 else {
-            return MealNutrition(fatGrams: nutrition.fatGrams, proteinGrams: nutrition.proteinGrams, carbGrams: grams)
+            return MealNutrition(fatGrams: nutrition.fatGrams, proteinGrams: nutrition.proteinGrams, carbGrams: grams, delayedRise: nutrition.delayedRise)
         }
         return nutrition.scaled(toCarbs: grams)
     }
@@ -273,7 +277,7 @@ final class MealCarbEstimator {
     private static let schema: [String: Any] = [
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "emoji", "carbs_grams", "absorption_hours", "items", "assumptions", "confidence", "fat_grams", "protein_grams"],
+        "required": ["name", "emoji", "carbs_grams", "absorption_hours", "items", "assumptions", "confidence", "fat_grams", "protein_grams", "delayed_rise"],
         "properties": [
             "name": ["type": "string"],
             "emoji": ["type": "string"],
@@ -296,6 +300,7 @@ final class MealCarbEstimator {
             "confidence": ["type": "string", "enum": ["high", "medium", "low"]] as [String: Any],
             "fat_grams": ["type": "number"],
             "protein_grams": ["type": "number"],
+            "delayed_rise": ["type": "boolean"],
         ] as [String: Any],
     ]
 
@@ -311,6 +316,7 @@ final class MealCarbEstimator {
         - assumptions: short notes, in the caregiver's language, on anything you had to guess — portion size, brand, recipe. Empty when nothing was guessed.
         - confidence: high when amounts and foods are clear, medium when portions had to be guessed, low when the description is vague.
         - fat_grams and protein_grams: total fat and protein in grams for the amount actually eaten, from Norwegian food tables (Matvaretabellen) and labels. Count butter, oil, cheese, cream and whole milk that go with the food.
+        - delayed_rise: whether this food, eaten as described, raises glucose again 2-5 hours after the meal because a substantial amount of fat and protein slows it down. Loop then gives extra insulin hours later, often while the child sleeps or is in kindergarten, so a wrong true is dangerous and a wrong false is harmless. True only for proper meals with plenty of fat and protein: porridge (havregrøt, risgrøt) cooked with or served with milk, pizza, taco, burgers, lasagna, pasta or rice with a creamy or meat sauce, a hot dinner with meat or fish and sauce, a large serving of bread with cheese, egg or fatty spreads. False for everything that is mainly a quick rise: smoothies, juice, milkshakes, chocolate milk, yogurt and yogurt drinks, any other drink, fruit and berries, candy, ice cream, cakes, biscuits, crackers, bread with a thin or sweet spread, and snacks. Judge a meal by what it is, not by its size: a child's normal portion of porridge is still porridge, and a big smoothie is still a smoothie. When in doubt, false.
 
         The caregiver may attach one or more photos of the meal, with or without text. Use them to identify the foods and judge the portions — the plate, cutlery, a glass or a hand gives the scale. Several photos are of the same meal, from different angles or at different moments; do not count food twice. When a photo shows a nutrition label, use its carbohydrate values. When the text and the photos disagree, the text wins, since the caregiver knows what was actually eaten. Name in assumptions anything in the photos you could not identify.
 

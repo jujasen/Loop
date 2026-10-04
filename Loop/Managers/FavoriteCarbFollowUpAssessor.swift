@@ -58,10 +58,11 @@ final class FavoriteCarbFollowUpAssessor {
         }
     }
 
-    /// The favorites whose fat and protein are missing or describe an older version of the food.
+    /// The favorites whose fat and protein are missing or describe an older version of the food, and
+    /// those assessed before the estimate was asked whether they rise late.
     static func foodsNeedingAssessment(_ foods: [StoredFavoriteFood], assessments: [String: FavoriteCarbFollowUpAssessment]) -> [StoredFavoriteFood] {
         foods.filter { food in
-            guard let assessment = assessments[food.id], assessment.nutrition != nil else { return true }
+            guard let assessment = assessments[food.id], assessment.nutrition?.delayedRise != nil else { return true }
             return assessment.contentKey != FavoriteCarbFollowUpAssessment.contentKey(for: food)
         }
     }

@@ -595,6 +595,17 @@
         }
       }
     },
+    ", no late rise expected: no later carbs" : {
+      "comment" : "Appended to the later carbs calculation when the meal estimate expects no late rise from the food (a smoothie, juice, fruit)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", ingen sen stigning ventet: ingen senere karbo"
+          }
+        }
+      }
+    },
     "." : {
       "comment" : "Full stop character",
       "localizations" : {

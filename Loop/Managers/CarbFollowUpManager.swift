@@ -8,6 +8,7 @@
 import Foundation
 import HealthKit
 import LoopKit
+import LoopCore
 import os.log
 
 /// Later carbs: a small, slow carb entry added some time after a meal, to cover the rise that fat
@@ -48,6 +49,10 @@ struct MealNutrition: Codable, Equatable {
     var proteinGrams: Double
     /// The carbs of the amount the fat and protein were estimated for.
     var carbGrams: Double
+    /// Whether the meal estimate expects this food to raise glucose again hours after it is eaten.
+    /// Only a food judged so can give a meal later carbs; `nil` (not judged, or judged by a build
+    /// that did not ask) counts as no.
+    var delayedRise: Bool? = nil
 
     /// Fat-protein units: 100 kcal from fat and protein each.
     var fatProteinUnits: Double {
@@ -59,14 +64,19 @@ struct MealNutrition: Codable, Equatable {
     func scaled(toCarbs carbs: Double) -> MealNutrition {
         guard carbGrams > 0, carbs > 0 else { return self }
         let factor = min(max(carbs / carbGrams, 0.25), 4)
-        return MealNutrition(fatGrams: fatGrams * factor, proteinGrams: proteinGrams * factor, carbGrams: carbs)
+        return MealNutrition(fatGrams: fatGrams * factor, proteinGrams: proteinGrams * factor, carbGrams: carbs, delayedRise: delayedRise)
     }
 
     static func + (lhs: MealNutrition, rhs: MealNutrition) -> MealNutrition {
-        MealNutrition(fatGrams: lhs.fatGrams + rhs.fatGrams, proteinGrams: lhs.proteinGrams + rhs.proteinGrams, carbGrams: lhs.carbGrams + rhs.carbGrams)
+        MealNutrition(
+            fatGrams: lhs.fatGrams + rhs.fatGrams,
+            proteinGrams: lhs.proteinGrams + rhs.proteinGrams,
+            carbGrams: lhs.carbGrams + rhs.carbGrams,
+            delayedRise: lhs.delayedRise == true || rhs.delayedRise == true
+        )
     }
 
-    static let zero = MealNutrition(fatGrams: 0, proteinGrams: 0, carbGrams: 0)
+    static let zero = MealNutrition(fatGrams: 0, proteinGrams: 0, carbGrams: 0, delayedRise: false)
 }
 
 /// What was decided for one meal on this phone, kept by the meal's carb entry. It wins over what
@@ -198,6 +208,9 @@ enum CarbFollowUpPlanner {
     static let maximumGrams = 15.0
     /// When the rise from fat and protein starts, after the last part of the meal.
     static let delay = TimeInterval.minutes(90)
+    /// A part of a meal logged with an absorption time this short is fast carbs — a smoothie, juice,
+    /// fruit — and never gives the meal later carbs, whatever the estimate made of it.
+    static let fastAbsorption = TimeInterval.hours(2)
 
     enum Decision: Equatable {
         case wait
@@ -217,9 +230,11 @@ enum CarbFollowUpPlanner {
 
     // MARK: Working out the amount
 
-    /// Later carbs for a meal of this much fat and protein, or `nil` below one unit. More units
-    /// last longer, the way the rise from a bigger meal does.
+    /// Later carbs for a meal of this much fat and protein, or `nil` below one unit or when no
+    /// part of it is expected to rise late. More units last longer, the way the rise from a bigger
+    /// meal does.
     static func rule(for nutrition: MealNutrition) -> CarbFollowUpRule? {
+        guard nutrition.delayedRise == true else { return nil }
         let units = nutrition.fatProteinUnits
         guard units.isFinite, units >= minimumUnits else { return nil }
         let grams = min((units * gramsPerUnit).rounded(), maximumGrams)
@@ -234,6 +249,8 @@ enum CarbFollowUpPlanner {
         var text = String(format: NSLocalizedString("%1$@ g fat + %2$@ g protein = %3$@ fat-protein units", comment: "How later carbs are worked out (1: grams of fat)(2: grams of protein)(3: units)"), whole(nutrition.fatGrams), whole(nutrition.proteinGrams), number(nutrition.fatProteinUnits))
         if let rule = rule(for: nutrition) {
             text += String(format: NSLocalizedString(" → %@ g", comment: "Result of the later carbs calculation (1: grams), appended to it"), whole(rule.carbGrams))
+        } else if nutrition.delayedRise != true {
+            text += NSLocalizedString(", no late rise expected: no later carbs", comment: "Appended to the later carbs calculation when the meal estimate expects no late rise from the food (a smoothie, juice, fruit)")
         } else {
             text += NSLocalizedString(", below 1: no later carbs", comment: "Appended to the later carbs calculation when the meal is below the limit")
         }
@@ -245,16 +262,25 @@ enum CarbFollowUpPlanner {
     }
 
     /// Fat and protein in one carb entry: what was found for this meal, or else what was found for
-    /// the favorite food it was logged as, scaled to the entry's carbs.
+    /// the favorite food it was logged as, scaled to the entry's carbs. An entry logged as fast
+    /// carbs keeps its fat and protein but can never be the part that rises late.
     static func nutrition(of entry: StoredCarbEntry, favorite: StoredFavoriteFood?, assessments: [String: FavoriteCarbFollowUpAssessment], mealNutrition: [String: MealNutrition]) -> MealNutrition? {
         let carbs = entry.quantity.doubleValue(for: .gram())
-        if let id = entry.syncIdentifier, let found = mealNutrition[id] {
-            return found.scaled(toCarbs: carbs)
+        var found: MealNutrition?
+        if let id = entry.syncIdentifier, let nutrition = mealNutrition[id] {
+            found = nutrition.scaled(toCarbs: carbs)
+        } else if let favorite, let nutrition = assessments[favorite.id]?.nutrition {
+            found = nutrition.scaled(toCarbs: carbs)
         }
-        if let favorite, let found = assessments[favorite.id]?.nutrition {
-            return found.scaled(toCarbs: carbs)
+        if isFast(entry) {
+            found?.delayedRise = false
         }
-        return nil
+        return found
+    }
+
+    /// True for an entry logged with fast carbs. Without an absorption time, Loop uses the medium one.
+    static func isFast(_ entry: StoredCarbEntry) -> Bool {
+        (entry.absorptionTime ?? LoopCoreConstants.defaultCarbAbsorptionTimes.medium) <= fastAbsorption
     }
 
     static func favorite(named name: String, in favorites: [StoredFavoriteFood]) -> StoredFavoriteFood? {
@@ -277,7 +303,9 @@ enum CarbFollowUpPlanner {
 
     /// What one meal's later carbs are, before anything was added: the latest decision made for
     /// one of its entries on this phone, else a favorite's fixed amount, else the amount worked out
-    /// from the fat and protein of all its entries together. `nil` when it gets none.
+    /// from the fat and protein of all its entries together. That last one needs at least one part
+    /// the meal estimate expects to rise late and that was not logged as fast carbs, so a smoothie
+    /// or juice never gets later carbs on its own. `nil` when it gets none.
     static func followUp(
         forMeal meal: [StoredCarbEntry],
         favorites: [StoredFavoriteFood],

@@ -184,17 +184,21 @@ final class CarbFollowUpPlannerTests: XCTestCase {
     /// Porridge made with milk and butter, then a cup of milk: neither is enough alone.
     private var walterAssessments: [String: FavoriteCarbFollowUpAssessment] {
         [
-            "porridge": FavoriteCarbFollowUpAssessment(contentKey: "p", nutrition: MealNutrition(fatGrams: 9, proteinGrams: 9, carbGrams: 30)),
-            "milk": FavoriteCarbFollowUpAssessment(contentKey: "m", nutrition: MealNutrition(fatGrams: 3, proteinGrams: 3, carbGrams: 4.5)),
+            "porridge": FavoriteCarbFollowUpAssessment(contentKey: "p", nutrition: MealNutrition(fatGrams: 9, proteinGrams: 9, carbGrams: 30, delayedRise: true)),
+            "milk": FavoriteCarbFollowUpAssessment(contentKey: "m", nutrition: MealNutrition(fatGrams: 3, proteinGrams: 3, carbGrams: 4.5, delayedRise: false)),
+            // Banana, berries and Greek yogurt: more fat and protein than the porridge, all of it fast.
+            "smoothie": FavoriteCarbFollowUpAssessment(contentKey: "s", nutrition: MealNutrition(fatGrams: 10, proteinGrams: 15, carbGrams: 30, delayedRise: false)),
         ]
     }
 
-    private func computed(_ entries: [StoredCarbEntry], mealNutrition: [String: MealNutrition] = [:], now: Date) -> [PlannedCarbFollowUp] {
-        CarbFollowUpPlanner.planned(entries: entries, favorites: [porridge, milk], rules: [:], assessments: walterAssessments, mealNutrition: mealNutrition, records: [:], now: now)
+    private let smoothie = StoredFavoriteFood(id: "smoothie", name: "Smoothie", carbsQuantity: HKQuantity(unit: .gram(), doubleValue: 30), foodType: "🥤", absorptionTime: .hours(2))
+
+    private func computed(_ entries: [StoredCarbEntry], mealNutrition: [String: MealNutrition] = [:], assessments: [String: FavoriteCarbFollowUpAssessment]? = nil, now: Date) -> [PlannedCarbFollowUp] {
+        CarbFollowUpPlanner.planned(entries: entries, favorites: [porridge, milk, smoothie], rules: [:], assessments: assessments ?? walterAssessments, mealNutrition: mealNutrition, records: [:], now: now)
     }
 
-    private func grams(_ carbs: Double, _ id: String, _ foodType: String, at date: Date) -> StoredCarbEntry {
-        StoredCarbEntry(startDate: date, quantity: HKQuantity(unit: .gram(), doubleValue: carbs), syncIdentifier: id, foodType: foodType)
+    private func grams(_ carbs: Double, _ id: String, _ foodType: String, at date: Date, absorption: TimeInterval? = nil) -> StoredCarbEntry {
+        StoredCarbEntry(startDate: date, quantity: HKQuantity(unit: .gram(), doubleValue: carbs), syncIdentifier: id, foodType: foodType, absorptionTime: absorption)
     }
 
     func testUnitsAreFatAndProteinCalories() {
@@ -203,17 +207,17 @@ final class CarbFollowUpPlannerTests: XCTestCase {
 
     func testBelowOneUnitThereAreNoLaterCarbs() {
         // 10 Ritz crackers: about 8 g fat and 2 g protein.
-        XCTAssertNil(CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 8, proteinGrams: 2, carbGrams: 20)))
+        XCTAssertNil(CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 8, proteinGrams: 2, carbGrams: 20, delayedRise: true)))
     }
 
     func testRuleIsHalfTheUsualConversion() {
-        let rule = CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 12, proteinGrams: 12, carbGrams: 30))
+        let rule = CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 12, proteinGrams: 12, carbGrams: 30, delayedRise: true))
         XCTAssertEqual(rule, CarbFollowUpRule(carbGrams: 8, absorptionTime: .hours(4), delay: .minutes(90)))
     }
 
     func testBiggerMealsLastLongerAndAreCapped() {
-        XCTAssertEqual(CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 20, proteinGrams: 10, carbGrams: 30))?.absorptionTime, .hours(5))
-        let pizza = CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 40, proteinGrams: 30, carbGrams: 60))
+        XCTAssertEqual(CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 20, proteinGrams: 10, carbGrams: 30, delayedRise: true))?.absorptionTime, .hours(5))
+        let pizza = CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 40, proteinGrams: 30, carbGrams: 60, delayedRise: true))
         XCTAssertEqual(pizza?.absorptionTime, .hours(6))
         XCTAssertEqual(pizza?.carbGrams, 15)
     }
@@ -249,8 +253,68 @@ final class CarbFollowUpPlannerTests: XCTestCase {
     }
 
     func testEstimatedMealUsesItsOwnFatAndProtein() {
-        let result = computed([grams(20, "x", "🍕 Pizza", at: meal)], mealNutrition: ["x": MealNutrition(fatGrams: 10, proteinGrams: 8, carbGrams: 20)], now: meal)
+        let result = computed([grams(20, "x", "🍕 Pizza", at: meal)], mealNutrition: ["x": MealNutrition(fatGrams: 10, proteinGrams: 8, carbGrams: 20, delayedRise: true)], now: meal)
         XCTAssertEqual(result.first?.rule.carbGrams, 6)
+    }
+
+    // MARK: Only foods that rise late
+
+    func testFoodNotExpectedToRiseLateHasNoLaterCarbsWhateverItsFatAndProtein() {
+        // 25 g × 9 + 15 g × 4 = 2.9 units: plenty, but not a late rise.
+        let nutrition = MealNutrition(fatGrams: 25, proteinGrams: 15, carbGrams: 30, delayedRise: false)
+        XCTAssertNil(CarbFollowUpPlanner.rule(for: nutrition))
+        XCTAssertTrue(CarbFollowUpPlanner.explanation(for: nutrition).hasSuffix(NSLocalizedString(", no late rise expected: no later carbs", comment: "")))
+    }
+
+    func testFoodNeverJudgedHasNoLaterCarbs() {
+        XCTAssertNil(CarbFollowUpPlanner.rule(for: MealNutrition(fatGrams: 25, proteinGrams: 15, carbGrams: 30)))
+        let result = computed([grams(20, "x", "🍕 Pizza", at: meal)], mealNutrition: ["x": MealNutrition(fatGrams: 25, proteinGrams: 15, carbGrams: 20)], now: meal)
+        XCTAssertTrue(result.isEmpty)
+    }
+
+    func testSmoothieHasNoLaterCarbs() {
+        XCTAssertTrue(computed([grams(30, "s", "🥤 Smoothie", at: meal, absorption: .hours(2))], now: meal).isEmpty)
+        XCTAssertTrue(computed([grams(8, "s", "🥤 Smoothie", at: meal, absorption: .hours(2))], now: meal).isEmpty)
+    }
+
+    func testSmoothieAndMilkTogetherHaveNoLaterCarbs() {
+        let milkTime = meal.addingTimeInterval(.minutes(20))
+        let result = computed([grams(30, "s", "🥤 Smoothie", at: meal), grams(4.5, "m", "🥛 Melk", at: milkTime)], now: milkTime)
+        XCTAssertTrue(result.isEmpty)
+    }
+
+    func testDescribedSmoothieHasNoLaterCarbs() {
+        let result = computed([grams(10, "x", "🥤 Liten smoothie", at: meal)], mealNutrition: ["x": MealNutrition(fatGrams: 10, proteinGrams: 15, carbGrams: 10, delayedRise: false)], now: meal)
+        XCTAssertTrue(result.isEmpty)
+    }
+
+    func testFoodLoggedAsFastCarbsNeverRisesLate() {
+        // Even if the estimate got it wrong, two hours or less is fast carbs.
+        let wrong = ["x": MealNutrition(fatGrams: 25, proteinGrams: 15, carbGrams: 20, delayedRise: true)]
+        XCTAssertTrue(computed([grams(20, "x", "🥤 Smoothie", at: meal, absorption: .hours(2))], mealNutrition: wrong, now: meal).isEmpty)
+        XCTAssertTrue(computed([grams(20, "x", "🥤 Smoothie", at: meal, absorption: .minutes(30))], mealNutrition: wrong, now: meal).isEmpty)
+        XCTAssertEqual(computed([grams(20, "x", "🍕 Pizza", at: meal, absorption: .hours(4))], mealNutrition: wrong, now: meal).count, 1)
+    }
+
+    func testPorridgeLoggedAsFastCarbsHasNoLaterCarbs() {
+        let milkTime = meal.addingTimeInterval(.minutes(30))
+        let result = computed([grams(30, "p", "🥣 Havregrøt", at: meal, absorption: .hours(2)), grams(4.5, "m", "🥛 Melk", at: milkTime)], now: milkTime)
+        XCTAssertTrue(result.isEmpty)
+    }
+
+    func testFastPartStillCountsTowardsAMealThatRisesLate() {
+        // Porridge alone is 1.2 units; the smoothie's fat and protein add to it, but cannot start it.
+        let smoothieTime = meal.addingTimeInterval(.minutes(30))
+        let result = computed([grams(30, "p", "🥣 Havregrøt", at: meal), grams(10, "s", "🥤 Smoothie", at: smoothieTime, absorption: .hours(2))], now: smoothieTime)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertGreaterThan(result.first!.rule.carbGrams, 6)
+    }
+
+    func testPorridgeAssessedBeforeTheVerdictHasNoLaterCarbsUntilAssessedAgain() {
+        var assessments = walterAssessments
+        assessments["porridge"]?.nutrition?.delayedRise = nil
+        let milkTime = meal.addingTimeInterval(.minutes(30))
+        XCTAssertTrue(computed([grams(30, "p", "🥣 Havregrøt", at: meal), grams(4.5, "m", "🥛 Melk", at: milkTime)], assessments: assessments, now: milkTime).isEmpty)
     }
 
     func testAddedLaterCarbsAreNotPartOfAMeal() {
@@ -266,9 +330,22 @@ final class CarbFollowUpPlannerTests: XCTestCase {
     }
 
     func testEstimateReadsFatAndProtein() throws {
+        let json = #"{"name":"Havregrøt","emoji":"🥣","carbs_grams":30,"absorption_hours":3,"items":[],"assumptions":[],"confidence":"high","fat_grams":9,"protein_grams":8,"delayed_rise":true}"#
+        let estimate = try JSONDecoder().decode(MealCarbEstimate.self, from: Data(json.utf8))
+        XCTAssertEqual(estimate.nutrition, MealNutrition(fatGrams: 9, proteinGrams: 8, carbGrams: 30, delayedRise: true))
+    }
+
+    func testEstimateWithoutAVerdictNeverRisesLate() throws {
         let json = #"{"name":"Havregrøt","emoji":"🥣","carbs_grams":30,"absorption_hours":3,"items":[],"assumptions":[],"confidence":"high","fat_grams":9,"protein_grams":8}"#
         let estimate = try JSONDecoder().decode(MealCarbEstimate.self, from: Data(json.utf8))
-        XCTAssertEqual(estimate.nutrition, MealNutrition(fatGrams: 9, proteinGrams: 8, carbGrams: 30))
+        XCTAssertEqual(estimate.nutrition?.delayedRise, false)
+    }
+
+    func testNutritionSavedBeforeTheVerdictStillReads() throws {
+        let json = #"{"fatGrams":9,"proteinGrams":8,"carbGrams":30}"#
+        let nutrition = try JSONDecoder().decode(MealNutrition.self, from: Data(json.utf8))
+        XCTAssertNil(nutrition.delayedRise)
+        XCTAssertNil(CarbFollowUpPlanner.rule(for: nutrition))
     }
 
     func testEstimateWithoutFatAndProteinStillReads() throws {
@@ -476,7 +553,7 @@ final class CarbFollowUpManagerTests: XCTestCase {
 final class FavoriteCarbFollowUpAssessorTests: XCTestCase {
     private var defaults: UserDefaults!
     private let milk = StoredFavoriteFood(id: "milk", name: "Melk", carbsQuantity: HKQuantity(unit: .gram(), doubleValue: 10), foodType: "🥛", absorptionTime: .hours(2))
-    private let nutrition = MealNutrition(fatGrams: 3, proteinGrams: 3, carbGrams: 10)
+    private let nutrition = MealNutrition(fatGrams: 3, proteinGrams: 3, carbGrams: 10, delayedRise: false)
 
     override func setUp() {
         super.setUp()
@@ -498,6 +575,16 @@ final class FavoriteCarbFollowUpAssessorTests: XCTestCase {
 
     func testEditedFoodIsAssessedAgain() {
         XCTAssertEqual(FavoriteCarbFollowUpAssessor.foodsNeedingAssessment([milk], assessments: ["milk": .init(contentKey: "older", nutrition: nutrition)]).count, 1)
+    }
+
+    func testAssessmentWithoutTheVerdictIsRedone() {
+        let unjudged = MealNutrition(fatGrams: 3, proteinGrams: 3, carbGrams: 10)
+        XCTAssertEqual(FavoriteCarbFollowUpAssessor.foodsNeedingAssessment([milk], assessments: ["milk": .init(contentKey: key, nutrition: unjudged)]).count, 1)
+    }
+
+    func testFoodWithoutAnEstimateIsNotAssessedOverAndOver() {
+        FavoriteCarbFollowUpAssessor.apply(nil, contentKey: key, to: "milk", defaults: defaults)
+        XCTAssertTrue(FavoriteCarbFollowUpAssessor.foodsNeedingAssessment([milk], assessments: defaults.carbFollowUpAssessments).isEmpty)
     }
 
     func testAssessmentFromTheFirstBuildIsRedone() {
