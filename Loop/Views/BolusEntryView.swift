@@ -211,16 +211,6 @@ struct BolusEntryView: View {
                 Text(viewModel.carbEntryDateAndAbsorptionTimeString!)
                     .foregroundColor(Color(.secondaryLabel))
             }
-
-            if let laterCarbs = viewModel.laterCarbSummary {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                    Text(laterCarbs)
-                }
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
         }
     }
 

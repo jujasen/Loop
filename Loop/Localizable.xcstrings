@@ -504,97 +504,6 @@
         }
       }
     },
-    " → %@ g" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " → %@ g"
-          }
-        }
-      }
-    },
-    "%1$@ %2$@ g at %3$@" : {
-      "comment" : "Status row title for a planned follow-up of a favorite food's carbs (1: food emoji)(2: grams)(3: time it is due)",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@ g kl. %3$@"
-          }
-        }
-      }
-    },
-    "%1$@ g fat + %2$@ g protein = %3$@ fat-protein units" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ g fett + %2$@ g protein = %3$@ fett-protein-enheter"
-          }
-        }
-      }
-    },
-    "%1$@ g · %2$@ g" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ g · %2$@ g"
-          }
-        }
-      }
-    },
-    "%1$@ in %2$@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ om %2$@"
-          }
-        }
-      }
-    },
-    "%1$@ together: %2$@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ sammen: %2$@"
-          }
-        }
-      }
-    },
-    "%@ (later carbs)" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ (senere karbo)"
-          }
-        }
-      }
-    },
-    "%@ last 15 min" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ siste 15 min"
-          }
-        }
-      }
-    },
-    ", below 1: no later carbs" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ", under 1: ingen senere karbo"
-          }
-        }
-      }
-    },
     "." : {
       "comment" : "Full stop character",
       "localizations" : {
@@ -3263,26 +3172,6 @@
         }
       }
     },
-    "Add Later Carbs" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg til senere karbo"
-          }
-        }
-      }
-    },
-    "Add Now" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg inn nå"
-          }
-        }
-      }
-    },
     "Add or correct something…" : {
       "comment" : "Placeholder for adding more information to a meal estimate",
       "localizations" : {
@@ -3301,37 +3190,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI-anslag – sjekk tallene før du går videre."
-          }
-        }
-      }
-    },
-    "Added after %@. Loop doses for them as usual." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lagt inn etter %@. Loop doserer for dem som vanlig."
-          }
-        }
-      }
-    },
-    "Added at %1$@ at the earliest, once glucose is at least 6 mmol/L and no longer falling. Skipped if that has not happened by %2$@." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legges inn tidligst kl. %1$@, når blodsukkeret er minst 6 mmol/L og ikke faller lenger. Droppes hvis det ikke har skjedd innen kl. %2$@."
-          }
-        }
-      }
-    },
-    "After the meal" : {
-      "comment" : "Label for how long after the meal the follow-up is added",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Etter måltidet"
           }
         }
       }
@@ -3380,46 +3238,6 @@
         }
       }
     },
-    "Being estimated…" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anslås …"
-          }
-        }
-      }
-    },
-    "Cancel Later Carbs" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avbryt senere karbo"
-          }
-        }
-      }
-    },
-    "Cancel Later Carbs?" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avbryte senere karbo?"
-          }
-        }
-      }
-    },
-    "Checked from %@, before every loop." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sjekkes fra kl. %@, før hver loop-runde."
-          }
-        }
-      }
-    },
     "Custom" : {
       "comment" : "Chart band label for a custom preset",
       "localizations" : {
@@ -3460,237 +3278,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Velg bilder"
-          }
-        }
-      }
-    },
-    "Earliest" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidligst"
-          }
-        }
-      }
-    },
-    "Every time %1$@ is logged — here on the phone, from the caregiver app or the watch — Loop adds %2$@ g with %3$@ absorption %4$@ later, once glucose is at least 6 mmol/L and no longer falling. If it has not turned up 3 hours after the meal, the later carbs are skipped." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hver gang %1$@ registreres – her på telefonen, fra LoopFollow eller fra klokka – legger Loop inn %2$@ g med %3$@ absorpsjon %4$@ senere, når blodsukkeret er minst 6 mmol/L og ikke faller lenger. Har det ikke snudd 3 timer etter måltidet, droppes den senere karboen."
-          }
-        }
-      }
-    },
-    "Fat and Protein" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fett og protein"
-          }
-        }
-      }
-    },
-    "Fixed Amount" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fast mengde"
-          }
-        }
-      }
-    },
-    "From fat and protein estimated by AI" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ut fra fett og protein anslått av AI"
-          }
-        }
-      }
-    },
-    "Glucose at least 6" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "BS minst 6"
-          }
-        }
-      }
-    },
-    "Glucose did not turn up after %@, so no later carbs were added." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blodsukkeret snudde ikke oppover etter %@, så ingen senere karbo ble lagt inn."
-          }
-        }
-      }
-    },
-    "Keep" : {
-      "comment" : "Button keeping a planned follow-up of a favorite food's carbs",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Behold"
-          }
-        }
-      }
-    },
-    "Later Carbs" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo"
-          }
-        }
-      }
-    },
-    "Later Carbs Skipped" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo droppet"
-          }
-        }
-      }
-    },
-    "Later Carbs · %@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo · %@"
-          }
-        }
-      }
-    },
-    "Later Carbs: %@ g" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo: %@ g"
-          }
-        }
-      }
-    },
-    "Later carbs" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo"
-          }
-        }
-      }
-    },
-    "Later carbs %1$@ g · %2$@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo %1$@ g · %2$@"
-          }
-        }
-      }
-    },
-    "Later carbs after %@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo etter %@"
-          }
-        }
-      }
-    },
-    "Later carbs are worked out for each meal from the fat and protein of everything eaten within an hour, so porridge and the milk after it count together. Below one fat-protein unit there are none." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo regnes ut for hvert måltid fra fett og protein i alt som spises innen en time, så grøt og melka etterpå teller sammen. Under én fett-protein-enhet blir det ingen."
-          }
-        }
-      }
-    },
-    "Later carbs wait for glucose to turn" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo venter på at BS snur"
-          }
-        }
-      }
-    },
-    "Later carbs: %1$@ at %2$@ if glucose is rising" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senere karbo: %1$@ kl. %2$@ hvis BS stiger"
-          }
-        }
-      }
-    },
-    "Latest" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Senest"
-          }
-        }
-      }
-    },
-    "Meal" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Måltid"
-          }
-        }
-      }
-    },
-    "No recent glucose" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ingen ny BS"
-          }
-        }
-      }
-    },
-    "Not This Time" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ikke denne gangen"
-          }
-        }
-      }
-    },
-    "Not falling" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ikke fallende"
           }
         }
       }
@@ -4036,16 +3623,6 @@
         }
       }
     },
-    "The %1$@ after %2$@ will not be added this time. A favorite food keeps its later carbs for next time." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ etter %2$@ blir ikke lagt inn denne gangen. En favoritt beholder sin senere karbo til neste gang."
-          }
-        }
-      }
-    },
     "The estimate could not be read. Try again." : {
       "comment" : "Error shown when the meal estimate response could not be parsed",
       "localizations" : {
@@ -4090,26 +3667,6 @@
         }
       }
     },
-    "Use" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bruk"
-          }
-        }
-      }
-    },
-    "Waiting for glucose to turn. Checked before every loop." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Venter på at blodsukkeret snur. Sjekkes før hver loop-runde."
-          }
-        }
-      }
-    },
     "Workout" : {
       "comment" : "Chart band label for the workout preset",
       "localizations" : {
@@ -4117,26 +3674,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Trening"
-          }
-        }
-      }
-    },
-    "now %@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nå %@"
-          }
-        }
-      }
-    },
-    "the meal at %@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "måltidet kl. %@"
           }
         }
       }

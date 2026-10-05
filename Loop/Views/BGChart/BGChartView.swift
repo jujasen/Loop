@@ -682,9 +682,6 @@ private struct MainBGChart: View {
                 body(t.drawnDate, lanedValue(t, maxBG: model.maxBG), t.pillText, t.carbEntryID)
             }
         }
-        for planned in model.plannedCarbs {
-            body(planned.point.drawnDate, lanedValue(planned.point, maxBG: model.maxBG), planned.point.pillText, planned.point.carbEntryID)
-        }
     }
 
     /// Pill entry for a BG reading. Shared by the scrub lookup and the tap hit test.
@@ -1420,34 +1417,6 @@ private struct BGChartCanvas: View, Equatable {
             }
         }
 
-        // Later carbs not yet added: hollow, with a dashed line to their latest time, so
-        // they never read as carbs Loop is already counting.
-        ForEach(model.plannedCarbs) { planned in
-            let y = lanedValue(planned.point, maxBG: model.maxBG)
-            RuleMark(
-                xStart: .value("time", planned.point.date),
-                xEnd: .value("time", planned.expiresAt),
-                y: .value("sgv", y)
-            )
-            .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-            .foregroundStyle(Color.orange.opacity(0.6))
-
-            PointMark(x: .value("time", planned.expiresAt), y: .value("sgv", y))
-                .symbol(PlannedCarbEndTick())
-                .symbolSize(isSmall ? 24 : 64)
-                .foregroundStyle(Color.orange.opacity(0.6))
-
-            PointMark(x: .value("time", planned.point.date), y: .value("sgv", y))
-                .symbol(.circle.strokeBorder(lineWidth: isSmall ? 1 : 2))
-                .symbolSize(isSmall ? 24 : 64)
-                .foregroundStyle(Color.orange.opacity(0.9))
-                .annotation(position: .top, alignment: .center) {
-                    if !isSmall, BGChartSettings.shared.showValues {
-                        Text(planned.point.label).font(.caption2).foregroundColor(.primary)
-                    }
-                }
-        }
-
         ForEach(windowed(model.automaticBoluses) { $0.drawnDate }) { pt in
             PointMark(
                 x: .value("time", pt.drawnDate),
@@ -1749,17 +1718,5 @@ private struct PillLabel: View {
             .foregroundColor(.primary)
             .multilineTextAlignment(.center)
             .lineLimit(lineLimit)
-    }
-}
-
-/// The short upright stroke that ends waiting later carbs' dashed line.
-@available(iOS 17.0, *)
-private struct PlannedCarbEndTick: ChartSymbolShape {
-    var perceptualUnitRect: CGRect { CGRect(x: 0, y: 0, width: 1, height: 1) }
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addRect(CGRect(x: rect.midX - 0.75, y: rect.minY, width: 1.5, height: rect.height))
-        return path
     }
 }

@@ -138,27 +138,6 @@ extension NotificationManager {
         UNUserNotificationCenter.current().add(request)
     }
     
-    static func sendCarbFollowUpAddedNotification(name: String, grams: Double) {
-        let notification = UNMutableNotificationContent()
-        let gramsDescription = NumberFormatter.localizedString(from: NSNumber(value: grams), number: .decimal)
-        notification.title = String(format: NSLocalizedString("Later Carbs: %@ g", comment: "The notification title for later carbs being added. (1: grams)"), gramsDescription)
-        notification.body = String(format: NSLocalizedString("Added after %@. Loop doses for them as usual.", comment: "The notification body for later carbs being added. (1: name of the meal)"), name)
-        notification.sound = .default
-
-        let request = UNNotificationRequest(identifier: "carbFollowUp", content: notification, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
-    }
-
-    static func sendCarbFollowUpDroppedNotification(name: String) {
-        let notification = UNMutableNotificationContent()
-        notification.title = NSLocalizedString("Later Carbs Skipped", comment: "The notification title for later carbs being given up on")
-        notification.body = String(format: NSLocalizedString("Glucose did not turn up after %@, so no later carbs were added.", comment: "The notification body for later carbs being given up on. (1: name of the meal)"), name)
-        notification.sound = .default
-
-        let request = UNNotificationRequest(identifier: "carbFollowUp", content: notification, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
-    }
-
     @MainActor
     static func sendRemoteBolusFailureNotification(for error: Error, amountInUnits: Double) {
         let notification = UNMutableNotificationContent()

@@ -77,12 +77,6 @@ struct AddEditFavoriteFoodView: View {
                 card
                     .padding(.top, 12)
 
-                // The rule is kept by the favorite's id, which a new food does not have yet.
-                if let food = viewModel.originalFavoriteFood {
-                    CarbFollowUpCard(food: food)
-                        .padding(.top, 12)
-                }
-
                 saveActionButton
 
                 if viewModel.canDelete {

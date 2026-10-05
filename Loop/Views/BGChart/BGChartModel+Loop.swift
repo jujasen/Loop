@@ -25,8 +25,6 @@ struct BGChartData {
     var predictedGlucose: [GlucoseValue] = []
     var doseEntries: [DoseEntry] = []
     var carbEntries: [StoredCarbEntry] = []
-    /// Later carbs waiting to be added. Drawn as a hollow ring, never counted as carbs.
-    var plannedCarbs: [PlannedCarbFollowUp] = []
     var basalSchedule: BasalRateSchedule?
     var targetRangeSchedule: GlucoseRangeSchedule?
     /// Overrides overlapping the chart window, including the active one.
@@ -158,25 +156,6 @@ extension BGChartModel {
                 carbEntryID: entry.createdByCurrentApp ? Self.carbEntryID(for: entry) : nil
             )
         }, minGap: Spread.carbGap, maxShift: Spread.carbShift)
-
-        // Later carbs sit where the prediction is at their due time: that is where the
-        // glucose they wait for is expected to be.
-        let predictedInterpolator = GlucoseInterpolator(points: readings + prediction, fallback: thresholds.low)
-        plannedCarbs = data.plannedCarbs.map { followUp in
-            let grams = Int(followUp.rule.carbGrams.rounded())
-            return PlannedCarbPoint(
-                point: TreatmentPoint(
-                    date: followUp.dueDate,
-                    value: followUp.rule.carbGrams,
-                    sgv: predictedInterpolator.value(at: followUp.dueDate),
-                    label: "\(grams)?",
-                    pillText: Self.plannedCarbPillText(followUp, time: "\(pillTimeString(for: followUp.dueDate))–\(pillTimeString(for: followUp.expiryDate))"),
-                    lane: .carbs,
-                    carbEntryID: Self.plannedCarbAnchorPrefix + followUp.triggerID
-                ),
-                expiresAt: followUp.expiryDate
-            )
-        }
 
         suspends = data.doseEntries.filter { $0.type == .suspend }.map { dose in
             TreatmentPoint(
@@ -358,16 +337,6 @@ extension BGChartModel {
     /// Stable identity for a carb entry, so a tapped mark can be resolved back to the
     /// entry it came from. HealthKit-backed entries carry a sync identifier; anything
     /// without one falls back to its object id.
-    /// Marks a selection anchor as waiting later carbs rather than a carb entry, so tapping its
-    /// pill opens the later-carbs sheet instead of the carb editor.
-    static let plannedCarbAnchorPrefix = "planned-carbs:"
-
-    static func plannedCarbPillText(_ followUp: PlannedCarbFollowUp, time: String) -> String {
-        var heading = NSLocalizedString("Later carbs", comment: "Chart label for waiting later carbs")
-        if !followUp.emoji.isEmpty { heading += " \(followUp.emoji)" }
-        return [heading, followUp.mealDescription, "\(Int(followUp.rule.carbGrams.rounded()))g", time].filter { !$0.isEmpty }.joined(separator: "\n")
-    }
-
     static func carbEntryID(for entry: StoredCarbEntry) -> String? {
         entry.syncIdentifier ?? entry.uuid?.uuidString
     }

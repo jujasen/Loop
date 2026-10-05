@@ -8,14 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		FA0020010000000000000005 /* MealCarbEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0020010000000000000006 /* MealCarbEstimatorTests.swift */; };
-		FA0030010000000000000005 /* CarbFollowUpTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0030010000000000000006 /* CarbFollowUpTests.swift */; };
 		FA0020010000000000000003 /* MealEstimateCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0020010000000000000004 /* MealEstimateCard.swift */; };
-		FA0030010000000000000003 /* CarbFollowUpCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0030010000000000000004 /* CarbFollowUpCard.swift */; };
-		FA003001000000000000000B /* LaterCarbViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA003001000000000000000C /* LaterCarbViews.swift */; };
 		FA0020010000000000000001 /* MealCarbEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0020010000000000000002 /* MealCarbEstimator.swift */; };
-		FA0030010000000000000001 /* CarbFollowUpManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0030010000000000000002 /* CarbFollowUpManager.swift */; };
-		FA0030010000000000000009 /* PlannedCarbNightscoutUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA003001000000000000000A /* PlannedCarbNightscoutUploader.swift */; };
-		FA0030010000000000000007 /* FavoriteCarbFollowUpAssessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0030010000000000000008 /* FavoriteCarbFollowUpAssessor.swift */; };
 		FA0021010000000000000001 /* CarbFoodLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0021010000000000000002 /* CarbFoodLabel.swift */; };
 		FA0021010000000000000003 /* CarbFoodLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0021010000000000000004 /* CarbFoodLabelTests.swift */; };
 		1419606428D9550400BA86E0 /* LoopKitUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 437AFEE6203688CF008C4892 /* LoopKitUI.framework */; };
@@ -784,14 +778,8 @@
 
 /* Begin PBXFileReference section */
 		FA0020010000000000000006 /* MealCarbEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCarbEstimatorTests.swift; sourceTree = "<group>"; };
-		FA0030010000000000000006 /* CarbFollowUpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbFollowUpTests.swift; sourceTree = "<group>"; };
 		FA0020010000000000000004 /* MealEstimateCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealEstimateCard.swift; sourceTree = "<group>"; };
-		FA0030010000000000000004 /* CarbFollowUpCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbFollowUpCard.swift; sourceTree = "<group>"; };
-		FA003001000000000000000C /* LaterCarbViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaterCarbViews.swift; sourceTree = "<group>"; };
 		FA0020010000000000000002 /* MealCarbEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCarbEstimator.swift; sourceTree = "<group>"; };
-		FA0030010000000000000002 /* CarbFollowUpManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbFollowUpManager.swift; sourceTree = "<group>"; };
-		FA003001000000000000000A /* PlannedCarbNightscoutUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannedCarbNightscoutUploader.swift; sourceTree = "<group>"; };
-		FA0030010000000000000008 /* FavoriteCarbFollowUpAssessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoriteCarbFollowUpAssessor.swift; sourceTree = "<group>"; };
 		FA0021010000000000000002 /* CarbFoodLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbFoodLabel.swift; sourceTree = "<group>"; };
 		FA0021010000000000000004 /* CarbFoodLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarbFoodLabelTests.swift; sourceTree = "<group>"; };
 		142CB7582A60BF2E0075748A /* EditMode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditMode.swift; sourceTree = "<group>"; };
@@ -1613,7 +1601,6 @@
 				C16B983F26B4898800256B05 /* DoseEnactorTests.swift */,
 				FA0010010000000000000006 /* FavoriteFoodSyncTests.swift */,
 				FA0020010000000000000006 /* MealCarbEstimatorTests.swift */,
-				FA0030010000000000000006 /* CarbFollowUpTests.swift */,
 				FA0021010000000000000004 /* CarbFoodLabelTests.swift */,
 				C650897E395CC0BE3FB14F18 /* RemoteTherapySettingsTests.swift */,
 				E9C58A7124DB489100487A17 /* LoopDataManagerTests.swift */,
@@ -2027,8 +2014,6 @@
 				43B260481ED248FB008CAA77 /* CarbEntryTableViewCell.swift */,
 				149A28BC2A853E6C00052EDF /* CarbEntryView.swift */,
 				FA0020010000000000000004 /* MealEstimateCard.swift */,
-				FA0030010000000000000004 /* CarbFollowUpCard.swift */,
-				FA003001000000000000000C /* LaterCarbViews.swift */,
 				431A8C3F1EC6E8AB00823B9C /* CircleMaskView.swift */,
 				A9A056B224B93C62007CF06D /* CriticalEventLogExportView.swift */,
 				C191D2A025B3ACAA00C26C0B /* DosingStrategySelectionView.swift */,
@@ -2079,9 +2064,6 @@
 				FA0010010000000000000004 /* FavoriteFoodEditJournal.swift */,
 				FA0010010000000000000002 /* FavoriteFoodNightscoutSync.swift */,
 				FA0020010000000000000002 /* MealCarbEstimator.swift */,
-				FA0030010000000000000002 /* CarbFollowUpManager.swift */,
-				FA003001000000000000000A /* PlannedCarbNightscoutUploader.swift */,
-				FA0030010000000000000008 /* FavoriteCarbFollowUpAssessor.swift */,
 				FA0021010000000000000002 /* CarbFoodLabel.swift */,
 				43A567681C94880B00334FAC /* LoopDataManager.swift */,
 				43C094491CACCC73001F6403 /* NotificationManager.swift */,
@@ -3514,8 +3496,6 @@
 				439A7942211F631C0041B75F /* RootNavigationController.swift in Sources */,
 				149A28BD2A853E6C00052EDF /* CarbEntryView.swift in Sources */,
 				FA0020010000000000000003 /* MealEstimateCard.swift in Sources */,
-				FA0030010000000000000003 /* CarbFollowUpCard.swift in Sources */,
-				FA003001000000000000000B /* LaterCarbViews.swift in Sources */,
 				4F11D3C020DCBEEC006E072C /* GlucoseBackfillRequestUserInfo.swift in Sources */,
 				89E267FC2292456700A3F2AF /* FeatureFlags.swift in Sources */,
 				43A567691C94880B00334FAC /* LoopDataManager.swift in Sources */,
@@ -3526,9 +3506,6 @@
 				FA0010010000000000000003 /* FavoriteFoodEditJournal.swift in Sources */,
 				FA0010010000000000000001 /* FavoriteFoodNightscoutSync.swift in Sources */,
 				FA0020010000000000000001 /* MealCarbEstimator.swift in Sources */,
-				FA0030010000000000000001 /* CarbFollowUpManager.swift in Sources */,
-				FA0030010000000000000009 /* PlannedCarbNightscoutUploader.swift in Sources */,
-				FA0030010000000000000007 /* FavoriteCarbFollowUpAssessor.swift in Sources */,
 				FA0021010000000000000001 /* CarbFoodLabel.swift in Sources */,
 				4302F4E11D4E9C8900F0FCAF /* TextFieldTableViewController.swift in Sources */,
 				1452F4AB2A851EDF00F8B9E4 /* AddEditFavoriteFoodView.swift in Sources */,
@@ -3831,7 +3808,6 @@
 				C16B984026B4898800256B05 /* DoseEnactorTests.swift in Sources */,
 				FA0010010000000000000005 /* FavoriteFoodSyncTests.swift in Sources */,
 				FA0020010000000000000005 /* MealCarbEstimatorTests.swift in Sources */,
-				FA0030010000000000000005 /* CarbFollowUpTests.swift in Sources */,
 				FA0021010000000000000003 /* CarbFoodLabelTests.swift in Sources */,
 				BD1206B9B83F9E39D186A15D /* RemoteTherapySettingsTests.swift in Sources */,
 				A9A63F8E246B271600588D5B /* NSTimeInterval.swift in Sources */,
