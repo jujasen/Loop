@@ -242,6 +242,9 @@ final class DeviceDataManager {
 
     private(set) var loopManager: LoopDataManager!
 
+    /// Raises insulin needs after meals heavy in fat and protein once glucose turns up, right before a loop.
+    private(set) var fatProteinBoost: FatProteinBoostManager!
+
     init(pluginManager: PluginManager,
          alertManager: AlertManager,
          settingsManager: SettingsManager,
@@ -405,6 +408,29 @@ final class DeviceDataManager {
         cacheStore.delegate = loopManager
         loopManager.presetActivationObservers.append(alertManager)
         loopManager.presetActivationObservers.append(analyticsServicesManager)
+
+        let carbStore = self.carbStore
+        let glucoseStore = self.glucoseStore
+        let loopManager = self.loopManager!
+        fatProteinBoost = FatProteinBoostManager(
+            fetchCarbEntries: { start, completion in
+                carbStore.getCarbEntries(start: start, end: nil) { result in
+                    switch result {
+                    case .success(let entries): completion(.success(entries))
+                    case .failure(let error): completion(.failure(error))
+                    }
+                }
+            },
+            fetchGlucose: { start, completion in
+                glucoseStore.getGlucoseSamples(start: start, end: nil, completion: completion)
+            },
+            currentOverride: { loopManager.settings.scheduleOverride },
+            enactOverride: { override in
+                loopManager.mutateSettings { settings in settings.scheduleOverride = override }
+            },
+            glucoseUnit: { [weak self] in self?.displayGlucosePreference.unit ?? .millimolesPerLiter }
+        )
+        FatProteinBoostManager.current = fatProteinBoost
 
         watchManager = WatchDataManager(deviceManager: self, healthStore: healthStore)
 
@@ -571,12 +597,16 @@ final class DeviceDataManager {
         self.log.default("Asserting current pump data")
         guard let pumpManager = pumpManager else {
             // Run loop, even if pump is missing, to ensure stored dosing decision
-            self.loopManager.loop()
+            fatProteinBoost.runDue {
+                self.loopManager.loop()
+            }
             return
         }
 
         pumpManager.ensureCurrentPumpData() { (lastSync) in
-            self.loopManager.loop()
+            self.fatProteinBoost.runDue {
+                self.loopManager.loop()
+            }
         }
     }
 

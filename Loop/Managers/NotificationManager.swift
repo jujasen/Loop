@@ -138,6 +138,20 @@ extension NotificationManager {
         UNUserNotificationCenter.current().add(request)
     }
     
+    static func sendFatProteinBoostStartedNotification(name: String, strength: Double, end: Date, glucose: String?) {
+        let notification = UNMutableNotificationContent()
+        notification.title = String(format: NSLocalizedString("🧈 Fat and Protein: %@", comment: "The notification title for the fat and protein boost starting. (1: insulin needs in percent)"), FatProteinBoostPlanner.percent(strength))
+        var body = String(format: NSLocalizedString("Started after %1$@, until %2$@.", comment: "The notification body for the fat and protein boost starting. (1: name of the meal)(2: end time)"), name, FatProteinBoostPlanner.time(end))
+        if let glucose {
+            body += " " + String(format: NSLocalizedString("Glucose %@ and not falling.", comment: "Appended to the fat and protein boost notification (1: glucose with unit)"), glucose)
+        }
+        notification.body = body
+        notification.sound = .default
+
+        let request = UNNotificationRequest(identifier: "fatProteinBoost", content: notification, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
     @MainActor
     static func sendRemoteBolusFailureNotification(for error: Error, amountInUnits: Double) {
         let notification = UNMutableNotificationContent()

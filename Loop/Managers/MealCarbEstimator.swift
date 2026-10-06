@@ -13,6 +13,7 @@
 //
 
 import UIKit
+import LoopKit
 
 /// One estimate for the whole meal, as returned by the model.
 struct MealCarbEstimate: Codable, Equatable {
@@ -38,11 +39,23 @@ struct MealCarbEstimate: Codable, Equatable {
     var items: [Item]
     var assumptions: [String]
     var confidence: Confidence
+    /// Fat and protein in the amount eaten, from which later carbs are worked out. Absent from
+    /// estimates made before later carbs existed.
+    var fatGrams: Double? = nil
+    var proteinGrams: Double? = nil
 
     enum CodingKeys: String, CodingKey {
         case name, emoji, items, assumptions, confidence
         case carbsGrams = "carbs_grams"
         case absorptionHours = "absorption_hours"
+        case fatGrams = "fat_grams"
+        case proteinGrams = "protein_grams"
+    }
+
+    /// Fat and protein for the later carbs, or `nil` when the estimate gave none.
+    var nutrition: MealNutrition? {
+        guard let fatGrams, let proteinGrams, fatGrams.isFinite, proteinGrams.isFinite else { return nil }
+        return MealNutrition(fatGrams: max(0, fatGrams), proteinGrams: max(0, proteinGrams), carbGrams: roundedCarbs)
     }
 
     /// Grams rounded to what the carb entry field shows (one decimal).
@@ -156,6 +169,25 @@ final class MealCarbEstimator {
         return try Self.parseResponse(data)
     }
 
+    /// Asks for the fat and protein in a favorite food's first serving size, scaled to the food's
+    /// own carbs: the model may picture a slightly different amount than the one in the register.
+    func estimateNutrition(of food: StoredFavoriteFood) async throws -> MealNutrition? {
+        let portion = food.defaultPortion
+        let grams = portion.carbsQuantity.doubleValue(for: .gram())
+        var description = "Favorittmat: \(food.name)"
+        if portion.hasName {
+            description += ", \(portion.name)"
+        }
+        description += ". \(NumberFormatter.localizedString(from: NSNumber(value: grams), number: .decimal)) g karbo. Anslå fett og protein for akkurat denne mengden, slik den vanligvis lages for et lite barn."
+
+        let estimate = try await estimate(conversation: [Message(role: "user", content: description)])
+        guard let nutrition = estimate.nutrition else { return nil }
+        guard estimate.roundedCarbs > 0, grams > 0 else {
+            return MealNutrition(fatGrams: nutrition.fatGrams, proteinGrams: nutrition.proteinGrams, carbGrams: grams)
+        }
+        return nutrition.scaled(toCarbs: grams)
+    }
+
     // MARK: - Request and response
 
     static func requestBody(conversation: [Message]) -> [String: Any] {
@@ -241,7 +273,7 @@ final class MealCarbEstimator {
     private static let schema: [String: Any] = [
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "emoji", "carbs_grams", "absorption_hours", "items", "assumptions", "confidence"],
+        "required": ["name", "emoji", "carbs_grams", "absorption_hours", "items", "assumptions", "confidence", "fat_grams", "protein_grams"],
         "properties": [
             "name": ["type": "string"],
             "emoji": ["type": "string"],
@@ -262,6 +294,8 @@ final class MealCarbEstimator {
             ] as [String: Any],
             "assumptions": ["type": "array", "items": ["type": "string"]] as [String: Any],
             "confidence": ["type": "string", "enum": ["high", "medium", "low"]] as [String: Any],
+            "fat_grams": ["type": "number"],
+            "protein_grams": ["type": "number"],
         ] as [String: Any],
     ]
 
@@ -276,6 +310,7 @@ final class MealCarbEstimator {
         - items: each component with the amount you assumed and its carbs. The item carbs must add up to carbs_grams.
         - assumptions: short notes, in the caregiver's language, on anything you had to guess — portion size, brand, recipe. Empty when nothing was guessed.
         - confidence: high when amounts and foods are clear, medium when portions had to be guessed, low when the description is vague.
+        - fat_grams and protein_grams: total fat and protein in grams for the amount actually eaten, from Norwegian food tables (Matvaretabellen) and labels. Count butter, oil, cheese, cream and whole milk that go with the food.
 
         The caregiver may attach one or more photos of the meal, with or without text. Use them to identify the foods and judge the portions — the plate, cutlery, a glass or a hand gives the scale. Several photos are of the same meal, from different angles or at different moments; do not count food twice. When a photo shows a nutrition label, use its carbohydrate values. When the text and the photos disagree, the text wins, since the caregiver knows what was actually eaten. Name in assumptions anything in the photos you could not identify.
 

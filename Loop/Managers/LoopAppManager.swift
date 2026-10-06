@@ -285,6 +285,8 @@ class LoopAppManager: NSObject {
         // end of each loop cycle, so it keeps working while the app is in the background.
         Task { @MainActor in
             FavoriteFoodSyncManager.shared.start()
+            // Looks at each favorite food once for its fat and protein, and again after it is edited.
+            FavoriteNutritionAssessor.shared.start()
         }
 
         state = state.next

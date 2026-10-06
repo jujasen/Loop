@@ -50,6 +50,7 @@ public struct SettingsView: View {
             }
             
             case favoriteFoods
+            case fatProteinBoost
         }
     }
     
@@ -119,6 +120,9 @@ public struct SettingsView: View {
                 switch sheet {
                 case .favoriteFoods:
                     FavoriteFoodsView()
+                case .fatProteinBoost:
+                    FatProteinBoostSettingsView(manager: FatProteinBoostManager.current)
+                        .environmentObject(displayGlucosePreference)
                 }
             }
         }
@@ -367,6 +371,11 @@ extension SettingsView {
                         imageView: Image("Favorite Foods Icon").renderingMode(.template).foregroundColor(carbTintColor),
                         label: String(localized: "Favorite Foods", comment: "Title for Favorite Foods view"),
                         descriptiveText: String(localized: "Simplify Carb Entry", comment: "Descriptive text for the Favorite Foods settings row"))
+            LargeButton(action: { sheet = .fatProteinBoost },
+                        includeArrow: true,
+                        imageView: Image(systemName: "clock.arrow.circlepath").resizable().scaledToFit().frame(width: 34, height: 34).foregroundColor(carbTintColor),
+                        label: String(localized: "Fat and Protein", comment: "Title of the fat and protein boost settings row"),
+                        descriptiveText: String(localized: "Extra insulin for the late rise", comment: "Descriptive text for the fat and protein boost settings row"))
         }
     }
     

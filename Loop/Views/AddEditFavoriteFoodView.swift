@@ -77,6 +77,12 @@ struct AddEditFavoriteFoodView: View {
                 card
                     .padding(.top, 12)
 
+                // The fat and protein are kept by the favorite's id, which a new food does not have yet.
+                if let food = viewModel.originalFavoriteFood {
+                    FavoriteNutritionCard(food: food)
+                        .padding(.top, 12)
+                }
+
                 saveActionButton
 
                 if viewModel.canDelete {

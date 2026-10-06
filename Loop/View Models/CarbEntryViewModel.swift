@@ -14,6 +14,16 @@ import Combine
 protocol CarbEntryViewModelDelegate: AnyObject, BolusEntryViewModelDelegate {
     var analyticsServicesManager: AnalyticsServicesManager { get }
     var defaultAbsorptionTimes: CarbStore.DefaultAbsorptionTimes { get }
+
+    /// Carb entries from the last few hours, so the fat and protein boost can count earlier parts
+    /// of the meal.
+    func recentCarbEntries(completion: @escaping ([StoredCarbEntry]) -> Void)
+}
+
+extension CarbEntryViewModelDelegate {
+    func recentCarbEntries(completion: @escaping ([StoredCarbEntry]) -> Void) {
+        completion([])
+    }
 }
 
 final class CarbEntryViewModel: ObservableObject {
@@ -83,6 +93,15 @@ final class CarbEntryViewModel: ObservableObject {
     }
     
     @Published var favoriteFoods = UserDefaults.standard.favoriteFoods
+
+    /// What the fat and protein boost would do for this meal, or `nil` without any carbs yet.
+    @Published private(set) var fatProteinBoost: FatProteinBoostPreview?
+    /// True when the boost was turned off for this meal.
+    @Published private(set) var isFatProteinBoostDeclined = false
+    /// Fat and protein the meal estimate found or that were typed in, saved with the entry.
+    private var mealNutrition: MealNutrition?
+    /// Earlier entries that may be part of the same meal (porridge before the milk).
+    private var recentCarbEntries: [StoredCarbEntry] = []
     @Published var favoriteFoodFolders = UserDefaults.standard.favoriteFoodFolders
     @Published var selectedFavoriteFoodIndex = -1
     /// `id` of the amount applied from the selected favorite food, for foods that have several.
@@ -124,6 +143,7 @@ final class CarbEntryViewModel: ObservableObject {
         observeAbsorptionTimeChange()
         observeFavoriteFoodChange()
         observeLoopUpdates()
+        observeFatProteinInputs()
     }
     
     /// Initalizer for when`CarbEntryView` has an entry to edit
@@ -142,8 +162,14 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionTimeWasEdited = true
         self.usesCustomFoodType = true
         self.shouldBeginEditingQuantity = false
-        
+
+        if let id = originalCarbEntry.syncIdentifier {
+            self.mealNutrition = UserDefaults.standard.mealNutrition[id]
+            self.isFatProteinBoostDeclined = UserDefaults.standard.fatProteinBoostDeclined[id] != nil
+        }
+
         observeLoopUpdates()
+        observeFatProteinInputs()
     }
     
     var originalCarbEntry: StoredCarbEntry? = nil
@@ -220,6 +246,9 @@ final class CarbEntryViewModel: ObservableObject {
             potentialCarbEntry: updatedCarbEntry,
             selectedCarbAbsorptionTimeEmoji: selectedDefaultAbsorptionTimeEmoji
         )
+        viewModel.mealNutrition = mealNutrition
+        viewModel.isFatProteinBoostDeclined = isFatProteinBoostDeclined
+        viewModel.fatProteinBoost = isFatProteinBoostDeclined ? nil : fatProteinBoost
         Task {
             await viewModel.generateRecommendationAndStartObserving()
         }
@@ -328,6 +357,8 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionTime = defaultAbsorptionTimes.medium
         self.absorptionTimeWasEdited = false
         self.usesCustomFoodType = false
+        mealNutrition = nil
+        updateFatProteinBoost()
     }
 
     private func apply(food: StoredFavoriteFood, portion: FavoriteFoodPortion) {
@@ -338,6 +369,72 @@ final class CarbEntryViewModel: ObservableObject {
         self.absorptionTime = food.absorptionTime
         self.absorptionTimeWasEdited = true
         self.usesCustomFoodType = true
+        // The favorite's own fat and protein apply now, not what was found for another food.
+        mealNutrition = nil
+        updateFatProteinBoost()
+    }
+
+    // MARK: - Fat and Protein
+
+    /// Works the meal's boost out again from what is on screen now, together with entries logged
+    /// up to an hour before it.
+    private func updateFatProteinBoost() {
+        let carbs = carbsQuantity ?? 0
+        guard carbs > 0 else {
+            fatProteinBoost = nil
+            return
+        }
+
+        let pendingID = "pending-fat-protein"
+        let entry = StoredCarbEntry(
+            startDate: time,
+            quantity: HKQuantity(unit: .gram(), doubleValue: carbs),
+            syncIdentifier: pendingID,
+            foodType: CarbFoodLabel(emoji: foodType, name: foodName).foodType,
+            absorptionTime: absorptionTime
+        )
+        let earlier = recentCarbEntries.filter { $0.startDate <= time && $0.syncIdentifier != originalCarbEntry?.syncIdentifier }
+
+        let defaults = UserDefaults.standard
+        var nutrition = defaults.mealNutrition
+        nutrition[pendingID] = mealNutrition
+        fatProteinBoost = FatProteinBoostPlanner.preview(
+            entry: entry,
+            earlier: earlier,
+            favorites: favoriteFoods,
+            assessments: defaults.favoriteNutritionAssessments,
+            mealNutrition: nutrition,
+            settings: defaults.fatProteinBoostSettings,
+            factor: defaults.fatProteinBoostCalibration.factor
+        )
+    }
+
+    private func observeFatProteinInputs() {
+        delegate?.recentCarbEntries { [weak self] entries in
+            DispatchQueue.main.async {
+                self?.recentCarbEntries = entries
+                self?.updateFatProteinBoost()
+            }
+        }
+
+        Publishers.CombineLatest3($time, $carbsQuantity, $foodName)
+            .dropFirst()
+            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
+            .sink { [weak self] _ in self?.updateFatProteinBoost() }
+            .store(in: &cancellables)
+    }
+
+    /// This entry's fat and protein as typed in on the boost sheet, and whether the boost is
+    /// turned off for the meal. An entry that already exists keeps the change at once; a new one
+    /// hands it to the bolus screen, which keeps it once the entry is saved.
+    func setFatProtein(_ nutrition: MealNutrition?, declined: Bool) {
+        mealNutrition = nutrition
+        isFatProteinBoostDeclined = declined
+        if let id = originalCarbEntry?.syncIdentifier {
+            UserDefaults.standard.setMealNutrition(nutrition, forEntry: id)
+            UserDefaults.standard.setFatProteinBoostDeclined(declined, forEntry: id)
+        }
+        updateFatProteinBoost()
     }
 
     // MARK: - Meal Estimate
@@ -441,6 +538,8 @@ final class CarbEntryViewModel: ObservableObject {
         usesCustomFoodType = true
         absorptionTime = estimate.absorptionTime(in: absorptionRimesRange)
         absorptionTimeWasEdited = true
+        mealNutrition = estimate.nutrition
+        updateFatProteinBoost()
     }
 
     // MARK: - Utility

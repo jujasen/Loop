@@ -211,6 +211,12 @@ struct BolusEntryView: View {
                 Text(viewModel.carbEntryDateAndAbsorptionTimeString!)
                     .foregroundColor(Color(.secondaryLabel))
             }
+
+            if let summary = viewModel.fatProteinBoostSummary {
+                Text(summary)
+                    .font(.footnote)
+                    .foregroundColor(Color(.secondaryLabel))
+            }
         }
     }
 

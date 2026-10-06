@@ -111,6 +111,19 @@ final class BolusEntryViewModel: ObservableObject {
 
     let originalCarbEntry: StoredCarbEntry?
     let potentialCarbEntry: NewCarbEntry?
+
+    /// Fat and protein found for or typed in for the meal being saved, kept by the saved entry.
+    var mealNutrition: MealNutrition?
+    /// True when the fat and protein boost was turned off for the meal being saved.
+    var isFatProteinBoostDeclined = false
+    /// What the boost will do for the meal, for the line under the carb entry.
+    var fatProteinBoost: FatProteinBoostPreview?
+
+    /// "🧈 130 % for 3 hr from 21:10 if glucose rises", or `nil` when the meal gets no boost.
+    var fatProteinBoostSummary: String? {
+        guard let boost = fatProteinBoost, let strength = boost.strength, let duration = boost.duration else { return nil }
+        return String(format: NSLocalizedString("🧈 %1$@ for %2$@ from %3$@ if glucose rises", comment: "Line under the carb entry on the bolus screen (1: insulin needs in percent)(2: duration)(3: earliest start)"), FatProteinBoostPlanner.percent(strength), FatProteinBoostPlanner.hours(duration), FatProteinBoostPlanner.time(boost.earliestStart))
+    }
     let selectedCarbAbsorptionTimeEmoji: String?
 
     @Published var recommendedBolus: HKQuantity?
@@ -406,6 +419,14 @@ final class BolusEntryViewModel: ObservableObject {
                 }
             }
             if let storedCarbEntry = await saveCarbEntry(carbEntry, replacingEntry: originalCarbEntry) {
+                if let id = storedCarbEntry.syncIdentifier {
+                    if let mealNutrition {
+                        UserDefaults.standard.setMealNutrition(mealNutrition, forEntry: id)
+                    }
+                    if isFatProteinBoostDeclined {
+                        UserDefaults.standard.setFatProteinBoostDeclined(true, forEntry: id)
+                    }
+                }
                 self.dosingDecision.carbEntry = storedCarbEntry
                 self.analyticsServicesManager?.didAddCarbs(source: "Phone", amount: storedCarbEntry.quantity.doubleValue(for: .gram()))
             } else {

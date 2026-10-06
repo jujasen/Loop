@@ -43698,6 +43698,690 @@
           }
         }
       }
+    },
+    "the meal at %@" : {
+      "comment" : "Stand-in for the name of a meal without one (1: time of the meal)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "måltidet kl. %@"
+          }
+        }
+      }
+    },
+    "%1$@ g fat + %2$@ g protein = %3$@ fat-protein units" : {
+      "comment" : "How the fat and protein boost is worked out (1: grams of fat)(2: grams of protein)(3: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ g fett + %2$@ g protein = %3$@ FPE"
+          }
+        }
+      }
+    },
+    " → %1$@ for %2$@" : {
+      "comment" : "Result of the fat and protein boost calculation, appended to it (1: insulin needs in percent)(2: duration)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " → %1$@ i %2$@"
+          }
+        }
+      }
+    },
+    ", below %@: no boost" : {
+      "comment" : "Appended to the fat and protein calculation when the meal is below the limit (1: the limit in units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", under %@: ingen forsterkning"
+          }
+        }
+      }
+    },
+    "%1$@ together: %2$@" : {
+      "comment" : "Fat and protein calculation for several foods eaten together (1: the foods)(2: the calculation)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ sammen: %2$@"
+          }
+        }
+      }
+    },
+    "Fat and Protein" : {
+      "comment" : "Name of the override that raises insulin needs after a meal heavy in fat and protein",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fett og protein"
+          }
+        }
+      }
+    },
+    "%1$@ for %2$@" : {
+      "comment" : "Short summary of the fat and protein boost (1: insulin needs in percent)(2: duration)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ i %2$@"
+          }
+        }
+      }
+    },
+    "%@ units, none" : {
+      "comment" : "Fat and protein row value for a meal below the limit (1: fat-protein units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ FPE, ingen"
+          }
+        }
+      }
+    },
+    "Not known" : {
+      "comment" : "Fat and protein row value when nothing is known about the meal's fat and protein",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukjent"
+          }
+        }
+      }
+    },
+    "Fat" : {
+      "comment" : "Label for grams of fat",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fett"
+          }
+        }
+      }
+    },
+    "Protein" : {
+      "comment" : "Label for grams of protein",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protein"
+          }
+        }
+      }
+    },
+    "Boost This Meal" : {
+      "comment" : "Toggle turning the fat and protein boost on or off for one meal",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forsterk dette måltidet"
+          }
+        }
+      }
+    },
+    "Set Fat and Protein by Hand" : {
+      "comment" : "Toggle for typing in the fat and protein of the food being logged",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sett fett og protein selv"
+          }
+        }
+      }
+    },
+    "This Food" : {
+      "comment" : "Header above the fat and protein of the food being logged",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne maten"
+          }
+        }
+      }
+    },
+    "Loop raises insulin needs from %1$@ at the earliest, once glucose is at least %2$@ and not falling, and ends it below %3$@. If glucose has not turned up 3 hours later, nothing happens. Meals within an hour of each other count together." : {
+      "comment" : "Explanation on the fat and protein sheet (1: earliest start time)(2: start glucose)(3: stop glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop øker insulinbehovet tidligst fra %1$@, når BS er minst %2$@ og ikke faller, og avslutter under %3$@. Har ikke BS begynt å stige 3 timer senere, skjer ingenting. Måltider innen en time fra hverandre regnes sammen."
+          }
+        }
+      }
+    },
+    "From the meal estimate, or typed in for this meal." : {
+      "comment" : "Where the fat and protein of the food being logged came from: this meal",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fra AI-beregningen, eller lagt inn for dette måltidet."
+          }
+        }
+      }
+    },
+    "From the favorite food. Change it on the favorite to change it every time." : {
+      "comment" : "Where the fat and protein of the food being logged came from: a favorite food",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fra favorittmaten. Endre den på favoritten for å endre den hver gang."
+          }
+        }
+      }
+    },
+    "Nothing is known about this food's fat and protein. Describe the meal to the AI estimate, pick a favorite food, or set it by hand." : {
+      "comment" : "Footer when nothing is known about the fat and protein of the food being logged",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fett og protein i denne maten er ukjent. Beskriv måltidet for AI-beregningen, velg en favoritt, eller sett det selv."
+          }
+        }
+      }
+    },
+    "%1$@ fat-protein units in %2$@ of carbs. %3$@" : {
+      "comment" : "Under a favorite food's fat and protein (1: units)(2: grams of carbs)(3: where the values came from)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ FPE i %2$@ karbo. %3$@"
+          }
+        }
+      }
+    },
+    "Set by hand." : {
+      "comment" : "A favorite's fat and protein were typed in",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satt for hånd."
+          }
+        }
+      }
+    },
+    "Estimated by AI." : {
+      "comment" : "A favorite's fat and protein came from the meal estimate",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beregnet av AI."
+          }
+        }
+      }
+    },
+    "Being estimated…" : {
+      "comment" : "Shown while the fat and protein of a favorite food are not known yet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beregnes…"
+          }
+        }
+      }
+    },
+    "Set by Hand" : {
+      "comment" : "Button typing in a favorite food's fat and protein",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sett selv"
+          }
+        }
+      }
+    },
+    "Fat and Protein Boost" : {
+      "comment" : "Toggle turning the fat and protein boost on or off",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fett- og proteinforsterkning"
+          }
+        }
+      }
+    },
+    "After a meal with a lot of fat and protein — porridge with butter, milk, pizza — glucose rises hours later, when the meal's carbs are long gone. Loop then raises insulin needs for a few hours, as an override named 🧈 Fat and Protein, but only once glucose has actually turned up. If it ends lower than it should, or stays high, the next boost is adjusted." : {
+      "comment" : "Explanation of the fat and protein boost",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etter et måltid med mye fett og protein – grøt med smør, melk, pizza – stiger BS flere timer senere, når karboen for lengst er borte. Loop øker da insulinbehovet i noen timer, som en overstyring kalt 🧈 Fett og protein, men bare når BS faktisk har begynt å stige. Ender det for lavt eller blir det liggende høyt, justeres neste forsterkning."
+          }
+        }
+      }
+    },
+    "Forget what was learned?" : {
+      "comment" : "Title of the confirmation for resetting the fat and protein boost's learning",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glemme det som er lært?"
+          }
+        }
+      }
+    },
+    "Start Over" : {
+      "comment" : "Button resetting the fat and protein boost's learning",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begynn på nytt"
+          }
+        }
+      }
+    },
+    "Running: %1$@ until %2$@" : {
+      "comment" : "The fat and protein boost running now (1: insulin needs in percent)(2: end time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiv: %1$@ til %2$@"
+          }
+        }
+      }
+    },
+    "End Now" : {
+      "comment" : "Button ending the running fat and protein boost",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avslutt nå"
+          }
+        }
+      }
+    },
+    "Waiting: %1$@ from %2$@" : {
+      "comment" : "A fat and protein boost waiting for glucose to turn up (1: insulin needs in percent)(2: earliest start)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Venter: %1$@ fra %2$@"
+          }
+        }
+      }
+    },
+    "Now" : {
+      "comment" : "Header above the running and waiting fat and protein boosts",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nå"
+          }
+        }
+      }
+    },
+    "Earliest After the Meal" : {
+      "comment" : "Setting: how long after the meal the boost may start",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidligst etter måltidet"
+          }
+        }
+      }
+    },
+    "Starts at" : {
+      "comment" : "Setting: glucose the boost starts at",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starter ved"
+          }
+        }
+      }
+    },
+    "Ends Below" : {
+      "comment" : "Setting: glucose the boost ends below",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slutter under"
+          }
+        }
+      }
+    },
+    "Smallest Meal" : {
+      "comment" : "Setting: fewest fat-protein units that get a boost",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minste måltid"
+          }
+        }
+      }
+    },
+    "%@ units" : {
+      "comment" : "Fat-protein units (1: number)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ FPE"
+          }
+        }
+      }
+    },
+    "When" : {
+      "comment" : "Header above the fat and protein boost's start settings",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når"
+          }
+        }
+      }
+    },
+    "A fat-protein unit is 100 kcal from fat and protein: about 11 g fat, or 25 g protein. Carbs that treated a low (logged below 5 mmol/L) are not counted." : {
+      "comment" : "Footer explaining fat-protein units",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En fett-protein-enhet (FPE) er 100 kcal fra fett og protein: omtrent 11 g fett eller 25 g protein. Karbo som behandlet en føling (lagt inn under 5 mmol/L) telles ikke."
+          }
+        }
+      }
+    },
+    "Per Unit" : {
+      "comment" : "Setting: extra insulin needs per fat-protein unit",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per enhet"
+          }
+        }
+      }
+    },
+    "At Most" : {
+      "comment" : "Setting: highest insulin needs the boost sets",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maks"
+          }
+        }
+      }
+    },
+    "How Much" : {
+      "comment" : "Header above the fat and protein boost's strength settings",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvor mye"
+          }
+        }
+      }
+    },
+    "Learned Factor" : {
+      "comment" : "The factor the fat and protein boost has learned",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lært faktor"
+          }
+        }
+      }
+    },
+    "%1$@ · %2$@ · highest %3$@, lowest %4$@ · × %5$@ → × %6$@" : {
+      "comment" : "One fat and protein boost's outcome (1: meal)(2: insulin needs in percent)(3: highest glucose)(4: lowest glucose)(5: factor before)(6: factor after)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@ · høyest %3$@, lavest %4$@ · × %5$@ → × %6$@"
+          }
+        }
+      }
+    },
+    "Learned" : {
+      "comment" : "Header above what the fat and protein boost has learned",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lært"
+          }
+        }
+      }
+    },
+    "Two hours after each boost Loop looks back: below 4 mmol/L makes the next one 20 % weaker, below 4.5 10 % weaker; still at 13 or more an hour into it makes the next one 15 % stronger, 11 or more 8 % stronger. The factor stays between × 0.5 and × 2, and the boost never goes past At Most." : {
+      "comment" : "Footer explaining how the fat and protein boost learns",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To timer etter hver forsterkning ser Loop tilbake: under 4 mmol/L gjør neste 20 % svakere, under 4,5 10 % svakere; fortsatt 13 eller mer en time inn gjør neste 15 % sterkere, 11 eller mer 8 % sterkere. Faktoren holdes mellom × 0,5 og × 2, og forsterkningen går aldri over Maks."
+          }
+        }
+      }
+    },
+    "%1$@ units → %2$@" : {
+      "comment" : "One example of the fat and protein boost's strength (1: units)(2: insulin needs in percent)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ FPE → %2$@"
+          }
+        }
+      }
+    },
+    "With what has been learned: %@. Porridge with butter and a glass of milk is often 2–3 units." : {
+      "comment" : "Examples under the fat and protein boost's strength settings (1: the examples)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Med det som er lært: %@. Grøt med smør og et glass melk er ofte 2–3 FPE."
+          }
+        }
+      }
+    },
+    "Went low" : {
+      "comment" : "Outcome of a fat and protein boost: glucose went below 4",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ble lav"
+          }
+        }
+      }
+    },
+    "A little low" : {
+      "comment" : "Outcome of a fat and protein boost: glucose went below 4.5",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Litt lav"
+          }
+        }
+      }
+    },
+    "Stayed high" : {
+      "comment" : "Outcome of a fat and protein boost: glucose stayed at 13 or more",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Holdt seg høy"
+          }
+        }
+      }
+    },
+    "A little high" : {
+      "comment" : "Outcome of a fat and protein boost: glucose stayed at 11 or more",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Litt høy"
+          }
+        }
+      }
+    },
+    "Good" : {
+      "comment" : "Outcome of a fat and protein boost: neither low nor high",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bra"
+          }
+        }
+      }
+    },
+    "🧈 Fat and Protein: %@" : {
+      "comment" : "The notification title for the fat and protein boost starting. (1: insulin needs in percent)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🧈 Fett og protein: %@"
+          }
+        }
+      }
+    },
+    "Started after %1$@, until %2$@." : {
+      "comment" : "The notification body for the fat and protein boost starting. (1: name of the meal)(2: end time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startet etter %1$@, til %2$@."
+          }
+        }
+      }
+    },
+    "Glucose %@ and not falling." : {
+      "comment" : "Appended to the fat and protein boost notification (1: glucose with unit)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BS %@ og faller ikke."
+          }
+        }
+      }
+    },
+    "🧈 %1$@ for %2$@ from %3$@ if glucose rises" : {
+      "comment" : "Line under the carb entry on the bolus screen (1: insulin needs in percent)(2: duration)(3: earliest start)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🧈 %1$@ i %2$@ fra %3$@ hvis BS stiger"
+          }
+        }
+      }
+    },
+    "Extra insulin for the late rise" : {
+      "comment" : "Descriptive text for the fat and protein boost settings row",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstra insulin for den sene stigningen"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

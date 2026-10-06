@@ -22,6 +22,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     @State private var showHowAbsorptionTimeWorks = false
     @State private var showAddFavoriteFood = false
     @State private var showFavoriteFoodPicker = false
+    @State private var showFatProteinEditor = false
     
     private let isNewEntry: Bool
 
@@ -111,6 +112,15 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         .sheet(isPresented: $showHowAbsorptionTimeWorks) {
             HowAbsorptionTimeWorksView()
         }
+        .sheet(isPresented: $showFatProteinEditor) {
+            FatProteinBoostEditorView(
+                boost: viewModel.fatProteinBoost,
+                isDeclined: viewModel.isFatProteinBoostDeclined,
+                carbs: viewModel.carbsQuantity ?? 0,
+                onDone: viewModel.setFatProtein(_:declined:)
+            )
+            .environmentObject(displayGlucosePreference)
+        }
     }
     
     private var mainCard: some View {
@@ -134,6 +144,16 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
             
             AbsorptionTimePickerRow(absorptionTime: $viewModel.absorptionTime, isFocused: absorptionTimeFocused, validDurationRange: viewModel.absorptionRimesRange, showHowAbsorptionTimeWorks: $showHowAbsorptionTimeWorks)
                 .padding(.bottom, 2)
+
+            if UserDefaults.standard.fatProteinBoostSettings.isEnabled {
+                CardSectionDivider()
+
+                FatProteinBoostRow(boost: viewModel.fatProteinBoost, isDeclined: viewModel.isFatProteinBoostDeclined) {
+                    expandedRow = nil
+                    showFatProteinEditor = true
+                }
+                .padding(.bottom, 2)
+            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal)
