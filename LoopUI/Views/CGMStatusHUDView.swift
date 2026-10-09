@@ -14,6 +14,9 @@ import LoopKitUI
 public final class CGMStatusHUDView: DeviceStatusHUDView, NibLoadable {
     
     private var viewModel: CGMStatusHUDViewModel!
+
+    /// Ticks the glucose age under the glucose value while the view is on screen.
+    private var glucoseAgeTimer: Timer?
     
     @IBOutlet public weak var glucoseValueHUD: GlucoseValueHUDView!
     
@@ -52,6 +55,23 @@ public final class CGMStatusHUDView: DeviceStatusHUDView, NibLoadable {
         })
     }
     
+    deinit {
+        glucoseAgeTimer?.invalidate()
+    }
+
+    override public func didMoveToWindow() {
+        super.didMoveToWindow()
+        glucoseAgeTimer?.invalidate()
+        glucoseAgeTimer = nil
+        guard window != nil else { return }
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            self?.updateGlucoseAge()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        glucoseAgeTimer = timer
+        updateGlucoseAge()
+    }
+
     override public func tintColorDidChange() {
         super.tintColorDidChange()
         
@@ -128,13 +148,23 @@ public final class CGMStatusHUDView: DeviceStatusHUDView, NibLoadable {
 
     func updateDisplay() {
         glucoseValueHUD.glucoseLabel.text = viewModel.glucoseValueString
-        glucoseValueHUD.unitLabel.text = viewModel.unitsString
+        updateGlucoseAge()
         glucoseValueHUD.tintColor = viewModel.glucoseValueTintColor
         presentStatusHighlight(viewModel.statusHighlight)
         
         accessibilityValue = viewModel.accessibilityString
     }
     
+    /// Shows how long ago the glucose was measured under the glucose value, as LoopFollow does,
+    /// or the glucose unit before there is a reading.
+    private func updateGlucoseAge() {
+        guard viewModel.isVisible else { return }
+        let text = viewModel.glucoseAgeString() ?? viewModel.unitsString
+        if glucoseValueHUD.unitLabel.text != text {
+            glucoseValueHUD.unitLabel.text = text
+        }
+    }
+
     func updateTrendIcon() {
         glucoseTrendHUD.setIcon(viewModel.glucoseTrendIcon)
         glucoseTrendHUD.tintColor = viewModel.glucoseTrendTintColor

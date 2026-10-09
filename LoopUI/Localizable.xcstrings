@@ -3723,6 +3723,18 @@
           }
         }
       }
+    },
+    "%@ min ago" : {
+      "comment" : "How long ago the glucose shown was measured, under the glucose value (1: minutes, or minutes:seconds)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ min siden"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

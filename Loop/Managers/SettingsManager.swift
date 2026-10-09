@@ -80,6 +80,16 @@ class SettingsManager {
             }
             .store(in: &cancellables)
 
+        // The app's own settings live in UserDefaults; any write there may have changed one.
+        NotificationCenter.default
+            .publisher(for: UserDefaults.didChangeNotification, object: UserDefaults.standard)
+            .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, LoopAppSettings.json() != self.latestSettings.appSettings else { return }
+                self.storeSettings()
+            }
+            .store(in: &cancellables)
+
         self.alertMuter.$configuration
             .sink { [weak self] alertMuterConfiguration in
                 guard var notificationSettings = self?.latestSettings.notificationSettings else { return }
@@ -140,7 +150,8 @@ class SettingsManager {
                               cgmDevice: deviceStatusProvider?.cgmManagerStatus?.device,
                               pumpDevice: deviceStatusProvider?.pumpManagerStatus?.device,
                               bloodGlucoseUnit: displayGlucosePreference?.unit,
-                              automaticDosingStrategy: newLoopSettings.automaticDosingStrategy)
+                              automaticDosingStrategy: newLoopSettings.automaticDosingStrategy,
+                              appSettings: LoopAppSettings.json())
     }
 
     func storeSettings(newLoopSettings: LoopSettings? = nil, notificationSettings: NotificationSettings? = nil) {
@@ -245,5 +256,56 @@ private extension NotificationSettings {
                   scheduledDeliverySetting: scheduledDeliverySetting,
                   temporaryMuteAlertsSetting: temporaryMuteAlertsSetting
         )
+    }
+}
+
+/// The settings Loop keeps outside `LoopSettings`, as one JSON object that Nightscout gets in
+/// loopSettings next to the therapy settings, so someone reading the data there sees all of them.
+enum LoopAppSettings {
+    static func json(defaults: UserDefaults = .standard) -> Data? {
+        let boost = defaults.fatProteinBoostSettings
+        let calibration = defaults.fatProteinBoostCalibration
+        let object: [String: Any] = [
+            // With the automatic bolus dosing strategy, the share of the recommended dose given each loop.
+            "bolusPartialApplicationFactor": LoopConstants.bolusPartialApplicationFactor,
+            // When enabled, the share instead slides with glucose across this range.
+            "glucoseBasedApplicationFactorEnabled": defaults.glucoseBasedApplicationFactorEnabled,
+            "glucoseBasedApplicationFactorRange": [
+                GlucoseBasedApplicationFactorStrategy.minPartialApplicationFactor,
+                GlucoseBasedApplicationFactorStrategy.maxPartialApplicationFactor
+            ],
+            "integralRetrospectiveCorrectionEnabled": defaults.integralRetrospectiveCorrectionEnabled,
+            "fatProteinBoost": [
+                "enabled": boost.isEnabled,
+                "minimumUnits": boost.minimumUnits,
+                "delayMinutes": boost.delay / 60,
+                "startGlucoseMgdl": boost.startGlucoseMgdl,
+                "startGlucoseMmol": mmol(boost.startGlucoseMgdl),
+                "stopGlucoseMgdl": boost.stopGlucoseMgdl,
+                "stopGlucoseMmol": mmol(boost.stopGlucoseMgdl),
+                "strengthPerUnit": boost.strengthPerUnit,
+                "maximumStrength": boost.maximumStrength,
+                "learnedFactor": calibration.factor,
+                "recentOutcomes": calibration.outcomes.prefix(5).map { outcome in
+                    [
+                        "meal": outcome.mealName,
+                        "start": ISO8601DateFormatter().string(from: outcome.start),
+                        "end": ISO8601DateFormatter().string(from: outcome.end),
+                        "units": outcome.units,
+                        "strength": outcome.strength,
+                        "peakMgdl": outcome.peakMgdl,
+                        "lowestMgdl": outcome.lowestMgdl,
+                        "verdict": outcome.verdict.rawValue,
+                        "factorBefore": outcome.factorBefore,
+                        "factorAfter": outcome.factorAfter
+                    ] as [String: Any]
+                }
+            ] as [String: Any]
+        ]
+        return try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+    }
+
+    private static func mmol(_ mgdl: Double) -> Double {
+        (mgdl / 18.0182 * 10).rounded() / 10
     }
 }

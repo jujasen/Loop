@@ -16,6 +16,9 @@ public class CGMStatusHUDViewModel {
     var trend: GlucoseTrend?
     
     var unitsString: String = "–"
+
+    /// When the glucose shown was measured.
+    private(set) var glucoseStartDate: Date?
     
     var glucoseValueString: String = CGMStatusHUDViewModel.staleGlucoseRepresentation
     
@@ -130,6 +133,7 @@ public class CGMStatusHUDViewModel {
         trend = nil
         
         let time = timeFormatter.string(from: glucoseStartDate)
+        self.glucoseStartDate = glucoseStartDate
 
         isStaleAt = glucoseStartDate.addingTimeInterval(staleGlucoseAge)
 
@@ -174,6 +178,19 @@ public class CGMStatusHUDViewModel {
                 
         unitsString = unit.localizedShortUnitString
         accessibilityString = accessibilityStrings.joined(separator: ", ")
+    }
+
+    /// How long ago the glucose shown was measured, the way LoopFollow shows it under its glucose:
+    /// whole minutes, with seconds from 4½ to 12 minutes, when the next reading is due or late.
+    func glucoseAgeString(at now: Date = Date()) -> String? {
+        guard let glucoseStartDate else { return nil }
+        let secondsAgo = max(0, now.timeIntervalSince(glucoseStartDate))
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .positional
+        formatter.zeroFormattingBehavior = .dropLeading
+        formatter.allowedUnits = secondsAgo >= 270 && secondsAgo < 720 ? [.minute, .second] : [.minute]
+        guard let duration = formatter.string(from: secondsAgo) else { return nil }
+        return String(format: LocalizedString("%@ min ago", comment: "How long ago the glucose shown was measured, under the glucose value (1: minutes, or minutes:seconds)"), duration)
     }
 
     func displayStaleGlucoseValue() {
