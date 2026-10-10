@@ -1302,6 +1302,9 @@ extension DeviceDataManager: PumpManagerDelegate {
         
         if status.insulinType != oldStatus.insulinType {
             loopManager.pumpInsulinType = status.insulinType
+            DispatchQueue.main.async {
+                self.settingsManager.pumpInsulinTypeDidChange()
+            }
         }
         
         if status.deliveryIsUncertain != oldStatus.deliveryIsUncertain {

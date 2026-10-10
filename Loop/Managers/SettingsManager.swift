@@ -85,7 +85,7 @@ class SettingsManager {
             .publisher(for: UserDefaults.didChangeNotification, object: UserDefaults.standard)
             .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
-                guard let self, LoopAppSettings.json() != self.latestSettings.appSettings else { return }
+                guard let self, self.currentAppSettings() != self.latestSettings.appSettings else { return }
                 self.storeSettings()
             }
             .store(in: &cancellables)
@@ -151,7 +151,21 @@ class SettingsManager {
                               pumpDevice: deviceStatusProvider?.pumpManagerStatus?.device,
                               bloodGlucoseUnit: displayGlucosePreference?.unit,
                               automaticDosingStrategy: newLoopSettings.automaticDosingStrategy,
-                              appSettings: LoopAppSettings.json())
+                              appSettings: LoopAppSettings.json(
+                                  pumpInsulinType: deviceStatusProvider?.pumpManagerStatus?.insulinType,
+                                  defaultRapidActingModel: newLoopSettings.defaultRapidActingModel))
+    }
+
+    private func currentAppSettings() -> Data? {
+        LoopAppSettings.json(
+            pumpInsulinType: deviceStatusProvider?.pumpManagerStatus?.insulinType,
+            defaultRapidActingModel: latestSettings.defaultRapidActingModel?.presetForRapidActingInsulin)
+    }
+
+    /// The insulin type on the pump picks the insulin model, so a change there is uploaded too.
+    func pumpInsulinTypeDidChange() {
+        guard currentAppSettings() != latestSettings.appSettings else { return }
+        storeSettings()
     }
 
     func storeSettings(newLoopSettings: LoopSettings? = nil, notificationSettings: NotificationSettings? = nil) {
@@ -262,10 +276,33 @@ private extension NotificationSettings {
 /// The settings Loop keeps outside `LoopSettings`, as one JSON object that Nightscout gets in
 /// loopSettings next to the therapy settings, so someone reading the data there sees all of them.
 enum LoopAppSettings {
-    static func json(defaults: UserDefaults = .standard) -> Data? {
+    static func json(
+        defaults: UserDefaults = .standard,
+        pumpInsulinType: InsulinType?,
+        defaultRapidActingModel: ExponentialInsulinModelPreset?
+    ) -> Data? {
         let boost = defaults.fatProteinBoostSettings
         let calibration = defaults.fatProteinBoostCalibration
+        // The model Loop actually computes with, as DeviceDataManager and LoopDataManager pick it.
+        let selectionEnabled = FeatureFlags.adultChildInsulinModelSelectionEnabled
+        let model = PresetInsulinModelProvider(defaultRapidActingModel: selectionEnabled ? defaultRapidActingModel : nil)
+            .model(for: pumpInsulinType) as? ExponentialInsulinModelPreset
+        var insulin: [String: Any] = [
+            // Whether the adult/child choice shows in Therapy Settings in this build.
+            "adultChildSelectionEnabled": selectionEnabled
+        ]
+        if let pumpInsulinType {
+            insulin["pumpInsulinType"] = pumpInsulinType.identifier
+            insulin["pumpInsulinTypeName"] = pumpInsulinType.brandName
+        }
+        if let model {
+            insulin["effectiveModel"] = model.rawValue
+            insulin["peakMinutes"] = model.peakActivity / 60
+            insulin["durationHours"] = model.actionDuration / 3600
+            insulin["delayMinutes"] = model.delay / 60
+        }
         let object: [String: Any] = [
+            "insulin": insulin,
             // With the automatic bolus dosing strategy, the share of the recommended dose given each loop.
             "bolusPartialApplicationFactor": LoopConstants.bolusPartialApplicationFactor,
             // When enabled, the share instead slides with glucose across this range.
@@ -307,5 +344,19 @@ enum LoopAppSettings {
 
     private static func mmol(_ mgdl: Double) -> Double {
         (mgdl / 18.0182 * 10).rounded() / 10
+    }
+}
+
+private extension InsulinType {
+    /// A name that stays the same whatever language the phone is in.
+    var identifier: String {
+        switch self {
+        case .novolog: return "novolog"
+        case .humalog: return "humalog"
+        case .apidra: return "apidra"
+        case .fiasp: return "fiasp"
+        case .lyumjev: return "lyumjev"
+        case .afrezza: return "afrezza"
+        }
     }
 }
