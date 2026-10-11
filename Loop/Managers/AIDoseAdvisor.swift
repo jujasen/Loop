@@ -205,15 +205,19 @@ final class AIDoseAdvisor {
 
     /// The model's dose held to Loop's maximum bolus and to `maximumAboveLoop` over Loop's own
     /// recommendation, then rounded to what the pump can give.
+    /// With `allowsMoreThanLoop` false — glucose already below target — it is held to Loop's dose.
     static func limitedDose(
         _ suggested: Double,
         loopUnits: Double?,
         maximumBolus: Double?,
         settings: AIDoseAdviceSettings,
+        allowsMoreThanLoop: Bool = true,
         round: (Double) -> Double
     ) -> (units: Double, limitedFrom: Double?) {
         let asked = suggested.isFinite ? max(0, suggested) : 0
-        var limit = (loopUnits ?? 0) + settings.maximumAboveLoop
+        let range = AIDoseAdviceSettings.maximumAboveLoopRange
+        let above = allowsMoreThanLoop ? min(max(settings.maximumAboveLoop, range.lowerBound), range.upperBound) : 0
+        var limit = (loopUnits ?? 0) + above
         if let maximumBolus {
             limit = min(limit, maximumBolus)
         }
@@ -232,7 +236,7 @@ final class AIDoseAdvisor {
     }
 
     /// Why no advice may be given right now, or `nil` when it may.
-    static func blockingReason(glucoseMgdl: Double?, glucoseDate: Date?, notice: BolusEntryViewModel.Notice?, now: Date) -> String? {
+    static func blockingReason(glucoseMgdl: Double?, glucoseDate: Date?, notice: BolusEntryViewModel.Notice?, loopUnits: Double?, lowestForecastMgdl: Double?, suspendThresholdMgdl: Double?, now: Date) -> String? {
         switch notice {
         case .staleGlucoseData?, .futureGlucoseData?:
             return String(localized: "No recent glucose — AI advice needs a CGM reading from the last 15 minutes.", comment: "AI dose advice is not given: glucose data is stale")
@@ -248,6 +252,13 @@ final class AIDoseAdvisor {
         }
         if glucoseMgdl < 70 {
             return String(localized: "Glucose is low. No AI dose is suggested.", comment: "AI dose advice is not given: glucose is low")
+        }
+        // Loop's notice needs a safety limit to be set; the forecast itself is checked as well.
+        if let lowest = lowestForecastMgdl, lowest < max(70, suspendThresholdMgdl ?? 0) {
+            return String(localized: "Loop sees glucose going below the safety limit. No AI dose is suggested.", comment: "AI dose advice is not given: a low is predicted")
+        }
+        guard loopUnits != nil else {
+            return String(localized: "Loop has no recommendation right now, so there is nothing to compare with.", comment: "AI dose advice is not given: Loop could not recommend a bolus")
         }
         return nil
     }

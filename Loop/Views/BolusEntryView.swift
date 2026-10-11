@@ -51,6 +51,12 @@ struct BolusEntryView: View {
             .onDisappear {
                 viewModel.setAIDoseAdviceOpen(false)
             }
+            .onReceive(viewModel.$recommendedBolus.dropFirst()) { _ in
+                DispatchQueue.main.async { viewModel.aiDoseInputsDidChange() }
+            }
+            .onReceive(viewModel.$activeNotice.dropFirst()) { _ in
+                DispatchQueue.main.async { viewModel.aiDoseInputsDidChange() }
+            }
             .onReceive(self.viewModel.$recommendedBolus) { recommendation in
                 // If the recommendation changes, and the user has not edited the bolus amount, update the bolus amount
                 let amount = recommendation?.doubleValue(for: .internationalUnit()) ?? 0

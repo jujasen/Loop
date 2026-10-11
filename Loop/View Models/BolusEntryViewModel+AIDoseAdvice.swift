@@ -27,22 +27,47 @@ extension BolusEntryViewModel {
         requestAIDoseAdvice()
     }
 
-    func requestAIDoseAdvice() {
-        let now = Date()
+    /// Why no advice may be given with what the screen shows now, or `nil`.
+    private func aiDoseBlockingReason(now: Date) -> String? {
         let latest = glucoseValues.last
-        if let reason = AIDoseAdvisor.blockingReason(
+        let lowestForecast = predictedGlucoseValues
+            .filter { $0.startDate > now }
+            .map { $0.quantity.doubleValue(for: .milligramsPerDeciliter) }
+            .min()
+        return AIDoseAdvisor.blockingReason(
             glucoseMgdl: latest?.quantity.doubleValue(for: .milligramsPerDeciliter),
             glucoseDate: latest?.startDate,
             notice: activeNotice,
+            loopUnits: recommendedBolusAmount,
+            lowestForecastMgdl: lowestForecast,
+            suspendThresholdMgdl: delegate?.settings.suspendThreshold?.quantity.doubleValue(for: .milligramsPerDeciliter),
             now: now
-        ) {
+        )
+    }
+
+    /// Called when Loop's recommendation or notice changes: advice given for the earlier
+    /// situation can no longer be used, and is asked for again.
+    func aiDoseInputsDidChange() {
+        guard case .ready(let advice) = aiDoseAdviceState else { return }
+        let now = Date()
+        if let reason = aiDoseBlockingReason(now: now) {
+            aiDoseAdviceState = .unavailable(reason)
+        } else if let loop = recommendedBolusAmount, let earlier = advice.loopUnits, abs(loop - earlier) < 0.001 {
+            return
+        } else {
+            aiDoseAdviceState = .failed(String(localized: "Loop's recommendation changed. Ask again for advice that fits it.", comment: "AI dose advice withdrawn because Loop's recommendation changed"))
+        }
+    }
+
+    func requestAIDoseAdvice() {
+        let now = Date()
+        if let reason = aiDoseBlockingReason(now: now) {
             aiDoseAdviceState = .unavailable(reason)
             return
         }
         guard let advisor = AIDoseAdvisor.shared else { return }
 
         aiDoseAdviceState = .loading
-        let loopUnits = recommendedBolusAmount
         let settings = UserDefaults.standard.aiDoseAdviceSettings
         let meal = aiDoseMealContext
 
@@ -55,14 +80,20 @@ extension BolusEntryViewModel {
             do {
                 let answer = try await advisor.advise(situation: situation, meal: meal)
                 guard !Task.isCancelled else { return }
+                // Loop may have changed its mind while the model was thinking.
+                if let reason = self.aiDoseBlockingReason(now: Date()) {
+                    self.aiDoseAdviceState = .unavailable(reason)
+                    return
+                }
                 let limited = AIDoseAdvisor.limitedDose(
                     answer.doseUnits,
-                    loopUnits: loopUnits,
+                    loopUnits: self.recommendedBolusAmount,
                     maximumBolus: self.maximumBolus?.doubleValue(for: .internationalUnit()) ?? self.delegate?.settings.maximumBolus,
                     settings: settings,
+                    allowsMoreThanLoop: self.activeNotice != .glucoseBelowTarget,
                     round: { self.delegate?.roundBolusVolume(units: $0) ?? ($0 * 20).rounded(.down) / 20 }
                 )
-                let advice = AIDoseAdvice(answer: answer, units: limited.units, loopUnits: loopUnits, limitedFrom: limited.limitedFrom, date: now)
+                let advice = AIDoseAdvice(answer: answer, units: limited.units, loopUnits: self.recommendedBolusAmount, limitedFrom: limited.limitedFrom, date: now)
                 self.aiDoseAdviceState = .ready(advice)
                 self.recordAIDoseAdvice(advice, accepted: false)
             } catch {
@@ -73,6 +104,19 @@ extension BolusEntryViewModel {
     }
 
     /// Notes that the shown advice went into the bolus field.
+    /// True when the advice still fits what the screen shows, so it may go into the bolus field.
+    func canAcceptAIDoseAdvice(_ advice: AIDoseAdvice) -> Bool {
+        guard aiDoseBlockingReason(now: Date()) == nil, let loop = recommendedBolusAmount, let earlier = advice.loopUnits else {
+            aiDoseInputsDidChange()
+            return false
+        }
+        guard abs(loop - earlier) < 0.001 else {
+            aiDoseInputsDidChange()
+            return false
+        }
+        return true
+    }
+
     func didAcceptAIDoseAdvice(_ advice: AIDoseAdvice) {
         recordAIDoseAdvice(advice, accepted: true)
     }
@@ -135,7 +179,7 @@ extension BolusEntryViewModel {
 
         let loopSettings = delegate?.settings
         var activeOverride: String?
-        if let override = loopSettings?.scheduleOverride ?? loopSettings?.preMealOverride, override.isActive(at: now) {
+        if let override = loopSettings?.preMealOverride ?? loopSettings?.scheduleOverride, override.isActive(at: now) {
             let name: String
             switch override.context {
             case .preset(let preset): name = "\(preset.symbol) \(preset.name)"

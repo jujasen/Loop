@@ -143,6 +143,7 @@ struct AIDoseAdviceSection: View {
                     .buttonStyle(.bordered)
 
                     Button {
+                        guard viewModel.canAcceptAIDoseAdvice(advice) else { return }
                         accept(advice)
                         acceptedDate = advice.date
                     } label: {

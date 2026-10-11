@@ -79,15 +79,15 @@ struct OpenAIChat {
                 let data = try await post(withModel, timeout: timeout)
                 remember(model)
                 return data
-            } catch ChatError.server(let message) where Self.isUnknownModel(message) {
-                lastError = ChatError.server(message)
-                continue
             } catch ChatError.server(let message) where Self.isUnsupportedReasoningEffort(message) && withModel["reasoning_effort"] != nil {
                 // A model without that setting still answers without it.
                 withModel["reasoning_effort"] = nil
                 let data = try await post(withModel, timeout: timeout)
                 remember(model)
                 return data
+            } catch ChatError.server(let message) where Self.isUnknownModel(message) {
+                lastError = ChatError.server(message)
+                continue
             }
         }
         throw lastError
@@ -117,6 +117,8 @@ struct OpenAIChat {
     /// OpenAI's wording when a model does not exist or the key has no access to it.
     static func isUnknownModel(_ message: String) -> Bool {
         let lowered = message.lowercased()
+        // "'reasoning_effort' is not supported with this model" is about the setting, not the model.
+        guard !lowered.contains("reasoning_effort") else { return false }
         return lowered.contains("model") && (
             lowered.contains("does not exist") ||
             lowered.contains("not found") ||

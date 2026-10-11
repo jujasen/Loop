@@ -61,18 +61,38 @@ final class AIDoseAdvisorTests: XCTestCase {
     // MARK: When no advice is given
 
     func testNoAdviceOnStaleOrLowGlucoseOrAPredictedLow() {
-        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now.addingTimeInterval(-.minutes(20)), notice: nil, now: now))
-        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: nil, glucoseDate: nil, notice: nil, now: now))
-        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 65, glucoseDate: now, notice: nil, now: now))
-        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .staleGlucoseData, now: now))
-        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .stalePumpData, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now.addingTimeInterval(-.minutes(20)), notice: nil, loopUnits: 1, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: nil, glucoseDate: nil, notice: nil, loopUnits: 1, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 65, glucoseDate: now, notice: nil, loopUnits: 1, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .staleGlucoseData, loopUnits: 1, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .stalePumpData, loopUnits: 1, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
         let threshold = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: 72)
-        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .predictedGlucoseBelowSuspendThreshold(suspendThreshold: threshold), now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .predictedGlucoseBelowSuspendThreshold(suspendThreshold: threshold), loopUnits: 1, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
+    }
+
+    func testNoAdviceWithoutALoopRecommendationOrWithALowInTheForecast() {
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now, notice: nil, loopUnits: nil, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
+        // No safety limit set: Loop raises no notice, but the forecast still blocks.
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now, notice: nil, loopUnits: 1, lowestForecastMgdl: 65, suspendThresholdMgdl: nil, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now, notice: nil, loopUnits: 1, lowestForecastMgdl: 75, suspendThresholdMgdl: 80, now: now))
+    }
+
+    func testBelowTargetHoldsTheDoseToLoops() {
+        let result = AIDoseAdvisor.limitedDose(1, loopUnits: 0.3, maximumBolus: 3, settings: AIDoseAdviceSettings(), allowsMoreThanLoop: false, round: pumpSteps)
+        XCTAssertEqual(result.units, 0.3, accuracy: 0.0001)
+        XCTAssertEqual(result.limitedFrom, 1)
+    }
+
+    func testAmountAboveLoopOutsideItsRangeIsHeldToIt() {
+        var settings = AIDoseAdviceSettings()
+        settings.maximumAboveLoop = 10
+        let result = AIDoseAdvisor.limitedDose(10, loopUnits: 1, maximumBolus: 10, settings: settings, round: pumpSteps)
+        XCTAssertEqual(result.units, 1 + AIDoseAdviceSettings.maximumAboveLoopRange.upperBound, accuracy: 0.0001)
     }
 
     func testAdviceIsGivenOnFreshGlucoseInRange() {
-        XCTAssertNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now.addingTimeInterval(-.minutes(4)), notice: nil, now: now))
-        XCTAssertNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now, notice: .glucoseBelowTarget, now: now))
+        XCTAssertNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now.addingTimeInterval(-.minutes(4)), notice: nil, loopUnits: 1, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
+        XCTAssertNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now, notice: .glucoseBelowTarget, loopUnits: 1, lowestForecastMgdl: 110, suspendThresholdMgdl: 72, now: now))
     }
 
     func testSettingsAreOffUntilTurnedOn() {
@@ -209,12 +229,12 @@ final class AIDoseAdvisorTests: XCTestCase {
         configuration.protocolClasses = [ModelStubURLProtocol.self]
         let chat = OpenAIChat(apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
 
-        _ = try await chat.send(["messages": []], timeout: 5)
+        _ = try await chat.send(["messages": [Any]()], timeout: 5)
         XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(OpenAIChat.modelCandidates.prefix(3)))
         XCTAssertEqual(defaults.openAIWorkingModel, working)
 
         ModelStubURLProtocol.requestedModels = []
-        _ = try await chat.send(["messages": []], timeout: 5)
+        _ = try await chat.send(["messages": [Any]()], timeout: 5)
         XCTAssertEqual(ModelStubURLProtocol.requestedModels, [working], "the remembered model goes first")
     }
 
@@ -230,7 +250,7 @@ final class AIDoseAdvisorTests: XCTestCase {
         let chat = OpenAIChat(apiKey: "sk-bad", session: URLSession(configuration: configuration), defaults: defaults)
 
         do {
-            _ = try await chat.send(["messages": []], timeout: 5)
+            _ = try await chat.send(["messages": [Any]()], timeout: 5)
             XCTFail("Expected an error")
         } catch {
             XCTAssertEqual(error.localizedDescription, "Incorrect API key provided")
@@ -242,6 +262,8 @@ final class AIDoseAdvisorTests: XCTestCase {
         XCTAssertTrue(OpenAIChat.isUnknownModel("The model `gpt-6-astra` does not exist or you do not have access to it."))
         XCTAssertFalse(OpenAIChat.isUnknownModel("Incorrect API key provided"))
         XCTAssertFalse(OpenAIChat.isUnknownModel("Rate limit reached"))
+        XCTAssertFalse(OpenAIChat.isUnknownModel("Unsupported parameter: 'reasoning_effort' is not supported with this model."))
+        XCTAssertTrue(OpenAIChat.isUnsupportedReasoningEffort("Unsupported parameter: 'reasoning_effort' is not supported with this model."))
     }
 }
 

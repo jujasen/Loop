@@ -44706,6 +44706,30 @@
           }
         }
       }
+    },
+    "Loop has no recommendation right now, so there is nothing to compare with." : {
+      "comment" : "AI dose advice is not given: Loop could not recommend a bolus",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop har ingen anbefaling akkurat nå, så det er ingenting å sammenligne med."
+          }
+        }
+      }
+    },
+    "Loop's recommendation changed. Ask again for advice that fits it." : {
+      "comment" : "AI dose advice withdrawn because Loop's recommendation changed",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loops anbefaling endret seg. Spør på nytt for et forslag som passer."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
