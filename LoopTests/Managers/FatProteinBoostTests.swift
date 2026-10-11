@@ -37,11 +37,20 @@ private func glucose(_ mmol: [Double], endingAt end: Date) -> [GlucoseValue] {
     }
 }
 
+extension FatProteinBoostSettings {
+    /// The standard settings, turned on.
+    static var on: FatProteinBoostSettings {
+        var settings = FatProteinBoostSettings.standard
+        settings.isEnabled = true
+        return settings
+    }
+}
+
 final class FatProteinBoostPlannerTests: XCTestCase {
     private let dinner = Date(timeIntervalSinceReferenceDate: 800_000_000)
-    private let settings = FatProteinBoostSettings.standard
+    private let settings = FatProteinBoostSettings.on
 
-    private func planned(_ entries: [StoredCarbEntry], glucose: [GlucoseValue] = [], records: [String: FatProteinBoostRecord] = [:], declined: [String: Date] = [:], mealNutrition: [String: MealNutrition] = [:], settings: FatProteinBoostSettings = .standard, factor: Double = 1, now: Date) -> [FatProteinBoostPlan] {
+    private func planned(_ entries: [StoredCarbEntry], glucose: [GlucoseValue] = [], records: [String: FatProteinBoostRecord] = [:], declined: [String: Date] = [:], mealNutrition: [String: MealNutrition] = [:], settings: FatProteinBoostSettings = .on, factor: Double = 1, now: Date) -> [FatProteinBoostPlan] {
         FatProteinBoostPlanner.planned(entries: entries, glucose: glucose, favorites: [milk, porridge, smoothie], assessments: assessments, mealNutrition: mealNutrition, declined: declined, records: records, settings: settings, factor: factor, now: now)
     }
 
@@ -299,6 +308,8 @@ final class FatProteinBoostManagerTests: XCTestCase {
         defaults.removePersistentDomain(forName: "FatProteinBoostManagerTests")
         defaults.favoriteFoods = [milk, porridge]
         defaults.favoriteNutritionAssessments = assessments
+        defaults.migrateFatProteinBoostToOffByDefault()
+        defaults.fatProteinBoostSettings = .on
         entries = [entry("a", porridge, at: dinner), entry("b", milk, at: dinner.addingTimeInterval(.minutes(25)))]
         enacted = []
         override = nil
@@ -407,5 +418,29 @@ final class FatProteinBoostManagerTests: XCTestCase {
         run(manager)
         XCTAssertTrue(enacted.isEmpty)
         XCTAssertEqual(defaults.fatProteinBoostRecords["b"]?.state, .skipped)
+    }
+
+    // MARK: Off by default
+
+    func testNewPhoneStartsWithTheBoostOff() {
+        XCTAssertFalse(FatProteinBoostSettings.standard.isEnabled)
+        defaults.removePersistentDomain(forName: "FatProteinBoostManagerTests")
+        _ = makeManager()
+        XCTAssertFalse(defaults.fatProteinBoostSettings.isEnabled)
+    }
+
+    func testBoostLeftOnByAnEarlierBuildIsTurnedOffOnceKeepingTheRest() {
+        defaults.removePersistentDomain(forName: "FatProteinBoostManagerTests")
+        var earlier = FatProteinBoostSettings.on
+        earlier.strengthPerUnit = 0.2
+        defaults.fatProteinBoostSettings = earlier
+        _ = makeManager()
+        XCTAssertFalse(defaults.fatProteinBoostSettings.isEnabled)
+        XCTAssertEqual(defaults.fatProteinBoostSettings.strengthPerUnit, 0.2)
+
+        // Turned back on in settings, it stays on.
+        defaults.fatProteinBoostSettings = earlier
+        _ = makeManager()
+        XCTAssertTrue(defaults.fatProteinBoostSettings.isEnabled)
     }
 }

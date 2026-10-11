@@ -57,7 +57,8 @@ struct FavoriteNutritionAssessment: Codable, Equatable {
 
 /// How the boost behaves. Stored on the phone and changed from its settings screen.
 struct FatProteinBoostSettings: Codable, Equatable {
-    var isEnabled = true
+    /// Off until turned on in Fat and Protein settings.
+    var isEnabled = false
     /// Meals below this many fat-protein units get no boost.
     var minimumUnits = 1.0
     /// Time from the last part of the meal to when the boost may first start.
@@ -672,6 +673,8 @@ final class FatProteinBoostManager {
         self.currentOverride = currentOverride
         self.enactOverride = enactOverride
 
+        defaults.migrateFatProteinBoostToOffByDefault()
+
         // A meal logged or deleted, or its fat and protein changed, shows up without waiting for a loop.
         for name in [CarbStore.carbEntriesDidChange, .fatProteinBoostInputsDidChange] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: nil) { [weak self] _ in
@@ -894,6 +897,18 @@ extension UserDefaults {
         case records = "com.loopkit.Loop.fatProteinBoostRecords"
         case settings = "com.loopkit.Loop.fatProteinBoostSettings"
         case calibration = "com.loopkit.Loop.fatProteinBoostCalibration"
+        case offByDefaultMigrated = "com.loopkit.Loop.fatProteinBoostOffByDefaultMigrated"
+    }
+
+    /// The boost was on by default in the builds that brought it, so their saved settings say on
+    /// whether or not anyone chose it. Turns it off once; turning it back on afterwards sticks.
+    func migrateFatProteinBoostToOffByDefault() {
+        guard !bool(forKey: FatProteinBoostKey.offByDefaultMigrated.rawValue) else { return }
+        if var settings: FatProteinBoostSettings = decoded(forKey: FatProteinBoostKey.settings.rawValue), settings.isEnabled {
+            settings.isEnabled = false
+            fatProteinBoostSettings = settings
+        }
+        set(true, forKey: FatProteinBoostKey.offByDefaultMigrated.rawValue)
     }
 
     /// What the meal estimate made of each favorite food, by favorite food `id`.
