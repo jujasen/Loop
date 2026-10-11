@@ -51,6 +51,7 @@ public struct SettingsView: View {
             
             case favoriteFoods
             case fatProteinBoost
+            case aiDoseAdvice
         }
     }
     
@@ -123,6 +124,8 @@ public struct SettingsView: View {
                 case .fatProteinBoost:
                     FatProteinBoostSettingsView(manager: FatProteinBoostManager.current)
                         .environmentObject(displayGlucosePreference)
+                case .aiDoseAdvice:
+                    AIDoseAdviceSettingsView()
                 }
             }
         }
@@ -376,6 +379,13 @@ extension SettingsView {
                         imageView: Image(systemName: "clock.arrow.circlepath").resizable().scaledToFit().frame(width: 34, height: 34).foregroundColor(carbTintColor),
                         label: String(localized: "Fat and Protein", comment: "Title of the fat and protein boost settings row"),
                         descriptiveText: String(localized: "Extra insulin for the late rise", comment: "Descriptive text for the fat and protein boost settings row"))
+            if AIDoseAdvisor.shared != nil {
+                LargeButton(action: { sheet = .aiDoseAdvice },
+                            includeArrow: true,
+                            imageView: Image(systemName: "sparkles").resizable().scaledToFit().frame(width: 34, height: 34).foregroundColor(.purple),
+                            label: String(localized: "AI Dose Advice", comment: "Title of the AI dose advice settings row"),
+                            descriptiveText: String(localized: "A second opinion on the bolus", comment: "Descriptive text for the AI dose advice settings row"))
+            }
         }
     }
     

@@ -125,46 +125,33 @@ final class MealCarbEstimator {
         return resized.jpegData(compressionQuality: 0.7)
     }
 
-    static let model = "gpt-5.4-mini"
-
     /// Built into the app at build time (`OPENAI_API_KEY` in the xcconfig, `OpenAIAPIKey` in
     /// Info.plist). Without it the feature stays hidden.
-    static let shared: MealCarbEstimator? = {
-        guard let key = Bundle.main.object(forInfoDictionaryKey: "OpenAIAPIKey") as? String else { return nil }
-        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !trimmed.hasPrefix("$(") else { return nil }
-        return MealCarbEstimator(apiKey: trimmed)
-    }()
+    static let shared: MealCarbEstimator? = OpenAIChat.shared.map { MealCarbEstimator(chat: $0) }
 
-    private let apiKey: String
-    private let session: URLSession
+    private let chat: OpenAIChat
 
-    init(apiKey: String, session: URLSession = .shared) {
-        self.apiKey = apiKey
-        self.session = session
+    init(chat: OpenAIChat) {
+        self.chat = chat
+    }
+
+    convenience init(apiKey: String, session: URLSession = .shared) {
+        self.init(chat: OpenAIChat(apiKey: apiKey, session: session))
     }
 
     /// Asks for a complete estimate of the meal described across `conversation`, which alternates
-    /// the caregiver's descriptions with the model's earlier estimates.
+    /// the caregiver's descriptions with the model's earlier estimates. It goes to the newest GPT
+    /// model the key can reach (see `OpenAIChat`).
     func estimate(conversation: [Message]) async throws -> MealCarbEstimate {
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
-        request.httpMethod = "POST"
         // Photos make the model take noticeably longer.
-        request.timeoutInterval = conversation.contains { !$0.images.isEmpty } ? 90 : 45
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: Self.requestBody(conversation: conversation))
-
+        let timeout: TimeInterval = conversation.contains { !$0.images.isEmpty } ? 120 : 60
         let data: Data
-        let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
-        } catch {
+            data = try await chat.send(Self.requestBody(conversation: conversation), timeout: timeout)
+        } catch OpenAIChat.ChatError.network(let error) {
             throw EstimateError.network(error)
-        }
-
-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw EstimateError.server(Self.serverMessage(from: data) ?? HTTPURLResponse.localizedString(forStatusCode: http.statusCode))
+        } catch OpenAIChat.ChatError.server(let message) {
+            throw EstimateError.server(message)
         }
         return try Self.parseResponse(data)
     }
@@ -193,7 +180,6 @@ final class MealCarbEstimator {
     static func requestBody(conversation: [Message]) -> [String: Any] {
         let messages = [Message(role: "system", content: systemPrompt)] + conversation
         return [
-            "model": model,
             "reasoning_effort": "low",
             "messages": messages.map { ["role": $0.role, "content": content(of: $0)] },
             "response_format": [
@@ -209,7 +195,7 @@ final class MealCarbEstimator {
 
     /// Plain text, or — when the message carries photos — the text followed by the photos as
     /// image parts.
-    private static func content(of message: Message) -> Any {
+    static func content(of message: Message) -> Any {
         guard !message.images.isEmpty else { return message.content }
         var parts: [[String: Any]] = []
         if !message.content.isEmpty {
@@ -260,14 +246,6 @@ final class MealCarbEstimator {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let content = (try? encoder.encode(estimate)).flatMap { String(data: $0, encoding: .utf8) } ?? ""
         return Message(role: "assistant", content: content)
-    }
-
-    private static func serverMessage(from data: Data) -> String? {
-        struct ErrorBody: Decodable {
-            struct Detail: Decodable { var message: String }
-            var error: Detail
-        }
-        return (try? JSONDecoder().decode(ErrorBody.self, from: data))?.error.message
     }
 
     private static let schema: [String: Any] = [

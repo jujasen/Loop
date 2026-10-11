@@ -107,4 +107,19 @@ extension DeviceDataManager: BolusEntryViewModelDelegate, ManualDoseViewModelDel
     func updateRemoteRecommendation() {
         loopManager.updateRemoteRecommendation()
     }
+
+    func aiDoseLocalHistory(start: Date) async -> AIDoseLocalHistory {
+        let samples: [StoredGlucoseSample] = (try? await glucoseStore.getGlucoseSamples(start: start, end: nil)) ?? []
+        let carbs: [StoredCarbEntry] = (try? await carbStore.getCarbEntries(start: start, end: nil)) ?? []
+        let doses: [DoseEntry] = await withCheckedContinuation { continuation in
+            doseStore.getNormalizedDoseEntries(start: start, end: nil) { result in
+                if case .success(let doses) = result {
+                    continuation.resume(returning: doses)
+                } else {
+                    continuation.resume(returning: [])
+                }
+            }
+        }
+        return AIDoseLocalHistory(glucose: samples, carbEntries: carbs, doses: doses)
+    }
 }

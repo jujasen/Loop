@@ -38,6 +38,9 @@ struct BolusEntryView: View {
                 List {
                     self.chartSection
                     self.summarySection
+                    if viewModel.isAIDoseAdviceAvailable {
+                        self.aiDoseAdviceSection
+                    }
                 }
                 .insetGroupedListStyle()
                 
@@ -45,6 +48,9 @@ struct BolusEntryView: View {
             .navigationBarTitle(self.title)
             .supportedInterfaceOrientations(.portrait)
             .alert(item: self.$viewModel.activeAlert, content: self.alert(for:))
+            .onDisappear {
+                viewModel.setAIDoseAdviceOpen(false)
+            }
             .onReceive(self.viewModel.$recommendedBolus) { recommendation in
                 // If the recommendation changes, and the user has not edited the bolus amount, update the bolus amount
                 let amount = recommendation?.doubleValue(for: .internationalUnit()) ?? 0
@@ -187,6 +193,15 @@ struct BolusEntryView: View {
         }
     }
     
+    /// Its own section, so it sits apart from Loop's recommendation and the bolus field.
+    private var aiDoseAdviceSection: some View {
+        AIDoseAdviceSection(viewModel: viewModel) { advice in
+            editedBolusAmount = true
+            enteredBolusStringBinding.wrappedValue = advice.units > 0 ? viewModel.formatBolusAmount(advice.units) : ""
+            viewModel.didAcceptAIDoseAdvice(advice)
+        }
+    }
+
     private var titleText: Text {
         return Text("Bolus Summary", comment: "Title for card displaying carb entry and bolus recommendation")
     }

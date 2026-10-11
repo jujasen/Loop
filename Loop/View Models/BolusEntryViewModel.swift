@@ -54,6 +54,15 @@ protocol BolusEntryViewModelDelegate: AnyObject {
     func roundBolusVolume(units: Double) -> Double
 
     func updateRemoteRecommendation()
+
+    /// Glucose, carbs and doses the phone holds since `start`, for the AI dose advice.
+    func aiDoseLocalHistory(start: Date) async -> AIDoseLocalHistory
+}
+
+extension BolusEntryViewModelDelegate {
+    func aiDoseLocalHistory(start: Date) async -> AIDoseLocalHistory {
+        AIDoseLocalHistory()
+    }
 }
 
 @MainActor
@@ -119,6 +128,12 @@ final class BolusEntryViewModel: ObservableObject {
     /// What the boost will do for the meal, for the line under the carb entry.
     var fatProteinBoost: FatProteinBoostPreview?
 
+    /// The meal as described and photographed on the carb entry screen, for the AI dose advice.
+    var aiDoseMealContext: AIDoseMealContext?
+    /// The AI dose advice section below the bolus field; closed until opened.
+    @Published var aiDoseAdviceState: AIDoseAdviceState = .off
+    var aiDoseAdviceTask: Task<Void, Never>?
+
     /// "🧈 130 % for 3 hr from 21:10 if glucose rises", or `nil` when the meal gets no boost.
     var fatProteinBoostSummary: String? {
         guard let boost = fatProteinBoost, let strength = boost.strength, let duration = boost.duration else { return nil }
@@ -163,7 +178,7 @@ final class BolusEntryViewModel: ObservableObject {
     var manualGlucoseSample: NewGlucoseSample?
 
     // MARK: - Seams
-    private weak var delegate: BolusEntryViewModelDelegate?
+    private(set) weak var delegate: BolusEntryViewModelDelegate?
     private let now: () -> Date
     private let screenWidth: CGFloat
     private let debounceIntervalMilliseconds: Int

@@ -249,6 +249,11 @@ final class CarbEntryViewModel: ObservableObject {
         viewModel.mealNutrition = mealNutrition
         viewModel.isFatProteinBoostDeclined = isFatProteinBoostDeclined
         viewModel.fatProteinBoost = isFatProteinBoostDeclined ? nil : fatProteinBoost
+        // The AI dose advice looks at the meal as it was described and photographed here.
+        viewModel.aiDoseMealContext = AIDoseMealContext(
+            conversation: mealConversation,
+            foodName: foodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : foodName
+        )
         Task {
             await viewModel.generateRecommendationAndStartObserving()
         }

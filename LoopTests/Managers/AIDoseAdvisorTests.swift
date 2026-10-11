@@ -1,0 +1,293 @@
+//
+//  AIDoseAdvisorTests.swift
+//  LoopTests
+//
+//  AI dose advice: the limits on the dose, when none is given, the request and answer, the
+//  Nightscout history summary, and finding the newest GPT model the key can reach.
+//
+
+import XCTest
+import HealthKit
+import LoopKit
+@testable import Loop
+
+final class AIDoseAdvisorTests: XCTestCase {
+    private let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
+    private let pumpSteps: (Double) -> Double = { ($0 * 20).rounded() / 20 }
+
+    // MARK: Limits
+
+    func testDoseWithinTheLimitsIsKeptAndRounded() {
+        let result = AIDoseAdvisor.limitedDose(1.23, loopUnits: 1.0, maximumBolus: 3, settings: AIDoseAdviceSettings(), round: pumpSteps)
+        XCTAssertEqual(result.units, 1.25, accuracy: 0.0001)
+        XCTAssertNil(result.limitedFrom)
+    }
+
+    func testDoseIsHeldToTheAmountAboveLoop() {
+        var settings = AIDoseAdviceSettings()
+        settings.maximumAboveLoop = 0.5
+        let result = AIDoseAdvisor.limitedDose(2.4, loopUnits: 1.0, maximumBolus: 5, settings: settings, round: pumpSteps)
+        XCTAssertEqual(result.units, 1.5, accuracy: 0.0001)
+        XCTAssertEqual(result.limitedFrom, 2.4)
+    }
+
+    func testDoseIsHeldToTheMaximumBolus() {
+        var settings = AIDoseAdviceSettings()
+        settings.maximumAboveLoop = 2
+        let result = AIDoseAdvisor.limitedDose(4, loopUnits: 2.5, maximumBolus: 3, settings: settings, round: pumpSteps)
+        XCTAssertEqual(result.units, 3, accuracy: 0.0001)
+        XCTAssertEqual(result.limitedFrom, 4)
+    }
+
+    func testRoundingNeverCarriesTheDoseOverTheLimit() {
+        var settings = AIDoseAdviceSettings()
+        settings.maximumAboveLoop = 0.1
+        // Limit 0.93; nearest pump step 0.95 would be over it.
+        let result = AIDoseAdvisor.limitedDose(2, loopUnits: 0.83, maximumBolus: 5, settings: settings, round: pumpSteps)
+        XCTAssertLessThanOrEqual(result.units, 0.93)
+        XCTAssertEqual(result.units, 0.9, accuracy: 0.0001)
+    }
+
+    func testNegativeOrBrokenDoseBecomesZero() {
+        XCTAssertEqual(AIDoseAdvisor.limitedDose(-1, loopUnits: 0, maximumBolus: 3, settings: AIDoseAdviceSettings(), round: pumpSteps).units, 0)
+        XCTAssertEqual(AIDoseAdvisor.limitedDose(.nan, loopUnits: 1, maximumBolus: 3, settings: AIDoseAdviceSettings(), round: pumpSteps).units, 0)
+    }
+
+    func testWithoutALoopRecommendationOnlyTheAmountAboveZeroIsAllowed() {
+        let result = AIDoseAdvisor.limitedDose(1, loopUnits: nil, maximumBolus: 3, settings: AIDoseAdviceSettings(), round: pumpSteps)
+        XCTAssertEqual(result.units, 0.5, accuracy: 0.0001)
+    }
+
+    // MARK: When no advice is given
+
+    func testNoAdviceOnStaleOrLowGlucoseOrAPredictedLow() {
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now.addingTimeInterval(-.minutes(20)), notice: nil, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: nil, glucoseDate: nil, notice: nil, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 65, glucoseDate: now, notice: nil, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .staleGlucoseData, now: now))
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .stalePumpData, now: now))
+        let threshold = HKQuantity(unit: .milligramsPerDeciliter, doubleValue: 72)
+        XCTAssertNotNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 120, glucoseDate: now, notice: .predictedGlucoseBelowSuspendThreshold(suspendThreshold: threshold), now: now))
+    }
+
+    func testAdviceIsGivenOnFreshGlucoseInRange() {
+        XCTAssertNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now.addingTimeInterval(-.minutes(4)), notice: nil, now: now))
+        XCTAssertNil(AIDoseAdvisor.blockingReason(glucoseMgdl: 140, glucoseDate: now, notice: .glucoseBelowTarget, now: now))
+    }
+
+    func testSettingsAreOffUntilTurnedOn() {
+        XCTAssertFalse(AIDoseAdviceSettings().isEnabled)
+        let decoded = try? JSONDecoder().decode(AIDoseAdviceSettings.self, from: Data("{}".utf8))
+        XCTAssertEqual(decoded, AIDoseAdviceSettings())
+    }
+
+    // MARK: Request and answer
+
+    private func situation() -> AIDoseSituation {
+        AIDoseSituation(
+            localTime: "søndag 11. oktober 2026 18:05",
+            childProfile: "4 år, 17 kg",
+            glucoseMmol: 7.8,
+            glucoseMinutesAgo: 3,
+            glucoseChangeLast15MinMmol: 0.4,
+            glucoseLast3Hours: [.init(minutes: -10, mmol: 7.4)],
+            loopRecommendedUnits: 1.2,
+            loopForecast: [.init(minutes: 30, mmol: 8.5)],
+            loopNotice: nil,
+            insulinOnBoardUnits: 0.3,
+            carbsOnBoardGrams: 5,
+            therapy: .init(carbRatioGramsPerUnit: 20, insulinSensitivityMmolPerUnit: 7, targetMmol: [5.5, 6.5], suspendThresholdMmol: 4, maximumBolusUnits: 3, activeOverride: nil),
+            meal: .init(carbsGrams: 30, absorptionHours: 3, foodType: "🍕 Pizza", foodName: "Pizza", minutesFromNow: 0, fatGrams: 12, proteinGrams: 10, fatProteinBoost: nil, isEditOfEarlierEntry: false),
+            todayCarbs: [],
+            todayInsulin: [],
+            todayGlucose: nil,
+            history: nil,
+            earlierAdvice: []
+        )
+    }
+
+    func testRequestCarriesTheSituationAndTheMealPhotos() throws {
+        let photo = Data([0xFF, 0xD8, 0xFF])
+        let meal = AIDoseMealContext(conversation: [
+            MealCarbEstimator.Message(role: "user", content: "pizza", images: [photo]),
+            MealCarbEstimator.Message(role: "assistant", content: #"{"carbs_grams":30}"#),
+        ], foodName: "Pizza")
+        let body = try AIDoseAdvisor.requestBody(situation: situation(), meal: meal)
+        XCTAssertNil(body["model"], "the model is picked when sending")
+        XCTAssertEqual(body["reasoning_effort"] as? String, "high")
+        let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
+        XCTAssertEqual(messages.first?["role"] as? String, "system")
+        let parts = try XCTUnwrap(messages.last?["content"] as? [[String: Any]])
+        let text = parts.compactMap { $0["text"] as? String }.joined(separator: "\n")
+        XCTAssertTrue(text.contains(#""loop_recommended_units":1.2"#))
+        XCTAssertTrue(text.contains(#""child_profile":"4 år, 17 kg""#))
+        XCTAssertTrue(text.contains("Omsorgspersonen skrev: pizza"))
+        XCTAssertEqual(parts.filter { $0["type"] as? String == "image_url" }.count, 1)
+        XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: body))
+    }
+
+    func testAnswerIsRead() throws {
+        let answer = #"{"dose_units":1.1,"summary":"Litt mindre enn Loop.","reasons":["Aktiv i barnehagen"],"cautions":[],"carbs_assessment":"Ser riktig ut.","confidence":"medium"}"#
+        let completion = try JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": answer]]]])
+        let parsed = try AIDoseAdvisor.parseResponse(completion)
+        XCTAssertEqual(parsed.doseUnits, 1.1)
+        XCTAssertEqual(parsed.reasons, ["Aktiv i barnehagen"])
+    }
+
+    func testUnreadableAnswerFails() throws {
+        let completion = try JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": "1.1 units"]]]])
+        XCTAssertThrowsError(try AIDoseAdvisor.parseResponse(completion))
+    }
+
+    // MARK: Nightscout history
+
+    func testHistoryFindsMealOutcomesAndDayparts() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Oslo")!
+        let meal = now.addingTimeInterval(-.hours(24))
+        var glucose: [NightscoutGlucoseReading] = []
+        // 6 mmol/L at the meal, up to 11, back to 7 and a low of 3.8 at 3 h 30 min.
+        for step in 0..<60 {
+            let date = meal.addingTimeInterval(.minutes(Double(step * 5)))
+            let mmol: Double
+            switch step {
+            case 0..<12: mmol = 6 + Double(step) * 5 / 12    // to 11 in an hour
+            case 12..<36: mmol = 11 - Double(step - 12) / 6  // to 7 at 3 h
+            case 42: mmol = 3.8
+            default: mmol = 7
+            }
+            glucose.append(.init(date: date, mgdl: mmol * 18.0182))
+        }
+        let treatments = [
+            NightscoutTreatment(date: meal, carbs: 30, insulin: nil, foodType: "🍝", isAutomatic: false),
+            NightscoutTreatment(date: meal.addingTimeInterval(.minutes(2)), carbs: nil, insulin: 1.5, foodType: nil, isAutomatic: false),
+            NightscoutTreatment(date: meal.addingTimeInterval(.minutes(10)), carbs: nil, insulin: 0.2, foodType: nil, isAutomatic: true),
+        ]
+        let summary = NightscoutHistory.summarize(glucose: glucose, treatments: treatments, days: 7, now: now, calendar: calendar)
+        let outcome = summary.meals.first
+        XCTAssertEqual(summary.meals.count, 1)
+        XCTAssertEqual(outcome?.carbsGrams, 30)
+        XCTAssertEqual(outcome?.bolusUnits, 1.5, "automatic boluses are not the meal's bolus")
+        XCTAssertEqual(outcome?.startMmol, 6)
+        XCTAssertEqual(outcome?.peakMmol, 11)
+        XCTAssertEqual(outcome?.mmolAfter3h, 7)
+        XCTAssertEqual(outcome?.lowestMmolWithin4h, 3.8)
+        XCTAssertFalse(summary.dayparts.isEmpty)
+        XCTAssertEqual(summary.averageDailyCarbsGrams, 4) // 30 g over 7 days
+    }
+
+    func testNightscoutDocumentsAreRead() throws {
+        let entries = try JSONSerialization.data(withJSONObject: [
+            ["sgv": 140, "date": 1_760_000_000_000],
+            ["mbg": 100, "date": 1_760_000_300_000],
+        ])
+        XCTAssertEqual(NightscoutHistory.parseGlucose(entries), [NightscoutGlucoseReading(date: Date(timeIntervalSince1970: 1_760_000_000), mgdl: 140)])
+
+        let treatments = try JSONSerialization.data(withJSONObject: [
+            ["created_at": "2026-10-10T16:00:00.000Z", "carbs": 25, "foodType": "🍕 Pizza"],
+            ["created_at": "2026-10-10T16:01:00Z", "insulin": 1.2, "automatic": false],
+            ["created_at": "2026-10-10T16:05:00Z", "eventType": "Temp Basal", "rate": 0.5],
+        ])
+        let parsed = NightscoutHistory.parseTreatments(treatments)
+        XCTAssertEqual(parsed.count, 2)
+        XCTAssertEqual(parsed.first?.carbs, 25)
+        XCTAssertEqual(parsed.first?.foodType, "🍕 Pizza")
+        XCTAssertEqual(parsed.last?.insulin, 1.2)
+    }
+
+    // MARK: Newest model
+
+    func testUnknownModelsAreSkippedAndTheWorkingOneRemembered() async throws {
+        let defaults = UserDefaults(suiteName: "AIDoseAdvisorTests")!
+        defaults.removePersistentDomain(forName: "AIDoseAdvisorTests")
+        defer { defaults.removePersistentDomain(forName: "AIDoseAdvisorTests") }
+
+        let working = OpenAIChat.modelCandidates[2]
+        ModelStubURLProtocol.acceptedModel = working
+        ModelStubURLProtocol.requestedModels = []
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ModelStubURLProtocol.self]
+        let chat = OpenAIChat(apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
+
+        _ = try await chat.send(["messages": []], timeout: 5)
+        XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(OpenAIChat.modelCandidates.prefix(3)))
+        XCTAssertEqual(defaults.openAIWorkingModel, working)
+
+        ModelStubURLProtocol.requestedModels = []
+        _ = try await chat.send(["messages": []], timeout: 5)
+        XCTAssertEqual(ModelStubURLProtocol.requestedModels, [working], "the remembered model goes first")
+    }
+
+    func testOtherErrorsAreNotRetriedOnOlderModels() async {
+        let defaults = UserDefaults(suiteName: "AIDoseAdvisorTests")!
+        defaults.removePersistentDomain(forName: "AIDoseAdvisorTests")
+        defer { defaults.removePersistentDomain(forName: "AIDoseAdvisorTests") }
+
+        ModelStubURLProtocol.acceptedModel = nil
+        ModelStubURLProtocol.requestedModels = []
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ModelStubURLProtocol.self]
+        let chat = OpenAIChat(apiKey: "sk-bad", session: URLSession(configuration: configuration), defaults: defaults)
+
+        do {
+            _ = try await chat.send(["messages": []], timeout: 5)
+            XCTFail("Expected an error")
+        } catch {
+            XCTAssertEqual(error.localizedDescription, "Incorrect API key provided")
+        }
+        XCTAssertEqual(ModelStubURLProtocol.requestedModels.count, 1)
+    }
+
+    func testUnknownModelMessagesAreRecognised() {
+        XCTAssertTrue(OpenAIChat.isUnknownModel("The model `gpt-6-astra` does not exist or you do not have access to it."))
+        XCTAssertFalse(OpenAIChat.isUnknownModel("Incorrect API key provided"))
+        XCTAssertFalse(OpenAIChat.isUnknownModel("Rate limit reached"))
+    }
+}
+
+/// Accepts only `acceptedModel`; answers other models as OpenAI does for an unknown model, and
+/// everything when `acceptedModel` is nil with a wrong-key error.
+private final class ModelStubURLProtocol: URLProtocol {
+    static var acceptedModel: String?
+    static var requestedModels: [String] = []
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        var body = request.httpBody
+        if body == nil, let stream = request.httpBodyStream {
+            stream.open()
+            var data = Data()
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            while stream.hasBytesAvailable {
+                let read = stream.read(&buffer, maxLength: buffer.count)
+                guard read > 0 else { break }
+                data.append(buffer, count: read)
+            }
+            stream.close()
+            body = data
+        }
+        let model = (body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] })?["model"] as? String ?? ""
+        Self.requestedModels.append(model)
+
+        let status: Int
+        let data: Data
+        if Self.acceptedModel == nil {
+            status = 401
+            data = Data(#"{"error":{"message":"Incorrect API key provided"}}"#.utf8)
+        } else if model == Self.acceptedModel {
+            status = 200
+            data = Data(#"{"choices":[{"message":{"content":"{}"}}]}"#.utf8)
+        } else {
+            status = 404
+            data = Data(#"{"error":{"message":"The model `\#(model)` does not exist or you do not have access to it."}}"#.utf8)
+        }
+        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}

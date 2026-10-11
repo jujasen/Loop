@@ -44382,6 +44382,330 @@
           }
         }
       }
+    },
+    "%1$@%2$@ U compared with Loop (%3$@ U)" : {
+      "comment" : "AI dose compared with Loop's (1: + or −)(2: difference)(3: Loop's recommendation)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@%2$@ E sammenlignet med Loop (%3$@ E)"
+          }
+        }
+      }
+    },
+    "%d days" : {
+      "comment" : "Number of days of history",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d dager"
+          }
+        }
+      }
+    },
+    "A second opinion from AI. Loop's recommendation above is unchanged; nothing is given unless you accept and deliver it." : {
+      "comment" : "Footer of the AI dose advice section",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En andre vurdering fra AI. Loops anbefaling over er uendret; ingenting gis uten at du godtar og gir dosen."
+          }
+        }
+      }
+    },
+    "A second opinion on the bolus" : {
+      "comment" : "Descriptive text for the AI dose advice settings row",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En andre vurdering av bolusen"
+          }
+        }
+      }
+    },
+    "AI Dose Advice" : {
+      "comment" : "Title of the AI dose advice settings row",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-doseforslag"
+          }
+        }
+      }
+    },
+    "AI Suggests" : {
+      "comment" : "Label for the AI suggested dose",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI foreslår"
+          }
+        }
+      }
+    },
+    "AI confidence: high" : {
+      "comment" : "AI dose advice confidence",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-sikkerhet: høy"
+          }
+        }
+      }
+    },
+    "AI confidence: low" : {
+      "comment" : "AI dose advice confidence",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-sikkerhet: lav"
+          }
+        }
+      }
+    },
+    "AI confidence: medium" : {
+      "comment" : "AI dose advice confidence",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-sikkerhet: middels"
+          }
+        }
+      }
+    },
+    "AI suggested %1$@ U; held to %2$@ U by the limits in settings." : {
+      "comment" : "Note when the AI dose was lowered to a limit (1: AI's dose)(2: dose shown)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI foreslo %1$@ E; begrenset til %2$@ E av grensene i innstillingene."
+          }
+        }
+      }
+    },
+    "About the Child" : {
+      "comment" : "Header for the child description used by AI dose advice",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Om barnet"
+          }
+        }
+      }
+    },
+    "Adds a section below the bolus field where AI can suggest a dose of its own, next to Loop's. It stays closed until opened, so the bolus screen looks as usual. The suggestion considers the meal, glucose now and today, insulin and carbs on board, what you write about the child below, and Nightscout history." : {
+      "comment" : "Explanation of AI dose advice in settings",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legger til en seksjon under bolusfeltet der AI kan foreslå en egen dose ved siden av Loops. Den er lukket til den åpnes, så bolusskjermen ser ut som vanlig. Forslaget tar hensyn til måltidet, blodsukkeret nå og i dag, aktivt insulin og karbo, det du skriver om barnet nedenfor, og historikken i Nightscout."
+          }
+        }
+      }
+    },
+    "Age, weight, activity (for example more active at kindergarten), habits, and what usually goes wrong. Sent to OpenAI with each request." : {
+      "comment" : "Footer for the child description used by AI dose advice",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alder, vekt, aktivitet (for eksempel mer aktiv i barnehagen), vaner og hva som pleier å gå galt. Sendes til OpenAI ved hver forespørsel."
+          }
+        }
+      }
+    },
+    "Don't Use" : {
+      "comment" : "Button declining the AI dose",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke bruk"
+          }
+        }
+      }
+    },
+    "Glucose is low. No AI dose is suggested." : {
+      "comment" : "AI dose advice is not given: glucose is low",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blodsukkeret er lavt. Ingen AI-dose foreslås."
+          }
+        }
+      }
+    },
+    "Limits" : {
+      "comment" : "Header for AI dose advice limits",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grenser"
+          }
+        }
+      }
+    },
+    "Loop sees glucose going below the safety limit. No AI dose is suggested." : {
+      "comment" : "AI dose advice is not given: a low is predicted",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop ser at blodsukkeret går under sikkerhetsgrensen. Ingen AI-dose foreslås."
+          }
+        }
+      }
+    },
+    "Most Above Loop" : {
+      "comment" : "Setting: the most the AI dose may be above Loop's recommendation",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maks over Loop"
+          }
+        }
+      }
+    },
+    "Nightscout History" : {
+      "comment" : "Setting: how many days of Nightscout history AI dose advice looks at",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nightscout-historikk"
+          }
+        }
+      }
+    },
+    "No recent glucose — AI advice needs a CGM reading from the last 15 minutes." : {
+      "comment" : "AI dose advice is not given: glucose data is stale",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen ny BS-verdi — AI-forslaget trenger en CGM-verdi fra de siste 15 minuttene."
+          }
+        }
+      }
+    },
+    "Put in the bolus field" : {
+      "comment" : "Shown after the AI dose was accepted",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagt inn i bolusfeltet"
+          }
+        }
+      }
+    },
+    "Same as Loop" : {
+      "comment" : "AI dose equals Loop's recommendation",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Samme som Loop"
+          }
+        }
+      }
+    },
+    "The AI answer could not be read. Try again." : {
+      "comment" : "Error shown when the AI dose advice response could not be parsed",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-svaret kunne ikke leses. Prøv igjen."
+          }
+        }
+      }
+    },
+    "The AI dose is never above the maximum bolus or more than this above Loop's recommendation. No dose is suggested when glucose is low, a low is predicted, or data is stale." : {
+      "comment" : "Footer for AI dose advice limits",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-dosen er aldri over maks bolus eller mer enn dette over Loops anbefaling. Ingen dose foreslås når blodsukkeret er lavt, en føling er ventet eller dataene er gamle."
+          }
+        }
+      }
+    },
+    "The pump has not reported recently, so insulin on board is uncertain." : {
+      "comment" : "AI dose advice is not given: pump data is stale",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pumpen har ikke rapportert nylig, så aktivt insulin er usikkert."
+          }
+        }
+      }
+    },
+    "Use AI Dose" : {
+      "comment" : "Button accepting the AI dose into the bolus field",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bruk AI-dosen"
+          }
+        }
+      }
+    },
+    "Weighing the meal, glucose and history…" : {
+      "comment" : "Shown while the AI dose advice is being worked out",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vurderer måltid, blodsukker og historikk …"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
