@@ -50,9 +50,14 @@ struct BolusEntryView: View {
             .alert(item: self.$viewModel.activeAlert, content: self.alert(for:))
             .onDisappear {
                 viewModel.setAIDoseAdviceOpen(false)
+                viewModel.aiDosePrefetch?.task.cancel()
+                viewModel.aiDosePrefetch = nil
             }
             .onReceive(viewModel.$recommendedBolus.dropFirst()) { _ in
-                DispatchQueue.main.async { viewModel.aiDoseInputsDidChange() }
+                DispatchQueue.main.async {
+                    viewModel.aiDoseInputsDidChange()
+                    viewModel.prefetchAIDoseAdvice()
+                }
             }
             .onReceive(viewModel.$activeNotice.dropFirst()) { _ in
                 DispatchQueue.main.async { viewModel.aiDoseInputsDidChange() }

@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FA0060010000000000000001 /* GlucoseInsight.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000002 /* GlucoseInsight.swift */; };
+		FA0060010000000000000003 /* GlucoseInsightManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000004 /* GlucoseInsightManager.swift */; };
+		FA0060010000000000000005 /* NightscoutHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000006 /* NightscoutHistoryStore.swift */; };
+		FA0060010000000000000007 /* GlucoseInsightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000008 /* GlucoseInsightView.swift */; };
+		FA0060010000000000000009 /* GlucoseInsightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA006001000000000000000A /* GlucoseInsightTests.swift */; };
 		FA0040010000000000000001 /* FatProteinBoost.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0040010000000000000002 /* FatProteinBoost.swift */; };
 		FA0050010000000000000001 /* OpenAIChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000002 /* OpenAIChat.swift */; };
 		FA0050010000000000000003 /* AIDoseAdvisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000004 /* AIDoseAdvisor.swift */; };
@@ -786,6 +791,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		FA0060010000000000000002 /* GlucoseInsight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsight.swift; sourceTree = "<group>"; };
+		FA0060010000000000000004 /* GlucoseInsightManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightManager.swift; sourceTree = "<group>"; };
+		FA0060010000000000000006 /* NightscoutHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightscoutHistoryStore.swift; sourceTree = "<group>"; };
+		FA0060010000000000000008 /* GlucoseInsightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightView.swift; sourceTree = "<group>"; };
+		FA006001000000000000000A /* GlucoseInsightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightTests.swift; sourceTree = "<group>"; };
 		FA0040010000000000000002 /* FatProteinBoost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatProteinBoost.swift; sourceTree = "<group>"; };
 		FA0050010000000000000002 /* OpenAIChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIChat.swift; sourceTree = "<group>"; };
 		FA0050010000000000000004 /* AIDoseAdvisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIDoseAdvisor.swift; sourceTree = "<group>"; };
@@ -1621,6 +1631,7 @@
 				FA0020010000000000000006 /* MealCarbEstimatorTests.swift */,
 				FA0040010000000000000008 /* FatProteinBoostTests.swift */,
 				FA005001000000000000000A /* AIDoseAdvisorTests.swift */,
+				FA006001000000000000000A /* GlucoseInsightTests.swift */,
 				FA0021010000000000000004 /* CarbFoodLabelTests.swift */,
 				C650897E395CC0BE3FB14F18 /* RemoteTherapySettingsTests.swift */,
 				E9C58A7124DB489100487A17 /* LoopDataManagerTests.swift */,
@@ -2036,6 +2047,7 @@
 				FA0020010000000000000004 /* MealEstimateCard.swift */,
 				FA0040010000000000000006 /* FatProteinBoostViews.swift */,
 				FA0050010000000000000008 /* AIDoseAdviceViews.swift */,
+				FA0060010000000000000008 /* GlucoseInsightView.swift */,
 				431A8C3F1EC6E8AB00823B9C /* CircleMaskView.swift */,
 				A9A056B224B93C62007CF06D /* CriticalEventLogExportView.swift */,
 				C191D2A025B3ACAA00C26C0B /* DosingStrategySelectionView.swift */,
@@ -2089,6 +2101,9 @@
 				FA0040010000000000000002 /* FatProteinBoost.swift */,
 				FA0050010000000000000002 /* OpenAIChat.swift */,
 				FA0050010000000000000004 /* AIDoseAdvisor.swift */,
+				FA0060010000000000000002 /* GlucoseInsight.swift */,
+				FA0060010000000000000004 /* GlucoseInsightManager.swift */,
+				FA0060010000000000000006 /* NightscoutHistoryStore.swift */,
 				FA0040010000000000000004 /* FavoriteNutritionAssessor.swift */,
 				FA0021010000000000000002 /* CarbFoodLabel.swift */,
 				43A567681C94880B00334FAC /* LoopDataManager.swift */,
@@ -3525,6 +3540,7 @@
 				FA0020010000000000000003 /* MealEstimateCard.swift in Sources */,
 				FA0040010000000000000005 /* FatProteinBoostViews.swift in Sources */,
 				FA0050010000000000000007 /* AIDoseAdviceViews.swift in Sources */,
+				FA0060010000000000000007 /* GlucoseInsightView.swift in Sources */,
 				4F11D3C020DCBEEC006E072C /* GlucoseBackfillRequestUserInfo.swift in Sources */,
 				89E267FC2292456700A3F2AF /* FeatureFlags.swift in Sources */,
 				43A567691C94880B00334FAC /* LoopDataManager.swift in Sources */,
@@ -3538,6 +3554,9 @@
 				FA0040010000000000000001 /* FatProteinBoost.swift in Sources */,
 				FA0050010000000000000001 /* OpenAIChat.swift in Sources */,
 				FA0050010000000000000003 /* AIDoseAdvisor.swift in Sources */,
+				FA0060010000000000000001 /* GlucoseInsight.swift in Sources */,
+				FA0060010000000000000003 /* GlucoseInsightManager.swift in Sources */,
+				FA0060010000000000000005 /* NightscoutHistoryStore.swift in Sources */,
 				FA0040010000000000000003 /* FavoriteNutritionAssessor.swift in Sources */,
 				FA0021010000000000000001 /* CarbFoodLabel.swift in Sources */,
 				4302F4E11D4E9C8900F0FCAF /* TextFieldTableViewController.swift in Sources */,
@@ -3844,6 +3863,7 @@
 				FA0020010000000000000005 /* MealCarbEstimatorTests.swift in Sources */,
 				FA0040010000000000000007 /* FatProteinBoostTests.swift in Sources */,
 				FA0050010000000000000009 /* AIDoseAdvisorTests.swift in Sources */,
+				FA0060010000000000000009 /* GlucoseInsightTests.swift in Sources */,
 				FA0021010000000000000003 /* CarbFoodLabelTests.swift in Sources */,
 				BD1206B9B83F9E39D186A15D /* RemoteTherapySettingsTests.swift in Sources */,
 				A9A63F8E246B271600588D5B /* NSTimeInterval.swift in Sources */,

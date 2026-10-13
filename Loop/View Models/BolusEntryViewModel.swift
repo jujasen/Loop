@@ -65,6 +65,13 @@ extension BolusEntryViewModelDelegate {
     }
 }
 
+/// Advice asked for in the background, for the recommendation Loop had then.
+struct AIDosePrefetch {
+    var loopUnits: Double
+    var date: Date
+    var task: Task<AIDoseModelAnswer, Error>
+}
+
 @MainActor
 final class BolusEntryViewModel: ObservableObject {
     enum Alert: Int {
@@ -133,6 +140,8 @@ final class BolusEntryViewModel: ObservableObject {
     /// The AI dose advice section below the bolus field; closed until opened.
     @Published var aiDoseAdviceState: AIDoseAdviceState = .off
     var aiDoseAdviceTask: Task<Void, Never>?
+    /// Advice asked for before the section was opened (see `prefetchAIDoseAdvice`).
+    var aiDosePrefetch: AIDosePrefetch?
 
     /// "🧈 130 % for 3 hr from 21:10 if glucose rises", or `nil` when the meal gets no boost.
     var fatProteinBoostSummary: String? {

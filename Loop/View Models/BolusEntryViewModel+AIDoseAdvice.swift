@@ -5,6 +5,10 @@
 //  The AI dose advice section on the bolus screen: gathers what the model needs, asks for the
 //  advice, holds the dose to the limits and keeps a record of what was shown and accepted.
 //
+//  When a meal comes from the carb entry screen, the advice is asked for as soon as Loop has its
+//  recommendation, while the section is still closed, so it is often ready when opened. It is
+//  shown, and recorded, only when the section is opened.
+//
 
 import Foundation
 import HealthKit
@@ -24,6 +28,7 @@ extension BolusEntryViewModel {
             aiDoseAdviceState = .off
             return
         }
+        // A prefetched answer is used when the section opens; otherwise it is asked for now.
         requestAIDoseAdvice()
     }
 
@@ -59,26 +64,70 @@ extension BolusEntryViewModel {
         }
     }
 
+    /// Asks for advice in the background for a meal from the carb entry screen, once Loop has its
+    /// recommendation. Nothing is shown until the section is opened.
+    func prefetchAIDoseAdvice() {
+        guard isAIDoseAdviceAvailable, aiDoseMealContext != nil, potentialCarbEntry != nil,
+              aiDoseAdviceState == .off, aiDosePrefetch == nil,
+              let loopUnits = recommendedBolusAmount
+        else { return }
+        let now = Date()
+        guard aiDoseBlockingReason(now: now) == nil, let ask = makeAIDoseRequest(now: now) else { return }
+        aiDosePrefetch = AIDosePrefetch(loopUnits: loopUnits, date: now, task: Task { try await ask() })
+    }
+
+    /// The prefetched answer's task, when it was asked for the same recommendation not long ago.
+    private func usablePrefetch(now: Date) -> AIDosePrefetch? {
+        guard let prefetch = aiDosePrefetch, let loop = recommendedBolusAmount,
+              abs(prefetch.loopUnits - loop) < 0.001, now.timeIntervalSince(prefetch.date) < .minutes(10)
+        else { return nil }
+        return prefetch
+    }
+
+    /// Gathers what the model needs and returns the call that asks it.
+    private func makeAIDoseRequest(now: Date) -> (@MainActor () async throws -> AIDoseModelAnswer)? {
+        guard let advisor = AIDoseAdvisor.shared else { return nil }
+        let settings = UserDefaults.standard.aiDoseAdviceSettings
+        let meal = aiDoseMealContext
+        let status = GlucoseInsightManager.shared.doseContext(
+            carbs: potentialCarbEntry?.quantity.doubleValue(for: .gram()),
+            foodType: potentialCarbEntry?.foodType,
+            at: now
+        )
+        return { @MainActor [weak self] in
+            guard let self else { throw CancellationError() }
+            let startOfDay = Calendar.current.startOfDay(for: now)
+            let local = await self.delegate?.aiDoseLocalHistory(start: min(startOfDay, now.addingTimeInterval(-.hours(3)))) ?? AIDoseLocalHistory()
+            let situation = self.aiDoseSituation(now: now, settings: settings, local: local)
+            return try await advisor.advise(situation: situation, status: status, meal: meal)
+        }
+    }
+
     func requestAIDoseAdvice() {
         let now = Date()
         if let reason = aiDoseBlockingReason(now: now) {
             aiDoseAdviceState = .unavailable(reason)
             return
         }
-        guard let advisor = AIDoseAdvisor.shared else { return }
+        let prefetch = usablePrefetch(now: now)
+        aiDosePrefetch = nil
+        let ask: @MainActor () async throws -> AIDoseModelAnswer
+        if let prefetch {
+            ask = { try await prefetch.task.value }
+        } else if let request = makeAIDoseRequest(now: now) {
+            ask = request
+        } else {
+            return
+        }
+        let askedAt = prefetch?.date ?? now
 
         aiDoseAdviceState = .loading
         let settings = UserDefaults.standard.aiDoseAdviceSettings
-        let meal = aiDoseMealContext
 
         aiDoseAdviceTask = Task { [weak self] in
             guard let self else { return }
-            let startOfDay = Calendar.current.startOfDay(for: now)
-            let local = await self.delegate?.aiDoseLocalHistory(start: min(startOfDay, now.addingTimeInterval(-.hours(3)))) ?? AIDoseLocalHistory()
-            let history = await NightscoutHistory.summary(days: settings.historyDays, now: now)
-            let situation = self.aiDoseSituation(now: now, settings: settings, local: local, history: history)
             do {
-                let answer = try await advisor.advise(situation: situation, meal: meal)
+                let answer = try await ask()
                 guard !Task.isCancelled else { return }
                 // Loop may have changed its mind while the model was thinking.
                 if let reason = self.aiDoseBlockingReason(now: Date()) {
@@ -93,7 +142,7 @@ extension BolusEntryViewModel {
                     allowsMoreThanLoop: self.activeNotice != .glucoseBelowTarget,
                     round: { self.delegate?.roundBolusVolume(units: $0) ?? ($0 * 20).rounded(.down) / 20 }
                 )
-                let advice = AIDoseAdvice(answer: answer, units: limited.units, loopUnits: self.recommendedBolusAmount, limitedFrom: limited.limitedFrom, date: now)
+                let advice = AIDoseAdvice(answer: answer, units: limited.units, loopUnits: self.recommendedBolusAmount, limitedFrom: limited.limitedFrom, date: askedAt)
                 self.aiDoseAdviceState = .ready(advice)
                 self.recordAIDoseAdvice(advice, accepted: false)
             } catch {
@@ -140,7 +189,7 @@ extension BolusEntryViewModel {
 
     // MARK: - The situation
 
-    private func aiDoseSituation(now: Date, settings: AIDoseAdviceSettings, local: AIDoseLocalHistory, history: NightscoutHistorySummary?) -> AIDoseSituation {
+    private func aiDoseSituation(now: Date, settings: AIDoseAdviceSettings, local: AIDoseLocalHistory) -> AIDoseSituation {
         let mmolUnit = HKUnit.millimolesPerLiter
         func mmol(_ quantity: HKQuantity) -> Double {
             (quantity.doubleValue(for: mmolUnit) * 10).rounded() / 10
@@ -252,9 +301,7 @@ extension BolusEntryViewModel {
             meal: meal,
             todayCarbs: todayCarbs,
             todayInsulin: todayInsulin,
-            todayGlucose: NightscoutHistory.daypart(readings: todayReadings, name: "i dag"),
-            history: history,
-            earlierAdvice: UserDefaults.standard.aiDoseAdviceRecords.suffix(15).map { $0 }
+            todayGlucose: GlucoseInsight.period(todayReadings)
         )
     }
 }

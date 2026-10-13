@@ -2,8 +2,8 @@
 //  AIDoseAdvisorTests.swift
 //  LoopTests
 //
-//  AI dose advice: the limits on the dose, when none is given, the request and answer, the
-//  Nightscout history summary, and finding the newest GPT model the key can reach.
+//  AI dose advice: the limits on the dose, when none is given, the request and answer, reading
+//  Nightscout documents, and finding the newest GPT model of each tier the key can reach.
 //
 
 import XCTest
@@ -120,9 +120,7 @@ final class AIDoseAdvisorTests: XCTestCase {
             meal: .init(carbsGrams: 30, absorptionHours: 3, foodType: "🍕 Pizza", foodName: "Pizza", minutesFromNow: 0, fatGrams: 12, proteinGrams: 10, fatProteinBoost: nil, isEditOfEarlierEntry: false),
             todayCarbs: [],
             todayInsulin: [],
-            todayGlucose: nil,
-            history: nil,
-            earlierAdvice: []
+            todayGlucose: nil
         )
     }
 
@@ -132,9 +130,21 @@ final class AIDoseAdvisorTests: XCTestCase {
             MealCarbEstimator.Message(role: "user", content: "pizza", images: [photo]),
             MealCarbEstimator.Message(role: "assistant", content: #"{"carbs_grams":30}"#),
         ], foodName: "Pizza")
-        let body = try AIDoseAdvisor.requestBody(situation: situation(), meal: meal)
+        let status = AIDoseStatusContext(
+            dataAgeMinutes: 12,
+            longTermSummary: "Stabilt på dagtid, høyt på kveld.",
+            longTermPoints: [],
+            longTermDoseHints: ["Kveld: Loop spår for lavt"],
+            todaySummary: nil,
+            todayDoseHints: [],
+            daypartNow: nil,
+            today: nil,
+            similarMeals: [],
+            earlierAdvice: []
+        )
+        let body = try AIDoseAdvisor.requestBody(situation: situation(), status: status, meal: meal)
         XCTAssertNil(body["model"], "the model is picked when sending")
-        XCTAssertEqual(body["reasoning_effort"] as? String, "high")
+        XCTAssertEqual(body["reasoning_effort"] as? String, "medium")
         let messages = try XCTUnwrap(body["messages"] as? [[String: Any]])
         XCTAssertEqual(messages.first?["role"] as? String, "system")
         let parts = try XCTUnwrap(messages.last?["content"] as? [[String: Any]])
@@ -143,6 +153,10 @@ final class AIDoseAdvisorTests: XCTestCase {
         XCTAssertTrue(text.contains(#""child_profile":"4 år, 17 kg""#))
         XCTAssertTrue(text.contains("Omsorgspersonen skrev: pizza"))
         XCTAssertEqual(parts.filter { $0["type"] as? String == "image_url" }.count, 1)
+        let image = try XCTUnwrap(parts.first { $0["type"] as? String == "image_url" }?["image_url"] as? [String: Any])
+        XCTAssertEqual(image["detail"] as? String, "low", "the meal estimate has already looked closely")
+        XCTAssertTrue((parts.first?["text"] as? String)?.contains("Kveld: Loop spår for lavt") == true, "the status goes first, so it can be cached")
+        XCTAssertTrue(text.contains(#""data_age_minutes":12"#))
         XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: body))
     }
 
@@ -160,41 +174,6 @@ final class AIDoseAdvisorTests: XCTestCase {
     }
 
     // MARK: Nightscout history
-
-    func testHistoryFindsMealOutcomesAndDayparts() {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "Europe/Oslo")!
-        let meal = now.addingTimeInterval(-.hours(24))
-        var glucose: [NightscoutGlucoseReading] = []
-        // 6 mmol/L at the meal, up to 11, back to 7 and a low of 3.8 at 3 h 30 min.
-        for step in 0..<60 {
-            let date = meal.addingTimeInterval(.minutes(Double(step * 5)))
-            let mmol: Double
-            switch step {
-            case 0..<12: mmol = 6 + Double(step) * 5 / 12    // to 11 in an hour
-            case 12..<36: mmol = 11 - Double(step - 12) / 6  // to 7 at 3 h
-            case 42: mmol = 3.8
-            default: mmol = 7
-            }
-            glucose.append(.init(date: date, mgdl: mmol * 18.0182))
-        }
-        let treatments = [
-            NightscoutTreatment(date: meal, carbs: 30, insulin: nil, foodType: "🍝", isAutomatic: false),
-            NightscoutTreatment(date: meal.addingTimeInterval(.minutes(2)), carbs: nil, insulin: 1.5, foodType: nil, isAutomatic: false),
-            NightscoutTreatment(date: meal.addingTimeInterval(.minutes(10)), carbs: nil, insulin: 0.2, foodType: nil, isAutomatic: true),
-        ]
-        let summary = NightscoutHistory.summarize(glucose: glucose, treatments: treatments, days: 7, now: now, calendar: calendar)
-        let outcome = summary.meals.first
-        XCTAssertEqual(summary.meals.count, 1)
-        XCTAssertEqual(outcome?.carbsGrams, 30)
-        XCTAssertEqual(outcome?.bolusUnits, 1.5, "automatic boluses are not the meal's bolus")
-        XCTAssertEqual(outcome?.startMmol, 6)
-        XCTAssertEqual(outcome?.peakMmol, 11)
-        XCTAssertEqual(outcome?.mmolAfter3h, 7)
-        XCTAssertEqual(outcome?.lowestMmolWithin4h, 3.8)
-        XCTAssertFalse(summary.dayparts.isEmpty)
-        XCTAssertEqual(summary.averageDailyCarbsGrams, 4) // 30 g over 7 days
-    }
 
     func testNightscoutDocumentsAreRead() throws {
         let entries = try JSONSerialization.data(withJSONObject: [
@@ -258,6 +237,32 @@ final class AIDoseAdvisorTests: XCTestCase {
         XCTAssertEqual(ModelStubURLProtocol.requestedModels.count, 1)
     }
 
+    func testTheFastTierHasItsOwnModelsAndCountsWhatItCosts() async throws {
+        let defaults = UserDefaults(suiteName: "AIDoseAdvisorTests")!
+        defaults.removePersistentDomain(forName: "AIDoseAdvisorTests")
+        defer { defaults.removePersistentDomain(forName: "AIDoseAdvisorTests") }
+
+        let working = OpenAIChat.Tier.fast.modelCandidates[1]
+        ModelStubURLProtocol.acceptedModel = working
+        ModelStubURLProtocol.requestedModels = []
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ModelStubURLProtocol.self]
+        let chat = OpenAIChat(apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
+
+        _ = try await chat.send(["messages": [Any]()], timeout: 5, tier: .fast)
+        XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(OpenAIChat.Tier.fast.modelCandidates.prefix(2)))
+        XCTAssertEqual(defaults.openAIWorkingModel(for: .fast), working)
+        XCTAssertNil(defaults.openAIWorkingModel, "the deep tier is remembered apart")
+
+        let usage = defaults.openAIUsage(on: Date()).byTier[.fast]
+        XCTAssertEqual(usage?.calls, 1)
+        XCTAssertEqual(usage?.inputTokens, 900)
+        XCTAssertEqual(usage?.cachedInputTokens, 100)
+        XCTAssertEqual(usage?.outputTokens, 2000)
+        // 900 × $2 + 100 × $0.20 + 2000 × $10, per million.
+        XCTAssertEqual(defaults.openAIUsage(on: Date()).dollars, 0.02182, accuracy: 0.000001)
+    }
+
     func testUnknownModelMessagesAreRecognised() {
         XCTAssertTrue(OpenAIChat.isUnknownModel("The model `gpt-6-astra` does not exist or you do not have access to it."))
         XCTAssertFalse(OpenAIChat.isUnknownModel("Incorrect API key provided"))
@@ -300,7 +305,7 @@ private final class ModelStubURLProtocol: URLProtocol {
             data = Data(#"{"error":{"message":"Incorrect API key provided"}}"#.utf8)
         } else if model == Self.acceptedModel {
             status = 200
-            data = Data(#"{"choices":[{"message":{"content":"{}"}}]}"#.utf8)
+            data = Data(#"{"choices":[{"message":{"content":"{}"}}],"usage":{"prompt_tokens":1000,"completion_tokens":2000,"prompt_tokens_details":{"cached_tokens":100}}}"#.utf8)
         } else {
             status = 404
             data = Data(#"{"error":{"message":"The model `\#(model)` does not exist or you do not have access to it."}}"#.utf8)

@@ -44730,6 +44730,438 @@
           }
         }
       }
+    },
+    "Insight" : {
+      "comment" : "Title of the glucose insight screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Innsikt"
+          }
+        }
+      }
+    },
+    "The AI writes about today from 06:00, and again when a meal is over or after a low." : {
+      "comment" : "Shown before the AI has written about today",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI skriver om dagen fra kl. 06, og på nytt når et måltid er over eller etter en føling."
+          }
+        }
+      }
+    },
+    "No numbers yet. They are read from Nightscout." : {
+      "comment" : "Shown when the glucose insight has no data yet",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen tall ennå. De hentes fra Nightscout."
+          }
+        }
+      }
+    },
+    "Today" : {
+      "comment" : "Header of today's section in the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I dag"
+          }
+        }
+      }
+    },
+    "Loop is forecasting %@ mmol/L lower than usual today: more insulin is needed than usual." : {
+      "comment" : "Glucose insight: today's forecast deviation, more insulin needed (1: signed mmol/L)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop spår %@ mmol/L for lavt i dag sammenlignet med vanlig: det trengs mer insulin enn vanlig."
+          }
+        }
+      }
+    },
+    "Loop is forecasting %@ mmol/L higher than usual today: less insulin is needed than usual." : {
+      "comment" : "Glucose insight: today's forecast deviation, less insulin needed (1: signed mmol/L)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop spår %@ mmol/L for høyt i dag sammenlignet med vanlig: det trengs mindre insulin enn vanlig."
+          }
+        }
+      }
+    },
+    "Loop's forecast is about as usual today (%@ mmol/L)." : {
+      "comment" : "Glucose insight: today's forecast deviation is small (1: signed mmol/L)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loops prognose treffer omtrent som vanlig i dag (%@ mmol/L)."
+          }
+        }
+      }
+    },
+    "The AI writes about the weeks behind each night after 04:00." : {
+      "comment" : "Shown before the AI has written about the weeks behind",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI skriver om de siste ukene hver natt etter kl. 04."
+          }
+        }
+      }
+    },
+    "Last 7 days" : {
+      "comment" : "Glucose insight: last seven days",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste 7 dager"
+          }
+        }
+      }
+    },
+    "Days 8–%d" : {
+      "comment" : "Glucose insight: the days before the last seven (1: days kept)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dag 8–%d"
+          }
+        }
+      }
+    },
+    "09–15 weekday / weekend" : {
+      "comment" : "Glucose insight: daytime on weekdays against weekends",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "09–15 hverdag / helg"
+          }
+        }
+      }
+    },
+    "The Weeks Behind" : {
+      "comment" : "Header of the long-term section in the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste uker"
+          }
+        }
+      }
+    },
+    "Parts of the Day" : {
+      "comment" : "Header of the parts of the day in the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tider på døgnet"
+          }
+        }
+      }
+    },
+    "Loop 2 h: how far glucose ended above (+) or below (−) Loop's forecast two hours on. Meals: only those without extra carbs, corrections or treated lows." : {
+      "comment" : "Footer explaining the parts of the day in the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop 2 t: hvor mye blodsukkeret endte over (+) eller under (−) Loops prognose to timer fram. Måltider: bare de uten ekstra karbo, korreksjon eller behandlet føling."
+          }
+        }
+      }
+    },
+    "Shown / used" : {
+      "comment" : "Glucose insight: AI doses shown and used",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vist / brukt"
+          }
+        }
+      }
+    },
+    "Low after a used AI dose" : {
+      "comment" : "Glucose insight: lows within four hours of a used AI dose",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Føling etter brukt AI-dose"
+          }
+        }
+      }
+    },
+    "AI Doses" : {
+      "comment" : "Header of the AI dose outcomes in the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-doser"
+          }
+        }
+      }
+    },
+    "Update Now" : {
+      "comment" : "Button updating the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oppdater nå"
+          }
+        }
+      }
+    },
+    "Numbers from Nightscout %@." : {
+      "comment" : "Glucose insight: when the numbers were read (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tall fra Nightscout kl. %@."
+          }
+        }
+      }
+    },
+    "AI today: %1$@ calls, about $%2$@ (about %3$@ kr)." : {
+      "comment" : "Glucose insight: OpenAI use today (1: calls)(2: dollars)(3: kroner)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI i dag: %1$@ kall, ca. %2$@ $ (ca. %3$@ kr)."
+          }
+        }
+      }
+    },
+    "Turn on AI Dose Advice in settings to have the AI write what the numbers mean." : {
+      "comment" : "Glucose insight: AI is off",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slå på AI-doseråd i innstillinger for at AI skal skrive hva tallene betyr."
+          }
+        }
+      }
+    },
+    "%1$d %% in range · %2$@ mean · %3$d lows" : {
+      "comment" : "Glucose insight: a period's summary (1: percent in range)(2: mean mmol/L)(3: low episodes)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d %% i mål · snitt %2$@ · %3$d følinger"
+          }
+        }
+      }
+    },
+    "in range" : {
+      "comment" : "Glucose insight: time in range label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i mål"
+          }
+        }
+      }
+    },
+    "mean" : {
+      "comment" : "Glucose insight: mean glucose label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "snitt"
+          }
+        }
+      }
+    },
+    "lows" : {
+      "comment" : "Glucose insight: low episodes label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "følinger"
+          }
+        }
+      }
+    },
+    "over 10" : {
+      "comment" : "Glucose insight: hours above 10 mmol/L label",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "over 10"
+          }
+        }
+      }
+    },
+    "still going" : {
+      "comment" : "Glucose insight: a meal less than four hours ago",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pågår"
+          }
+        }
+      }
+    },
+    "extra carbs" : {
+      "comment" : "Glucose insight meal flag",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ekstra karbo"
+          }
+        }
+      }
+    },
+    "correction" : {
+      "comment" : "Glucose insight meal flag",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "korreksjon"
+          }
+        }
+      }
+    },
+    "treated low" : {
+      "comment" : "Glucose insight meal flag",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "behandlet føling"
+          }
+        }
+      }
+    },
+    "started low" : {
+      "comment" : "Glucose insight meal flag",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "startet lavt"
+          }
+        }
+      }
+    },
+    "%1$d %% · 30 d %2$d %%" : {
+      "comment" : "Glucose insight: time in range last 7 and 30 days (1: 7 days)(2: 30 days)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d %% · 30 d %2$d %%"
+          }
+        }
+      }
+    },
+    "%d meals" : {
+      "comment" : "Glucose insight: clean meals in a part of the day",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d måltider"
+          }
+        }
+      }
+    },
+    "low after %d %%" : {
+      "comment" : "Glucose insight: share of meals followed by a low",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lavt etter %d %%"
+          }
+        }
+      }
+    },
+    ">10 at 3 h %d %%" : {
+      "comment" : "Glucose insight: share of meals above 10 three hours on",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ">10 etter 3 t %d %%"
+          }
+        }
+      }
+    },
+    "Nightscout is not set up, so the weeks behind can't be read." : {
+      "comment" : "Glucose insight error: no Nightscout credentials",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nightscout er ikke satt opp, så de siste ukene kan ikke leses."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

@@ -140,14 +140,14 @@ final class MealCarbEstimator {
     }
 
     /// Asks for a complete estimate of the meal described across `conversation`, which alternates
-    /// the caregiver's descriptions with the model's earlier estimates. It goes to the newest GPT
-    /// model the key can reach (see `OpenAIChat`).
+    /// the caregiver's descriptions with the model's earlier estimates. It goes to the fast tier
+    /// (see `OpenAIChat`): it was built for a mini model, and someone is waiting for it.
     func estimate(conversation: [Message]) async throws -> MealCarbEstimate {
         // Photos make the model take noticeably longer.
         let timeout: TimeInterval = conversation.contains { !$0.images.isEmpty } ? 120 : 60
         let data: Data
         do {
-            data = try await chat.send(Self.requestBody(conversation: conversation), timeout: timeout)
+            data = try await chat.send(Self.requestBody(conversation: conversation), timeout: timeout, tier: .fast)
         } catch OpenAIChat.ChatError.network(let error) {
             throw EstimateError.network(error)
         } catch OpenAIChat.ChatError.server(let message) {

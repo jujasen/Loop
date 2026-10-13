@@ -431,6 +431,9 @@ final class DeviceDataManager {
             glucoseUnit: { [weak self] in self?.displayGlucosePreference.unit ?? .millimolesPerLiter }
         )
         FatProteinBoostManager.current = fatProteinBoost
+        Task { @MainActor in
+            GlucoseInsightManager.shared.start(settings: { loopManager.settings })
+        }
 
         watchManager = WatchDataManager(deviceManager: self, healthStore: healthStore)
 

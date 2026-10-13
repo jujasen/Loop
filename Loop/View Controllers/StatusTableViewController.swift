@@ -319,6 +319,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
     private lazy var bolusItem = makeToolbarItem(title: NSLocalizedString("Bolus", comment: "The label of the bolus entry button"), image: UIImage(named: "bolus"), tintColor: .insulinTintColor, action: #selector(presentBolusScreen))
     private lazy var settingsItem = makeToolbarItem(title: NSLocalizedString("Settings", comment: "The label of the settings button"), image: UIImage(named: "settings"), tintColor: .secondaryLabel, action: #selector(onSettingsTapped))
     private lazy var preMealItem = makeToolbarItem(title: NSLocalizedString("Pre-Meal Targets", comment: "The label of the pre-meal mode toggle button"), image: UIImage.preMealImage(selected: false), tintColor: .carbTintColor, action: #selector(premealButtonTapped(_:)))
+    /// In place of the pre-meal button, which was not used: the glucose insight.
+    private lazy var insightItem = makeToolbarItem(title: NSLocalizedString("Insight", comment: "The label of the glucose insight button"), image: UIImage(systemName: "sparkles"), tintColor: .systemPurple, action: #selector(presentGlucoseInsight))
     private lazy var workoutItem = makeToolbarItem(title: NSLocalizedString("Workout Targets", comment: "The label of the workout mode toggle button"), image: UIImage.workoutImage(selected: false), tintColor: .glucoseTintColor, action: #selector(toggleWorkoutMode(_:)))
 
     private func makeToolbarItem(title: String, image: UIImage?, tintColor: UIColor, action: Selector) -> UIBarButtonItem {
@@ -334,12 +336,12 @@ final class StatusTableViewController: LoopChartsTableViewController {
         }
 
         if #available(iOS 26, *) {
-            toolbarItems = [carbsItem, preMealItem, bolusItem, workoutItem, settingsItem]
+            toolbarItems = [carbsItem, insightItem, bolusItem, workoutItem, settingsItem]
         } else {
             toolbarItems = [
                 carbsItem,
                 flexibleSpace(),
-                preMealItem,
+                insightItem,
                 flexibleSpace(),
                 bolusItem,
                 flexibleSpace(),
@@ -350,7 +352,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         }
 #if compiler(>=6.4)
         if #available(iOS 27, *) {
-            for item in [carbsItem, preMealItem, bolusItem, workoutItem, settingsItem] {
+            for item in [carbsItem, insightItem, bolusItem, workoutItem, settingsItem] {
                 item.isPaddingRemoved = true
             }
             settingsItem.visibilityPriority = .high
@@ -2212,6 +2214,11 @@ final class StatusTableViewController: LoopChartsTableViewController {
     
     @IBAction func onSettingsTapped(_ sender: UIBarButtonItem) {
         presentSettings()
+    }
+
+    @objc private func presentGlucoseInsight() {
+        let hostingController = UIHostingController(rootView: GlucoseInsightView(manager: .shared))
+        present(hostingController, animated: true)
     }
 
     private func presentSettings() {
