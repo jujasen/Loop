@@ -309,6 +309,35 @@ final class GlucoseInsightTests: XCTestCase {
         XCTAssertEqual(loaded, history)
     }
 
+    // MARK: Sharing with LoopFollow
+
+    func testTheNightscoutDocumentHasAFixedIdNoFoodFieldsAndNoMealList() throws {
+        var status = GlucoseInsightStatus()
+        status.dataUpdatedAt = monday(12)
+        status.longTerm = GlucoseInsightLongTerm(days: 30, last7Days: nil, earlierDays: nil, dayparts: [], weekdayDaytime: nil, weekendDaytime: nil, averageDailyCarbsGrams: 120, averageDailyBolusUnits: 5, meals: [GlucoseInsightMeal(date: monday(8), daypart: "morgen 06-09", carbsGrams: 20, foods: [], bolusUnits: 1, automaticUnitsWithin3h: 0, startMmol: nil, peakMmol: nil, after2hMmol: nil, after3hMmol: nil, lowestWithin4hMmol: nil, flags: [])], advice: [], computedAt: monday(12))
+        var usage = OpenAIDailyUsage(day: "2026-10-12")
+        usage.byTier[.fast] = OpenAIUsage(calls: 3, inputTokens: 10_000, cachedInputTokens: 0, outputTokens: 10_000)
+
+        let document = GlucoseInsightDocument(status: status, aiEnabled: true, usage: usage, now: monday(12, 5))
+        let json = try document.json()
+        XCTAssertEqual(json["_id"] as? String, "6c6f6f70696e736967687431")
+        XCTAssertEqual(json["type"] as? String, "loopInsight")
+        XCTAssertNil(json["name"], "a name and carbs would make it a favorite food")
+        XCTAssertNil(json["carbs"])
+        XCTAssertEqual(json["uploadedAt"] as? String, "2026-10-12T10:05:00Z")
+        XCTAssertEqual((json["aiUsageToday"] as? [String: Any])?["calls"] as? Int, 3)
+        XCTAssertEqual((json["aiUsageToday"] as? [String: Any])?["dollars"] as? Double, 0.12)
+        XCTAssertEqual(((json["insight"] as? [String: Any])?["longTerm"] as? [String: Any])?["meals"] as? [Any] as? [Int], [], "the meal list stays on the phone")
+        XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: json))
+
+        // What LoopFollow reads back.
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let back = try decoder.decode(GlucoseInsightDocument.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(back.insight.longTerm?.averageDailyCarbsGrams, 120)
+        XCTAssertEqual(back.uploadedAt, monday(12, 5))
+    }
+
     // MARK: Writing the texts
 
     func testTextRequestsUseTheRightEffortAndAnswersAreRead() throws {

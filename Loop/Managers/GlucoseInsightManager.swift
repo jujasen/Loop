@@ -6,7 +6,7 @@
 //  instead of working through weeks of history while someone waits at the bolus screen.
 //
 //  After a loop, at most every half hour: what is new in Nightscout is read and the numbers are
-//  worked out again — no AI. With AI dose advice turned on, the model also writes what the numbers
+//  worked out again — no AI — and the result is put back in Nightscout for LoopFollow. With AI dose advice turned on, the model also writes what the numbers
 //  mean: the deep model once a night about the weeks behind, and the fast model through the day
 //  when a meal is over or after a low. Each has a daily ceiling, so a fault can't run up the bill.
 //
@@ -32,6 +32,7 @@ final class GlucoseInsightManager: ObservableObject {
     private var settings: () -> LoopSettings? = { nil }
     private var observer: NSObjectProtocol?
     private var lastDataAttempt: Date?
+    private let uploader = GlucoseInsightUploader()
 
     init(store: NightscoutHistoryStore = .shared, defaults: UserDefaults = .standard, fileURL: URL? = nil) {
         self.store = store
@@ -64,10 +65,6 @@ final class GlucoseInsightManager: ObservableObject {
         guard !isUpdating else { return }
         let now = Date()
         var due = GlucoseInsightSchedule.dueWork(status: status, attempts: defaults.glucoseInsightAttempts, aiEnabled: aiEnabled, lastDataAttempt: lastDataAttempt, now: now)
-        // Without AI, Nightscout is read only while someone looks at the numbers.
-        if !aiEnabled && !force {
-            due.data = false
-        }
         if force, now.timeIntervalSince(status.dataUpdatedAt ?? .distantPast) >= .minutes(5) {
             due.data = true
         }
@@ -142,6 +139,8 @@ final class GlucoseInsightManager: ObservableObject {
         if let data = try? JSONEncoder().encode(status) {
             try? data.write(to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         }
+        // LoopFollow reads it from Nightscout.
+        uploader.upload(status, aiEnabled: aiEnabled, usage: defaults.openAIUsage(on: Date()))
     }
 
 #if DEBUG

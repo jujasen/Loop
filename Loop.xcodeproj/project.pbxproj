@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FA006001000000000000000B /* GlucoseInsightNightscout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA006001000000000000000C /* GlucoseInsightNightscout.swift */; };
 		FA0060010000000000000001 /* GlucoseInsight.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000002 /* GlucoseInsight.swift */; };
 		FA0060010000000000000003 /* GlucoseInsightManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000004 /* GlucoseInsightManager.swift */; };
 		FA0060010000000000000005 /* NightscoutHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000006 /* NightscoutHistoryStore.swift */; };
@@ -791,6 +792,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		FA006001000000000000000C /* GlucoseInsightNightscout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightNightscout.swift; sourceTree = "<group>"; };
 		FA0060010000000000000002 /* GlucoseInsight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsight.swift; sourceTree = "<group>"; };
 		FA0060010000000000000004 /* GlucoseInsightManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightManager.swift; sourceTree = "<group>"; };
 		FA0060010000000000000006 /* NightscoutHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightscoutHistoryStore.swift; sourceTree = "<group>"; };
@@ -2104,6 +2106,7 @@
 				FA0060010000000000000002 /* GlucoseInsight.swift */,
 				FA0060010000000000000004 /* GlucoseInsightManager.swift */,
 				FA0060010000000000000006 /* NightscoutHistoryStore.swift */,
+				FA006001000000000000000C /* GlucoseInsightNightscout.swift */,
 				FA0040010000000000000004 /* FavoriteNutritionAssessor.swift */,
 				FA0021010000000000000002 /* CarbFoodLabel.swift */,
 				43A567681C94880B00334FAC /* LoopDataManager.swift */,
@@ -3557,6 +3560,7 @@
 				FA0060010000000000000001 /* GlucoseInsight.swift in Sources */,
 				FA0060010000000000000003 /* GlucoseInsightManager.swift in Sources */,
 				FA0060010000000000000005 /* NightscoutHistoryStore.swift in Sources */,
+				FA006001000000000000000B /* GlucoseInsightNightscout.swift in Sources */,
 				FA0040010000000000000003 /* FavoriteNutritionAssessor.swift in Sources */,
 				FA0021010000000000000001 /* CarbFoodLabel.swift in Sources */,
 				4302F4E11D4E9C8900F0FCAF /* TextFieldTableViewController.swift in Sources */,
