@@ -24,6 +24,8 @@ final class GlucoseInsightManager: ObservableObject {
 
     @Published private(set) var status: GlucoseInsightStatus
     @Published private(set) var isUpdating = false
+    /// How the last upload for LoopFollow went; nil until one has been tried since launch.
+    @Published private(set) var sharing: GlucoseInsightSharing?
 
     private let log = OSLog(category: "GlucoseInsightManager")
     private let store: NightscoutHistoryStore
@@ -42,6 +44,7 @@ final class GlucoseInsightManager: ObservableObject {
             .appendingPathComponent("Status.json")
         try? FileManager.default.createDirectory(at: self.fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         status = (try? Data(contentsOf: self.fileURL)).flatMap { try? JSONDecoder().decode(GlucoseInsightStatus.self, from: $0) } ?? GlucoseInsightStatus()
+        uploader.onResult = { [weak self] in self?.sharing = $0 }
     }
 
     /// Starts following the loop. `settings` gives the therapy settings the model is told about.

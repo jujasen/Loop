@@ -322,6 +322,7 @@ final class GlucoseInsightTests: XCTestCase {
         let json = try document.json()
         XCTAssertEqual(json["_id"] as? String, "6c6f6f70696e736967687431")
         XCTAssertEqual(json["type"] as? String, "loopInsight")
+        XCTAssertEqual(json["created_at"] as? String, "2026-01-01T00:00:00.000Z", "Nightscout up to 15.0.6 finds the stored document by _id and created_at")
         XCTAssertNil(json["name"], "a name and carbs would make it a favorite food")
         XCTAssertNil(json["carbs"])
         XCTAssertEqual(json["uploadedAt"] as? String, "2026-10-12T10:05:00Z")

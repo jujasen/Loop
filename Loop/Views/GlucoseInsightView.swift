@@ -193,6 +193,15 @@ struct GlucoseInsightView: View {
                 if let error = status.lastError {
                     Text(error).foregroundColor(.red)
                 }
+                switch manager.sharing {
+                case let .shared(date):
+                    Text(String(format: NSLocalizedString("Shared with LoopFollow %@.", comment: "Glucose insight: when it was last put in Nightscout for LoopFollow (1: time)"), date.formatted(date: .omitted, time: .shortened)))
+                case let .failed(error, date):
+                    Text(String(format: NSLocalizedString("Couldn't share with LoopFollow %1$@: %2$@", comment: "Glucose insight: putting it in Nightscout for LoopFollow failed (1: time)(2: error)"), date.formatted(date: .omitted, time: .shortened), error))
+                        .foregroundColor(.red)
+                case nil:
+                    EmptyView()
+                }
                 if aiEnabled {
                     let usage = UserDefaults.standard.openAIUsage(on: Date())
                     Text(String(format: NSLocalizedString("AI today: %1$@ calls, about $%2$@ (about %3$@ kr).", comment: "Glucose insight: OpenAI use today (1: calls)(2: dollars)(3: kroner)"),

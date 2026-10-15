@@ -44947,6 +44947,54 @@
         }
       }
     },
+    "Shared with LoopFollow %@." : {
+      "comment" : "Glucose insight: when it was last put in Nightscout for LoopFollow (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delt med LoopFollow kl. %@."
+          }
+        }
+      }
+    },
+    "Couldn't share with LoopFollow %1$@: %2$@" : {
+      "comment" : "Glucose insight: putting it in Nightscout for LoopFollow failed (1: time)(2: error)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunne ikke dele med LoopFollow kl. %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Nightscout is not set up." : {
+      "comment" : "Glucose insight sharing error: no Nightscout credentials",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nightscout er ikke satt opp."
+          }
+        }
+      }
+    },
+    "Nightscout answered %d." : {
+      "comment" : "Glucose insight sharing error: Nightscout refused the upload (1: HTTP status)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nightscout svarte %d."
+          }
+        }
+      }
+    },
     "Numbers from Nightscout %@." : {
       "comment" : "Glucose insight: when the numbers were read (1: time)",
       "extractionState" : "manual",
