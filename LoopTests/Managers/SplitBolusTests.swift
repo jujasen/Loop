@@ -276,6 +276,7 @@ final class SplitBolusManagerTests: XCTestCase {
     private var defaults: UserDefaults!
     private var now: Date!
     private var glucose: [GlucoseValue] = []
+    private var carbs: [SplitBolusPlanner.LoggedCarb] = []
     private var sent: [UNNotificationRequest] = []
     private var removed: [String] = []
     private var manager: SplitBolusManager!
@@ -286,6 +287,7 @@ final class SplitBolusManagerTests: XCTestCase {
         now = milkTime
         sent = []
         removed = []
+        carbs = []
         manager = SplitBolusManager(
             defaults: defaults,
             now: { self.now },
@@ -293,6 +295,9 @@ final class SplitBolusManagerTests: XCTestCase {
                 completion(.success(self.glucose.filter { $0.startDate >= start }.map {
                     StoredGlucoseSample(startDate: $0.startDate, quantity: $0.quantity)
                 }))
+            },
+            fetchCarbs: { start, completion in
+                completion(.success(self.carbs.filter { $0.date >= start }))
             },
             carbRatio: { _ in 15 },
             history: { NightscoutHistory() },
@@ -352,6 +357,42 @@ final class SplitBolusManagerTests: XCTestCase {
         await run()
         XCTAssertTrue(sent.isEmpty)
         XCTAssertTrue(manager.openPlans.isEmpty)
+    }
+
+    func testARestSentFromLoopFollowIsTakenAsGiven() async throws {
+        let split = try await XCTUnwrapAsync(await manager.suggestion(carbs: 14, foodType: "🥛🍼 Melk", mealDate: milkTime))
+        manager.add(split, nowEntryID: "now")
+        glucose = evening(from: milkTime) { _ in 7 }
+        now = milkTime.addingTimeInterval(.minutes(122))
+        await run()
+        let planID = try XCTUnwrap(manager.dueRest?.id)
+        XCTAssertEqual(sent.count, 1)
+
+        let restFoodType = try XCTUnwrap(manager.plan(withID: planID)?.restFoodType)
+        carbs = [
+            .init(id: "now", foodType: "🥛🍼 Melk", date: milkTime),
+            .init(id: "remote", foodType: restFoodType, date: milkTime.addingTimeInterval(.minutes(130))),
+        ]
+        now = milkTime.addingTimeInterval(.minutes(132))
+        await run()
+
+        let plan = try XCTUnwrap(manager.plan(withID: planID))
+        XCTAssertEqual(plan.state, .given)
+        XCTAssertEqual(plan.laterEntryID, "remote")
+        XCTAssertEqual(plan.givenAt, milkTime.addingTimeInterval(.minutes(130)), "Learned from when it was eaten")
+        XCTAssertNil(manager.dueRest)
+        XCTAssertTrue(removed.contains(SplitBolusManager.notificationPrefix + planID), "The offer on the phone goes away")
+    }
+
+    func testARestSentBeforeItIsDueIsNeverOffered() async throws {
+        let split = try await XCTUnwrapAsync(await manager.suggestion(carbs: 14, foodType: "🥛🍼 Melk", mealDate: milkTime))
+        manager.add(split, nowEntryID: "now")
+        glucose = evening(from: milkTime) { _ in 7 }
+        carbs = [.init(id: "remote", foodType: "🥛🍼 Melk " + SplitBolusPlanner.restSuffix, date: milkTime.addingTimeInterval(.minutes(100)))]
+        now = milkTime.addingTimeInterval(.minutes(122))
+        await run()
+        XCTAssertTrue(sent.isEmpty)
+        XCTAssertEqual(defaults.splitBolusPlans.first?.state, .given)
     }
 
     func testLowGlucoseWaitsHalfAnHourThenSkips() async throws {

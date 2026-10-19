@@ -180,17 +180,23 @@ struct SplitBolusPlan: Codable, Equatable, Identifiable {
         FatProteinBoostPlanner.mealDescription(name: mealName, date: mealDate)
     }
 
-    /// The rest as a carb entry: its own name, so it is never taken for another serving.
-    func laterEntry(at date: Date) -> NewCarbEntry {
+    /// The rest's own name, so it is never taken for another serving: "🥛🍼 Melk (resten)".
+    /// LoopFollow logs the rest with exactly this, read from Nightscout (`SplitBolusTreatment`).
+    var restFoodType: String? {
         let label = CarbFoodLabel(foodType: foodType)
         let name = label.name.isEmpty
             ? NSLocalizedString("Rest", comment: "Name of the rest of a split bolus for a meal without a name")
             : label.name + " " + SplitBolusPlanner.restSuffix
-        return NewCarbEntry(
+        return CarbFoodLabel(emoji: label.emoji.isEmpty ? "✂️" : label.emoji, name: name).foodType
+    }
+
+    /// The rest as a carb entry.
+    func laterEntry(at date: Date) -> NewCarbEntry {
+        NewCarbEntry(
             date: date,
             quantity: HKQuantity(unit: .gram(), doubleValue: laterCarbs),
             startDate: date,
-            foodType: CarbFoodLabel(emoji: label.emoji.isEmpty ? "✂️" : label.emoji, name: name).foodType,
+            foodType: restFoodType,
             absorptionTime: SplitBolusSettings.laterAbsorptionTime
         )
     }
@@ -408,6 +414,45 @@ enum SplitBolusPlanner {
         return SplitBolusHistoryBasis(count: count, medianRiseStart: median(rises), medianPeak: median(peaks), earlyLows: lows)
     }
 
+    // MARK: A rest logged elsewhere
+
+    /// A carb entry as the split looks at it.
+    struct LoggedCarb: Equatable {
+        var id: String?
+        var foodType: String?
+        var date: Date
+    }
+
+    /// True when `foodType` names the rest of `plan`: exactly what the split logs it with, or,
+    /// typed in another language, the meal's name with "(rest)" after it.
+    static func isRest(_ foodType: String?, of plan: SplitBolusPlan) -> Bool {
+        guard let foodType, !foodType.isEmpty else { return false }
+        if foodType == plan.restFoodType { return true }
+        let name = CarbFoodLabel(foodType: foodType).name
+        let meal = CarbFoodLabel(foodType: plan.foodType).name
+        guard !meal.isEmpty else { return false }
+        for suffix in Set([restSuffix, "(rest)"]) where name.hasSuffix(suffix) {
+            let base = name.dropLast(suffix.count).trimmingCharacters(in: .whitespaces)
+            if base.caseInsensitiveCompare(meal) == .orderedSame { return true }
+        }
+        return false
+    }
+
+    /// The rest of an open split when it was logged without the split knowing: sent from
+    /// LoopFollow as a remote carb entry, or typed in by hand. It counts from the meal until the
+    /// rest is let go, and an entry already taken for another split's rest never counts again.
+    static func loggedRest(for plan: SplitBolusPlan, in entries: [LoggedCarb], claimed: Set<String>) -> LoggedCarb? {
+        guard plan.isOpen else { return nil }
+        let end = plan.due.addingTimeInterval(restWindow)
+        return entries
+            .filter { entry in
+                entry.date >= plan.mealDate && entry.date <= end
+                    && (entry.id.map { $0 != plan.nowEntryID && !claimed.contains($0) } ?? true)
+                    && isRest(entry.foodType, of: plan)
+            }
+            .min { $0.date < $1.date }
+    }
+
     // MARK: When it is due
 
     enum DueDecision: Equatable {
@@ -615,8 +660,10 @@ final class SplitBolusManager {
     private let log = OSLog(category: "SplitBolusManager")
 
     typealias GlucoseFetcher = (_ start: Date, _ completion: @escaping (Swift.Result<[StoredGlucoseSample], Error>) -> Void) -> Void
+    typealias CarbFetcher = (_ start: Date, _ completion: @escaping (Swift.Result<[SplitBolusPlanner.LoggedCarb], Error>) -> Void) -> Void
 
     private let fetchGlucose: GlucoseFetcher
+    private let fetchCarbs: CarbFetcher
     private let carbRatio: (Date) -> Double?
     private let glucoseUnit: () -> HKUnit
     private let defaults: UserDefaults
@@ -635,6 +682,7 @@ final class SplitBolusManager {
         defaults: UserDefaults = .standard,
         now: @escaping () -> Date = Date.init,
         fetchGlucose: @escaping GlucoseFetcher,
+        fetchCarbs: @escaping CarbFetcher = { _, completion in completion(.success([])) },
         carbRatio: @escaping (Date) -> Double?,
         glucoseUnit: @escaping () -> HKUnit = { .millimolesPerLiter },
         history: @escaping () async -> NightscoutHistory = { await NightscoutHistoryStore.shared.history() },
@@ -647,6 +695,7 @@ final class SplitBolusManager {
         self.defaults = defaults
         self.now = now
         self.fetchGlucose = fetchGlucose
+        self.fetchCarbs = fetchCarbs
         self.carbRatio = carbRatio
         self.glucoseUnit = glucoseUnit
         self.history = history
@@ -715,12 +764,16 @@ final class SplitBolusManager {
         let date = now()
         update { plans in
             guard let index = plans.firstIndex(where: { $0.id == planID }) else { return }
-            plans[index].state = .given
-            plans[index].stateDate = date
-            plans[index].givenAt = date
-            plans[index].laterEntryID = entryID
+            Self.markGiven(&plans[index], entryID: entryID, at: date, now: date)
         }
         removeNotifications([Self.notificationPrefix + planID])
+    }
+
+    private static func markGiven(_ plan: inout SplitBolusPlan, entryID: String?, at date: Date, now: Date) {
+        plan.state = .given
+        plan.stateDate = now
+        plan.givenAt = date
+        plan.laterEntryID = entryID
     }
 
     /// Calls a split off by hand. Nothing is learned from it.
@@ -737,14 +790,16 @@ final class SplitBolusManager {
 
     // MARK: Running
 
-    /// Offers the rests that are due, skips the ones glucose speaks against, and learns from
-    /// evenings that are over, then calls `completion`.
+    /// Takes rests logged elsewhere as given, offers the rests that are due, skips the ones
+    /// glucose speaks against, and learns from evenings that are over, then calls `completion`.
     func runDue(completion: @escaping () -> Void) {
         let date = now()
-        guard plans.contains(where: { $0.isOpen || ($0.state != .cancelled && !$0.isEvaluated) }) else {
+        let current = plans
+        guard current.contains(where: { $0.isOpen || ($0.state != .cancelled && !$0.isEvaluated) }) else {
             completion()
             return
         }
+        let carbStart = current.filter(\.isOpen).map(\.mealDate).min()
         fetchGlucose(date.addingTimeInterval(-(SplitBolusPlanner.outcomeSpan + .hours(2)))) { result in
             let glucose: [GlucoseValue]
             switch result {
@@ -754,18 +809,46 @@ final class SplitBolusManager {
                 self.log.error("Could not read glucose for the split bolus: %{public}@", String(describing: error))
                 glucose = []
             }
-            self.runLock.lock()
-            self.run(glucose: glucose, now: date)
-            self.runLock.unlock()
-            completion()
+            self.fetchLoggedCarbs(from: carbStart) { carbs in
+                self.runLock.lock()
+                self.run(glucose: glucose, carbs: carbs, now: date)
+                self.runLock.unlock()
+                completion()
+            }
         }
     }
 
-    private func run(glucose: [GlucoseValue], now: Date) {
+    private func fetchLoggedCarbs(from start: Date?, completion: @escaping ([SplitBolusPlanner.LoggedCarb]) -> Void) {
+        guard let start else {
+            completion([])
+            return
+        }
+        fetchCarbs(start) { result in
+            switch result {
+            case .success(let entries):
+                completion(entries)
+            case .failure(let error):
+                self.log.error("Could not read carbs for the split bolus: %{public}@", String(describing: error))
+                completion([])
+            }
+        }
+    }
+
+    private func run(glucose: [GlucoseValue], carbs: [SplitBolusPlanner.LoggedCarb], now: Date) {
         var plans = SplitBolusPlanner.pruned(defaults.splitBolusPlans, now: now)
         var calibration = defaults.splitBolusCalibration
         let settings = defaults.splitBolusSettings
         let check = SplitBolusPlanner.glucoseCheck(glucose, now: now)
+
+        // A rest sent from LoopFollow arrives as a plain carb entry: it is the rest, given.
+        var claimed = Set(plans.compactMap(\.laterEntryID))
+        for index in plans.indices {
+            guard let entry = SplitBolusPlanner.loggedRest(for: plans[index], in: carbs, claimed: claimed) else { continue }
+            Self.markGiven(&plans[index], entryID: entry.id, at: entry.date, now: now)
+            entry.id.map { claimed.insert($0) }
+            removeNotifications([Self.notificationPrefix + plans[index].id])
+            log.default("Rest of the split bolus for %{public}@ was logged elsewhere", plans[index].mealDescription)
+        }
 
         for index in plans.indices {
             let plan = plans[index]

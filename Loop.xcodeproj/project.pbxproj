@@ -15,6 +15,8 @@
 		FA0060010000000000000009 /* GlucoseInsightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA006001000000000000000A /* GlucoseInsightTests.swift */; };
 		FA0040010000000000000001 /* FatProteinBoost.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0040010000000000000002 /* FatProteinBoost.swift */; };
 		FB0050010000000000000001 /* SplitBolus.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0050010000000000000002 /* SplitBolus.swift */; };
+		FB0050010000000000000007 /* SplitBolusNightscout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0050010000000000000008 /* SplitBolusNightscout.swift */; };
+		FB0050010000000000000009 /* SplitBolusNightscoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB005001000000000000000A /* SplitBolusNightscoutTests.swift */; };
 		FA0050010000000000000001 /* OpenAIChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000002 /* OpenAIChat.swift */; };
 		FA0050010000000000000003 /* AIDoseAdvisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000004 /* AIDoseAdvisor.swift */; };
 		FA0050010000000000000005 /* BolusEntryViewModel+AIDoseAdvice.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000006 /* BolusEntryViewModel+AIDoseAdvice.swift */; };
@@ -803,6 +805,8 @@
 		FA006001000000000000000A /* GlucoseInsightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightTests.swift; sourceTree = "<group>"; };
 		FA0040010000000000000002 /* FatProteinBoost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatProteinBoost.swift; sourceTree = "<group>"; };
 		FB0050010000000000000002 /* SplitBolus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitBolus.swift; sourceTree = "<group>"; };
+		FB0050010000000000000008 /* SplitBolusNightscout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitBolusNightscout.swift; sourceTree = "<group>"; };
+		FB005001000000000000000A /* SplitBolusNightscoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitBolusNightscoutTests.swift; sourceTree = "<group>"; };
 		FA0050010000000000000002 /* OpenAIChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIChat.swift; sourceTree = "<group>"; };
 		FA0050010000000000000004 /* AIDoseAdvisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIDoseAdvisor.swift; sourceTree = "<group>"; };
 		FA0050010000000000000006 /* BolusEntryViewModel+AIDoseAdvice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BolusEntryViewModel+AIDoseAdvice.swift"; sourceTree = "<group>"; };
@@ -1639,6 +1643,7 @@
 				FA0020010000000000000006 /* MealCarbEstimatorTests.swift */,
 				FA0040010000000000000008 /* FatProteinBoostTests.swift */,
 				FB0050010000000000000006 /* SplitBolusTests.swift */,
+				FB005001000000000000000A /* SplitBolusNightscoutTests.swift */,
 				FA005001000000000000000A /* AIDoseAdvisorTests.swift */,
 				FA006001000000000000000A /* GlucoseInsightTests.swift */,
 				FA0021010000000000000004 /* CarbFoodLabelTests.swift */,
@@ -2110,6 +2115,7 @@
 				FA0020010000000000000002 /* MealCarbEstimator.swift */,
 				FA0040010000000000000002 /* FatProteinBoost.swift */,
 				FB0050010000000000000002 /* SplitBolus.swift */,
+				FB0050010000000000000008 /* SplitBolusNightscout.swift */,
 				FA0050010000000000000002 /* OpenAIChat.swift */,
 				FA0050010000000000000004 /* AIDoseAdvisor.swift */,
 				FA0060010000000000000002 /* GlucoseInsight.swift */,
@@ -3566,6 +3572,7 @@
 				FA0020010000000000000001 /* MealCarbEstimator.swift in Sources */,
 				FA0040010000000000000001 /* FatProteinBoost.swift in Sources */,
 				FB0050010000000000000001 /* SplitBolus.swift in Sources */,
+				FB0050010000000000000007 /* SplitBolusNightscout.swift in Sources */,
 				FA0050010000000000000001 /* OpenAIChat.swift in Sources */,
 				FA0050010000000000000003 /* AIDoseAdvisor.swift in Sources */,
 				FA0060010000000000000001 /* GlucoseInsight.swift in Sources */,
@@ -3878,6 +3885,7 @@
 				FA0020010000000000000005 /* MealCarbEstimatorTests.swift in Sources */,
 				FA0040010000000000000007 /* FatProteinBoostTests.swift in Sources */,
 				FB0050010000000000000005 /* SplitBolusTests.swift in Sources */,
+				FB0050010000000000000009 /* SplitBolusNightscoutTests.swift in Sources */,
 				FA0050010000000000000009 /* AIDoseAdvisorTests.swift in Sources */,
 				FA0060010000000000000009 /* GlucoseInsightTests.swift in Sources */,
 				FA0021010000000000000003 /* CarbFoodLabelTests.swift in Sources */,

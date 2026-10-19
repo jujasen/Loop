@@ -3293,6 +3293,17 @@
         }
       }
     },
+    "Rest of split bolus %1$@ · %2$@" : {
+      "comment" : "Nightscout note for the waiting rest of a split bolus (1: carbs)(2: name of the meal)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest av delt bolus %1$@ · %2$@"
+          }
+        }
+      }
+    },
     "Take Photo" : {
       "comment" : "Menu item taking a photo of the meal for the meal estimate",
       "localizations" : {

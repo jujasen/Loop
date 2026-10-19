@@ -436,11 +436,23 @@ final class DeviceDataManager {
             fetchGlucose: { start, completion in
                 glucoseStore.getGlucoseSamples(start: start, end: nil, completion: completion)
             },
+            fetchCarbs: { start, completion in
+                carbStore.getCarbEntries(start: start, end: nil) { result in
+                    switch result {
+                    case .success(let entries):
+                        completion(.success(entries.map { .init(id: $0.syncIdentifier, foodType: $0.foodType, date: $0.startDate) }))
+                    case .failure(let error):
+                        completion(.failure(error))
+                    }
+                }
+            },
             carbRatio: { date in loopManager.settings.carbRatioSchedule?.value(at: date) },
             glucoseUnit: { [weak self] in self?.displayGlucosePreference.unit ?? .millimolesPerLiter }
         )
         SplitBolusManager.current = splitBolus
+        let splitBolus = self.splitBolus!
         Task { @MainActor in
+            SplitBolusNightscoutUploader.shared.start(manager: splitBolus)
             GlucoseInsightManager.shared.start(settings: { loopManager.settings })
         }
 
