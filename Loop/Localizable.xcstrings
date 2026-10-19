@@ -3194,6 +3194,30 @@
         }
       }
     },
+    "Alerts on this phone when glucose stays high and is not falling although the insulin given should have brought it down — the pod may not be delivering, for example a kinked cannula or a leak the pod does not alarm for." : {
+      "comment" : "Footer under the pump delivery alert switch",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Varsler på denne telefonen når BS holder seg høy og ikke faller selv om insulinet som er gitt skulle ha fått den ned — da gir poden kanskje ikke insulin, for eksempel ved en knekt kanyle eller lekkasje poden ikke varsler om."
+          }
+        }
+      }
+    },
+    "At least %@" : {
+      "comment" : "Pump delivery alert rule value (1: glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minst %@"
+          }
+        }
+      }
+    },
     "Automatic Bolus" : {
       "comment" : "Chart label for a bolus Loop gave on its own",
       "localizations" : {
@@ -3234,6 +3258,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "BS-måling"
+          }
+        }
+      }
+    },
+    "Check the pod and cannula, measure ketones, and consider insulin by pen and a new pod." : {
+      "comment" : "Advice in the pump delivery alert",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sjekk pod og kanyle, mål ketoner, og vurder insulin med penn og ny pod."
           }
         }
       }
@@ -3282,6 +3318,102 @@
         }
       }
     },
+    "Glucose %1$@ and not falling. The insulin from the last 90 minutes should have lowered it by %2$@, yet it is %3$@ higher than insulin and carbs explain." : {
+      "comment" : "Pump delivery alert (1: current glucose)(2: expected drop from insulin)(3: unexplained rise)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BS %1$@ og faller ikke. Insulinet fra de siste 90 minuttene skulle ha senket den med %2$@, men den er %3$@ høyere enn insulin og karbo forklarer."
+          }
+        }
+      }
+    },
+    "Insulin and carbs over the last 90 minutes are weighed with ISF and carb ratio. Glucose must not be falling, and every reading over the time must meet the limits. The same rules as LoopFollow's alert, set from 60 days of Nightscout history; after an alert, there is no new one for an hour." : {
+      "comment" : "Footer under the pump delivery alert's rules",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insulin og karbo de siste 90 minuttene regnes med ISF og karbofaktor. BS må ikke falle, og alle målinger i hele tidsrommet må oppfylle grensene. Samme regler som LoopFollow-varselet, satt ut fra 60 dager med Nightscout-historikk; etter et varsel kommer det ikke noe nytt på en time."
+          }
+        }
+      }
+    },
+    "Insulin Given" : {
+      "comment" : "Pump delivery alert rule: insulin acting",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insulin gitt"
+          }
+        }
+      }
+    },
+    "Insulin given but glucose keeps rising" : {
+      "comment" : "Descriptive text for the pump delivery alert settings row",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insulin gitt, men BS stiger likevel"
+          }
+        }
+      }
+    },
+    "Last Alert" : {
+      "comment" : "Header above the last pump delivery alert",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste varsel"
+          }
+        }
+      }
+    },
+    "Persistent" : {
+      "comment" : "Pump delivery alert rule: how long",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vedvarende"
+          }
+        }
+      }
+    },
+    "Pump Delivery Alert" : {
+      "comment" : "Title of the pump delivery alert settings",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulig pumpesvikt"
+          }
+        }
+      }
+    },
+    "Pump May Not Be Delivering Insulin" : {
+      "comment" : "Title of the alert when glucose keeps rising although insulin was given",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulig at poden ikke gir insulin"
+          }
+        }
+      }
+    },
     "Remove photo" : {
       "comment" : "Button label removing a photo from the meal estimate",
       "localizations" : {
@@ -3300,6 +3432,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rest av delt bolus %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Should lower by %@" : {
+      "comment" : "Pump delivery alert rule value (1: glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skulle senke med %@"
           }
         }
       }
@@ -3645,6 +3789,18 @@
         }
       }
     },
+    "Unexplained Rise" : {
+      "comment" : "Pump delivery alert rule: rise insulin and carbs do not explain",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uforklart stigning"
+          }
+        }
+      }
+    },
     "Unsure" : {
       "comment" : "Meal estimate confidence: low",
       "localizations" : {
@@ -3674,6 +3830,18 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "F.eks. fiskegrateng"
+          }
+        }
+      }
+    },
+    "When It Alerts" : {
+      "comment" : "Header above the pump delivery alert's rules",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når den varsler"
           }
         }
       }

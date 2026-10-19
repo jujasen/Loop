@@ -245,6 +245,8 @@ final class DeviceDataManager {
     /// Raises insulin needs after meals heavy in fat and protein once glucose turns up, right before a loop.
     private(set) var fatProteinBoost: FatProteinBoostManager!
     private(set) var splitBolus: SplitBolusManager!
+    /// Alerts when glucose keeps rising although the insulin given should have brought it down.
+    private(set) var pumpDelivery: PumpDeliveryAlertManager!
 
     init(pluginManager: PluginManager,
          alertManager: AlertManager,
@@ -451,6 +453,36 @@ final class DeviceDataManager {
         )
         SplitBolusManager.current = splitBolus
         let splitBolus = self.splitBolus!
+        let doseStore = self.doseStore
+        pumpDelivery = PumpDeliveryAlertManager(
+            fetchGlucose: { start, end, completion in
+                glucoseStore.getGlucoseSamples(start: start, end: end, completion: completion)
+            },
+            fetchDoses: { start, end, completion in
+                doseStore.getNormalizedDoseEntries(start: start, end: end) { result in
+                    switch result {
+                    case .success(let doses): completion(.success(doses))
+                    case .failure(let error): completion(.failure(error))
+                    }
+                }
+            },
+            fetchCarbs: { start, end, completion in
+                carbStore.getCarbEntries(start: start, end: end) { result in
+                    switch result {
+                    case .success(let entries): completion(.success(entries))
+                    case .failure(let error): completion(.failure(error))
+                    }
+                }
+            },
+            sensitivity: { carbStore.insulinSensitivityScheduleApplyingOverrideHistory ?? loopManager.settings.insulinSensitivitySchedule },
+            carbRatio: { carbStore.carbRatioScheduleApplyingOverrideHistory ?? loopManager.settings.carbRatioSchedule },
+            insulinModel: { doseStore.insulinModelProvider.model(for: loopManager.pumpInsulinType) },
+            defaultAbsorption: { carbStore.defaultAbsorptionTimes.medium },
+            glucoseUnit: { [weak self] in self?.displayGlucosePreference.unit ?? .millimolesPerLiter },
+            alertIssuer: alertManager
+        )
+        PumpDeliveryAlertManager.current = pumpDelivery
+        pumpDelivery.start()
         Task { @MainActor in
             SplitBolusNightscoutUploader.shared.start(manager: splitBolus)
             GlucoseInsightManager.shared.start(settings: { loopManager.settings })

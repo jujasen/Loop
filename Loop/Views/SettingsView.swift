@@ -52,6 +52,7 @@ public struct SettingsView: View {
             case favoriteFoods
             case fatProteinBoost
             case splitBolus
+            case pumpDeliveryAlert
             case aiDoseAdvice
         }
     }
@@ -127,6 +128,9 @@ public struct SettingsView: View {
                         .environmentObject(displayGlucosePreference)
                 case .splitBolus:
                     SplitBolusSettingsView(manager: SplitBolusManager.current)
+                        .environmentObject(displayGlucosePreference)
+                case .pumpDeliveryAlert:
+                    PumpDeliveryAlertSettingsView(manager: PumpDeliveryAlertManager.current)
                         .environmentObject(displayGlucosePreference)
                 case .aiDoseAdvice:
                     AIDoseAdviceSettingsView()
@@ -388,6 +392,11 @@ extension SettingsView {
                         imageView: Image(systemName: "scissors").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(carbTintColor),
                         label: String(localized: "Split Bolus", comment: "Title of the split bolus settings row"),
                         descriptiveText: String(localized: "Part now, the rest later", comment: "Descriptive text for the split bolus settings row"))
+            LargeButton(action: { sheet = .pumpDeliveryAlert },
+                        includeArrow: true,
+                        imageView: Image(systemName: "drop.triangle").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(.orange),
+                        label: String(localized: "Pump Delivery Alert", comment: "Title of the pump delivery alert settings row"),
+                        descriptiveText: String(localized: "Insulin given but glucose keeps rising", comment: "Descriptive text for the pump delivery alert settings row"))
             if AIDoseAdvisor.shared != nil {
                 LargeButton(action: { sheet = .aiDoseAdvice },
                             includeArrow: true,
