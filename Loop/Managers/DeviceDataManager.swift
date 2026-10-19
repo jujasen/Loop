@@ -244,6 +244,7 @@ final class DeviceDataManager {
 
     /// Raises insulin needs after meals heavy in fat and protein once glucose turns up, right before a loop.
     private(set) var fatProteinBoost: FatProteinBoostManager!
+    private(set) var splitBolus: SplitBolusManager!
 
     init(pluginManager: PluginManager,
          alertManager: AlertManager,
@@ -431,6 +432,14 @@ final class DeviceDataManager {
             glucoseUnit: { [weak self] in self?.displayGlucosePreference.unit ?? .millimolesPerLiter }
         )
         FatProteinBoostManager.current = fatProteinBoost
+        splitBolus = SplitBolusManager(
+            fetchGlucose: { start, completion in
+                glucoseStore.getGlucoseSamples(start: start, end: nil, completion: completion)
+            },
+            carbRatio: { date in loopManager.settings.carbRatioSchedule?.value(at: date) },
+            glucoseUnit: { [weak self] in self?.displayGlucosePreference.unit ?? .millimolesPerLiter }
+        )
+        SplitBolusManager.current = splitBolus
         Task { @MainActor in
             GlucoseInsightManager.shared.start(settings: { loopManager.settings })
         }
@@ -601,14 +610,18 @@ final class DeviceDataManager {
         guard let pumpManager = pumpManager else {
             // Run loop, even if pump is missing, to ensure stored dosing decision
             fatProteinBoost.runDue {
-                self.loopManager.loop()
+                self.splitBolus.runDue {
+                    self.loopManager.loop()
+                }
             }
             return
         }
 
         pumpManager.ensureCurrentPumpData() { (lastSync) in
             self.fatProteinBoost.runDue {
-                self.loopManager.loop()
+                self.splitBolus.runDue {
+                    self.loopManager.loop()
+                }
             }
         }
     }

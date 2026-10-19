@@ -243,6 +243,13 @@ struct BolusEntryView: View {
                     .font(.footnote)
                     .foregroundColor(Color(.secondaryLabel))
             }
+
+            if let summary = viewModel.splitBolusSummary {
+                Text(summary)
+                    .font(.footnote)
+                    .foregroundColor(Color(.secondaryLabel))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

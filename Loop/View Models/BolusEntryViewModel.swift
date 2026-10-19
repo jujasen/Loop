@@ -135,6 +135,31 @@ final class BolusEntryViewModel: ObservableObject {
     /// What the boost will do for the meal, for the line under the carb entry.
     var fatProteinBoost: FatProteinBoostPreview?
 
+    /// The split the meal being saved goes with: its entry is the part eaten now.
+    var splitBolus: SplitBolusSuggestion?
+    /// The split whose rest the entry being saved is.
+    var splitRestPlan: SplitBolusPlan?
+
+    /// "✂️ Split: 7.5 g now · 6.5 g at 21:40, about 0.45 U" for a split meal, or for its rest
+    /// what was planned for it.
+    var splitBolusSummary: String? {
+        if let split = splitBolus {
+            var text = String(format: NSLocalizedString("✂️ Split: %@", comment: "Line under the carb entry on the bolus screen for a split bolus (1: summary of the split)"), SplitBolusPlanner.summary(split))
+            if let units = split.laterUnits {
+                text += String(format: NSLocalizedString(", rest about %@", comment: "Appended to the split bolus line: rough insulin for the rest (1: insulin)"), SplitBolusPlanner.units(units))
+            }
+            return text
+        }
+        if let plan = splitRestPlan {
+            var text = String(format: NSLocalizedString("✂️ Rest of the split bolus for %@", comment: "Line under the carb entry on the bolus screen for the rest of a split bolus (1: name of the meal)"), plan.mealDescription)
+            if let units = plan.laterUnits {
+                text += String(format: NSLocalizedString(": planned about %@", comment: "Appended to the rest of a split bolus line (1: insulin planned)"), SplitBolusPlanner.units(units))
+            }
+            return text
+        }
+        return nil
+    }
+
     /// The meal as described and photographed on the carb entry screen, for the AI dose advice.
     var aiDoseMealContext: AIDoseMealContext?
     /// The AI dose advice section below the bolus field; closed until opened.
@@ -450,6 +475,12 @@ final class BolusEntryViewModel: ObservableObject {
                     if isFatProteinBoostDeclined {
                         UserDefaults.standard.setFatProteinBoostDeclined(true, forEntry: id)
                     }
+                }
+                if let splitBolus {
+                    SplitBolusManager.current?.add(splitBolus, nowEntryID: storedCarbEntry.syncIdentifier)
+                }
+                if let splitRestPlan {
+                    SplitBolusManager.current?.markGiven(planID: splitRestPlan.id, entryID: storedCarbEntry.syncIdentifier)
                 }
                 self.dosingDecision.carbEntry = storedCarbEntry
                 self.analyticsServicesManager?.didAddCarbs(source: "Phone", amount: storedCarbEntry.quantity.doubleValue(for: .gram()))

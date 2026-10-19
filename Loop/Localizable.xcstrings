@@ -45210,6 +45210,589 @@
           }
         }
       }
+    },
+    "Rest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resten"
+          }
+        }
+      }
+    },
+    "(rest)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "(resten)"
+          }
+        }
+      }
+    },
+    "%1$@ now · %2$@ at %3$@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ nå · %2$@ kl. %3$@"
+          }
+        }
+      }
+    },
+    "rise after about %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "stigning etter ca. %@"
+          }
+        }
+      }
+    },
+    "highest after about %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "høyest etter ca. %@"
+          }
+        }
+      }
+    },
+    "low within 2 hr %1$d of %2$d times" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lav innen 2 t %1$d av %2$d ganger"
+          }
+        }
+      }
+    },
+    "%1$d earlier servings: %2$@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$d tidligere ganger: %2$@"
+          }
+        }
+      }
+    },
+    "✂️ Rest of the bolus: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✂️ Resten av bolusen: %@"
+          }
+        }
+      }
+    },
+    "%1$@ carbs, about %2$@. Tap to log it and bolus." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ karbo, ca. %2$@. Trykk for å legge inn og gi bolus."
+          }
+        }
+      }
+    },
+    "Glucose %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BS %@."
+          }
+        }
+      }
+    },
+    "✂️ Rest of the bolus waits: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✂️ Resten av bolusen venter: %@"
+          }
+        }
+      }
+    },
+    "Glucose %1$@ is low or falling. Checking again at %2$@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BS %1$@ er lav eller faller. Sjekker igjen kl. %2$@."
+          }
+        }
+      }
+    },
+    "✂️ No rest of the bolus: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✂️ Ingen rest-bolus: %@"
+          }
+        }
+      }
+    },
+    "Glucose %@ is still low or falling, so the rest is skipped this time." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BS %@ er fortsatt lav eller faller, så resten hoppes over denne gangen."
+          }
+        }
+      }
+    },
+    "✂️ Split: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✂️ Delt: %@"
+          }
+        }
+      }
+    },
+    ", rest about %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", resten ca. %@"
+          }
+        }
+      }
+    },
+    "✂️ Rest of the split bolus for %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✂️ Resten av delt bolus for %@"
+          }
+        }
+      }
+    },
+    ": planned about %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ": planlagt ca. %@"
+          }
+        }
+      }
+    },
+    "Split Bolus" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Del opp bolus"
+          }
+        }
+      }
+    },
+    "Enter the carbs to see the split." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv inn karbo for å se delingen."
+          }
+        }
+      }
+    },
+    "Share Now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andel nå"
+          }
+        }
+      }
+    },
+    "Rest After" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resten etter"
+          }
+        }
+      }
+    },
+    "≈ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "≈ %@"
+          }
+        }
+      }
+    },
+    "Time learned from earlier splits." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidspunktet er lært fra tidligere delinger."
+          }
+        }
+      }
+    },
+    "Time from earlier servings in Nightscout: the rest half an hour before the usual rise." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidspunkt fra tidligere ganger i Nightscout: resten en halvtime før stigningen pleier å komme."
+          }
+        }
+      }
+    },
+    "Fat in the meal gives a late rise, so the rest comes 2 hours after." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fett i måltidet gir sen stigning, så resten kommer 2 timer etter."
+          }
+        }
+      }
+    },
+    "The rest has %@ extra, learned from evenings that stayed high." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resten har %@ ekstra, lært fra kvelder som ble høye."
+          }
+        }
+      }
+    },
+    "Loop doses only for the part now. When the rest is due you get a notification; with glucose below 5 or falling it waits half an hour, once." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop doserer bare for delen nå. Når resten skal gis kommer et varsel; er BS under 5 eller fallende venter den en halvtime, én gang."
+          }
+        }
+      }
+    },
+    "✂️ Rest of the bolus for %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✂️ Resten av bolusen for %@"
+          }
+        }
+      }
+    },
+    "Log the Rest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg inn resten"
+          }
+        }
+      }
+    },
+    "Planned for %1$@: %2$@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Planlagt kl. %1$@: %2$@"
+          }
+        }
+      }
+    },
+    ", about %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", ca. %@"
+          }
+        }
+      }
+    },
+    "Loop works out the bolus from glucose now." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop regner ut bolusen ut fra BS nå."
+          }
+        }
+      }
+    },
+    "Check glucose before you log it." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sjekk BS før du legger den inn."
+          }
+        }
+      }
+    },
+    "%1$@: %2$@ at %3$@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ kl. %3$@"
+          }
+        }
+      }
+    },
+    "Call Off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avlys"
+          }
+        }
+      }
+    },
+    "Waiting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Venter"
+          }
+        }
+      }
+    },
+    "Swipe to call a rest off." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sveip for å avlyse en rest."
+          }
+        }
+      }
+    },
+    "Start Values" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startverdier"
+          }
+        }
+      }
+    },
+    "Used until something is learned. Without anything learned, the time comes from earlier servings of the same food in Nightscout when there are at least 5 of them." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brukes til noe er lært. Før det hentes tidspunktet fra tidligere ganger med samme mat i Nightscout når det finnes minst 5."
+          }
+        }
+      }
+    },
+    "Start value" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startverdi"
+          }
+        }
+      }
+    },
+    "Extra on the Rest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstra på resten"
+          }
+        }
+      }
+    },
+    "Six hours after each split Loop looks back. Below 4 mmol/L before the rest: 5 % less now next time. Below 4 after the rest: less extra, or the rest 15 minutes later. Over 10 for more than an hour from 2 to 6 hours after: 10 % extra on the rest. Already 2 mmol/L up when the rest was logged (from the low point, or from the start after a dip): the rest 15 minutes earlier. Share now stays between 40 and 80 %, the rest between 1½ and 3 hours, the extra at most 50 %." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seks timer etter hver deling ser Loop tilbake. Under 4 mmol/L før resten: 5 % mindre nå neste gang. Under 4 etter resten: mindre ekstra, eller resten 15 minutter senere. Over 10 i mer enn en time fra 2 til 6 timer etter: 10 % ekstra på resten. Allerede 2 mmol/L opp da resten ble lagt inn (fra bunnen, eller fra start etter en dipp): resten 15 minutter tidligere. Andel nå holdes mellom 40 og 80 %, resten mellom 1½ og 3 timer, ekstra maks 50 %."
+          }
+        }
+      }
+    },
+    "lowest before the rest %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lavest før resten %@"
+          }
+        }
+      }
+    },
+    "after %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "etter %@"
+          }
+        }
+      }
+    },
+    "no rest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ingen rest"
+          }
+        }
+      }
+    },
+    "%@ over 10" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ over 10"
+          }
+        }
+      }
+    },
+    "now %1$@ → %2$@, rest %3$@ → %4$@, extra %5$@ → %6$@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nå %1$@ → %2$@, resten %3$@ → %4$@, ekstra %5$@ → %6$@"
+          }
+        }
+      }
+    },
+    "no change" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ingen endring"
+          }
+        }
+      }
+    },
+    "Not due yet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke tid ennå"
+          }
+        }
+      }
+    },
+    "Due: notification sent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tid nå: varsel sendt"
+          }
+        }
+      }
+    },
+    "Waiting half an hour: glucose was low or falling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Venter en halvtime: BS var lav eller fallende"
+          }
+        }
+      }
+    },
+    "Part now, the rest later" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En del nå, resten senere"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

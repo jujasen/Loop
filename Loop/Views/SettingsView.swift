@@ -51,6 +51,7 @@ public struct SettingsView: View {
             
             case favoriteFoods
             case fatProteinBoost
+            case splitBolus
             case aiDoseAdvice
         }
     }
@@ -123,6 +124,9 @@ public struct SettingsView: View {
                     FavoriteFoodsView()
                 case .fatProteinBoost:
                     FatProteinBoostSettingsView(manager: FatProteinBoostManager.current)
+                        .environmentObject(displayGlucosePreference)
+                case .splitBolus:
+                    SplitBolusSettingsView(manager: SplitBolusManager.current)
                         .environmentObject(displayGlucosePreference)
                 case .aiDoseAdvice:
                     AIDoseAdviceSettingsView()
@@ -379,6 +383,11 @@ extension SettingsView {
                         imageView: Image(systemName: "clock.arrow.circlepath").resizable().scaledToFit().frame(width: 34, height: 34).foregroundColor(carbTintColor),
                         label: String(localized: "Fat and Protein", comment: "Title of the fat and protein boost settings row"),
                         descriptiveText: String(localized: "Extra insulin for the late rise", comment: "Descriptive text for the fat and protein boost settings row"))
+            LargeButton(action: { sheet = .splitBolus },
+                        includeArrow: true,
+                        imageView: Image(systemName: "scissors").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(carbTintColor),
+                        label: String(localized: "Split Bolus", comment: "Title of the split bolus settings row"),
+                        descriptiveText: String(localized: "Part now, the rest later", comment: "Descriptive text for the split bolus settings row"))
             if AIDoseAdvisor.shared != nil {
                 LargeButton(action: { sheet = .aiDoseAdvice },
                             includeArrow: true,

@@ -560,6 +560,8 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
              LoopNotificationCategory.remoteTherapySettingsFailure.rawValue,
              LoopNotificationCategory.missedMeal.rawValue:
             completionHandler([.badge, .sound, .list, .banner])
+        case let identifier where identifier.hasPrefix(SplitBolusManager.notificationPrefix):
+            completionHandler([.badge, .sound, .list, .banner])
         default:
             // For all others, banners are not to be displayed while in the foreground
             completionHandler([.badge, .sound, .list])
@@ -591,6 +593,15 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
                 alertManager?.acknowledgeAlert(identifier: Alert.Identifier(managerIdentifier: managerIdentifier, alertIdentifier: alertIdentifier))
             }
         case UNNotificationDefaultActionIdentifier:
+            // The rest of a split bolus opens the carb entry screen with the rest filled in.
+            if response.notification.request.identifier.hasPrefix(SplitBolusManager.notificationPrefix),
+               let planID = response.notification.request.content.userInfo[SplitBolusManager.planIDUserInfoKey] as? String {
+                let activity = NSUserActivity.forNewCarbEntry()
+                activity.addUserInfoEntries(from: [SplitBolusManager.planIDUserInfoKey: planID])
+                rootViewController?.restoreUserActivityState(activity)
+                break
+            }
+
             guard response.notification.request.identifier == LoopNotificationCategory.missedMeal.rawValue else {
                 break
             }

@@ -69,6 +69,8 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
             ScrollView {
                 warningsCard
 
+                splitRestCard
+
                 mainCard
                     .padding(.top, 8)
 
@@ -154,6 +156,13 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
                 }
                 .padding(.bottom, 2)
             }
+
+            if viewModel.canSplitBolus {
+                CardSectionDivider()
+
+                SplitBolusSection(viewModel: viewModel)
+                    .padding(.bottom, 2)
+            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal)
@@ -161,6 +170,18 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         .padding(.horizontal)
     }
     
+    @ViewBuilder
+    private var splitRestCard: some View {
+        if let plan = viewModel.splitRestPlan ?? viewModel.dueSplitRest {
+            SplitRestCard(plan: plan, onUse: viewModel.splitRestPlan == nil ? { viewModel.useSplitRest(plan) } : nil)
+                .padding(.vertical, 12)
+                .padding(.horizontal)
+                .background(CardBackground())
+                .padding(.horizontal)
+                .padding(.top, 8)
+        }
+    }
+
     @ViewBuilder
     private var bolusView: some View {
         if let viewModel = viewModel.bolusViewModel {
