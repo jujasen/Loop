@@ -2605,6 +2605,96 @@ extension LoopDataManager: ServicesManagerDelegate {
         }()
     }
     
+    /// How far back a caregiver's phone may reach to change a carb entry. Wider than the window a new
+    /// entry may be placed in, so that yesterday evening's meal can still be corrected in the morning.
+    static let remoteCarbEditLookback = TimeInterval(hours: 24)
+
+    func editCarbs(_ edit: RemoteCarbEdit) async throws {
+        let now = Date()
+        let entries = try await carbStore.getCarbEntries(start: now.addingTimeInterval(-Self.remoteCarbEditLookback), end: nil)
+        guard let entry = entries.last(where: { $0.syncIdentifier == edit.syncIdentifier }) else {
+            throw RemoteCarbEditError.entryNotFound
+        }
+        guard entry.createdByCurrentApp else {
+            throw RemoteCarbEditError.entryNotEditable
+        }
+
+        if edit.delete {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                deleteCarbEntry(entry) { result in
+                    switch result {
+                    case .success:
+                        continuation.resume()
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+            return
+        }
+
+        let replacement = try Self.carbEntry(
+            for: edit,
+            replacing: entry,
+            defaultAbsorptionTime: carbStore.defaultAbsorptionTimes.medium,
+            now: now
+        )
+        _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<StoredCarbEntry, Error>) in
+            addCarbEntry(replacement, replacing: entry) { result in
+                switch result {
+                case .success(let storedCarbEntry):
+                    continuation.resume(returning: storedCarbEntry)
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    /// The entry that replaces `entry`: the changed values from `edit`, the rest kept. A changed value is
+    /// held to the same limits as a new remote carb entry; a kept one is not checked again, so an entry
+    /// from earlier than a new one may be placed can still have its amount corrected.
+    static func carbEntry(for edit: RemoteCarbEdit, replacing entry: StoredCarbEntry, defaultAbsorptionTime: TimeInterval, now: Date) throws -> NewCarbEntry {
+        let amountInGrams = edit.amountInGrams ?? entry.quantity.doubleValue(for: .gram())
+        if edit.amountInGrams != nil {
+            guard amountInGrams > 0.0 else {
+                throw CarbActionError.invalidCarbs
+            }
+            guard amountInGrams <= LoopConstants.maxCarbEntryQuantity.doubleValue(for: .gram()) else {
+                throw CarbActionError.exceedsMaxCarbs
+            }
+        }
+
+        if let absorptionTime = edit.absorptionTime,
+           absorptionTime < LoopConstants.minCarbAbsorptionTime || absorptionTime > LoopConstants.maxCarbAbsorptionTime
+        {
+            throw CarbActionError.invalidAbsorptionTime(absorptionTime)
+        }
+
+        if let startDate = edit.startDate, startDate != entry.startDate {
+            let maxStartDate = now.addingTimeInterval(LoopConstants.maxCarbEntryFutureTime)
+            let minStartDate = now.addingTimeInterval(LoopConstants.maxCarbEntryPastTime)
+            guard startDate <= maxStartDate && startDate >= minStartDate else {
+                throw CarbActionError.invalidStartDate(startDate)
+            }
+        }
+
+        let foodType: String?
+        if let editedFoodType = edit.foodType {
+            foodType = editedFoodType.isEmpty ? nil : editedFoodType
+        } else {
+            foodType = entry.foodType
+        }
+
+        return NewCarbEntry(
+            date: now,
+            quantity: HKQuantity(unit: .gram(), doubleValue: amountInGrams),
+            startDate: edit.startDate ?? entry.startDate,
+            foodType: foodType,
+            absorptionTime: edit.absorptionTime ?? entry.absorptionTime ?? defaultAbsorptionTime
+        )
+    }
+
     //Can't add this concurrency wrapper method to LoopKit due to the minimum iOS version
     func devliverCarbEntry(_ carbEntry: NewCarbEntry) async throws -> StoredCarbEntry {
         return try await withCheckedThrowingContinuation { continuation in

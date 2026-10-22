@@ -216,6 +216,48 @@ extension NotificationManager {
     }
     
     @MainActor
+    static func sendRemoteCarbEditNotification(for edit: RemoteCarbEdit) {
+        let notification = UNMutableNotificationContent()
+
+        notification.body = [remoteCarbEditNotificationBody(for: edit), "Success!"].joined(separator: "\n")
+        notification.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: LoopNotificationCategory.remoteCarbs.rawValue,
+            content: notification,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    @MainActor
+    static func sendRemoteCarbEditFailureNotification(for error: Error, edit: RemoteCarbEdit) {
+        let notification = UNMutableNotificationContent()
+
+        notification.body = [remoteCarbEditNotificationBody(for: edit), error.localizedDescription].joined(separator: "\n")
+        notification.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: LoopNotificationCategory.remoteCarbsFailure.rawValue,
+            content: notification,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private static func remoteCarbEditNotificationBody(for edit: RemoteCarbEdit) -> String {
+        if edit.delete {
+            return NSLocalizedString("Remote Carbs Deleted", comment: "The message for a remote carb entry deletion notification.")
+        }
+        if let amountInGrams = edit.amountInGrams {
+            return String(format: NSLocalizedString("Remote Carbs Changed: %d grams", comment: "The message for a remote carb entry change notification. (1: New carb amount in grams)"), Int(amountInGrams))
+        }
+        return NSLocalizedString("Remote Carbs Changed", comment: "The message for a remote carb entry change notification that keeps the amount.")
+    }
+
+    @MainActor
     static func sendRemoteTherapySettingsNotification(for change: RemoteTherapySettingsChange) {
         let notification = UNMutableNotificationContent()
         notification.title = remoteTherapySettingsNotificationTitle(for: change)

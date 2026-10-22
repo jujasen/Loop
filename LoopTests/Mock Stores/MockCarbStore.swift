@@ -72,6 +72,10 @@ class MockCarbStore: CarbStoreProtocol {
         completion(.failure(.notConfigured))
     }
     
+    func getCarbEntries(start: Date?, end: Date?) async throws -> [StoredCarbEntry] {
+        return carbHistory ?? []
+    }
+    
     func getCarbStatus(start: Date, end: Date?, effectVelocities: [GlucoseEffectVelocity]?, completion: @escaping (CarbStoreResult<[CarbStatus<StoredCarbEntry>]>) -> Void) {
         completion(.failure(.notConfigured))
     }

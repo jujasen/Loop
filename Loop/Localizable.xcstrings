@@ -34208,6 +34208,39 @@
         }
       }
     },
+    "Remote Carbs Changed" : {
+      "comment" : "The message for a remote carb entry change notification that keeps the amount.",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karbohydrater endret eksternt"
+          }
+        }
+      }
+    },
+    "Remote Carbs Changed: %d grams" : {
+      "comment" : "The message for a remote carb entry change notification. (1: New carb amount in grams)",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karbohydrater endret eksternt: %d gram"
+          }
+        }
+      }
+    },
+    "Remote Carbs Deleted" : {
+      "comment" : "The message for a remote carb entry deletion notification.",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karbohydrater slettet eksternt"
+          }
+        }
+      }
+    },
     "Remote Carbs Entry: %d grams" : {
       "comment" : "The carb amount message for a remote carbs entry notification. (1: Carb amount in grams)",
       "localizations" : {

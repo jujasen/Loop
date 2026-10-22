@@ -259,6 +259,7 @@ public protocol ServicesManagerDelegate: AnyObject {
     func enactOverride(name: String, duration: TemporaryScheduleOverride.Duration?, remoteAddress: String) async throws
     func cancelCurrentOverride() async throws
     func deliverCarbs(amountInGrams: Double, absorptionTime: TimeInterval?, foodType: String?, startDate: Date?) async throws
+    func editCarbs(_ edit: RemoteCarbEdit) async throws
     func updateTherapySettings(_ changes: (_ settings: inout LoopSettings) -> Void) async
 }
 
@@ -350,6 +351,18 @@ extension ServicesManager: ServiceDelegate {
         }
     }
     
+    func editRemoteCarbs(_ edit: RemoteCarbEdit) async throws {
+        do {
+            try await servicesManagerDelegate?.editCarbs(edit)
+            log.default("Applied remote carb edit: %{public}@", String(describing: edit))
+            await NotificationManager.sendRemoteCarbEditNotification(for: edit)
+            await remoteDataServicesManager.triggerUpload(for: .carb)
+        } catch {
+            await NotificationManager.sendRemoteCarbEditFailureNotification(for: error, edit: edit)
+            throw error
+        }
+    }
+
     func deliverRemoteBolus(amountInUnits: Double) async throws {
         do {
             
