@@ -136,7 +136,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
 
             CardSectionDivider()
             
-            DatePickerRow(date: $viewModel.time, isFocused: timeFocused, minimumDate: viewModel.minimumDate, maximumDate: viewModel.maximumDate)
+            MealTimeRow(date: $viewModel.time, isFocused: timeFocused, minimumDate: viewModel.minimumDate, maximumDate: viewModel.maximumDate)
             
             CardSectionDivider()
             
@@ -172,8 +172,12 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     
     @ViewBuilder
     private var splitRestCard: some View {
-        if let plan = viewModel.splitRestPlan ?? viewModel.dueSplitRest {
-            SplitRestCard(plan: plan, onUse: viewModel.splitRestPlan == nil ? { viewModel.useSplitRest(plan) } : nil)
+        if let plan = viewModel.splitRestPlan ?? viewModel.openSplitRest {
+            SplitRestCard(
+                plan: plan,
+                onUse: viewModel.splitRestPlan == nil ? { viewModel.useSplitRest(plan) } : nil,
+                onCancel: { viewModel.cancelSplitRest(plan) }
+            )
                 .padding(.vertical, 12)
                 .padding(.horizontal)
                 .background(CardBackground())
@@ -302,11 +306,12 @@ extension CarbEntryView {
     /// One tap applies a favorite. Foods saved with several amounts open a short menu of those
     /// amounts instead, so a "slice" can be logged as a whole, a half or a quarter.
     ///
-    /// The chips wrap onto as many lines as they need rather than scrolling sideways, so every
-    /// favorite is visible and reachable without swiping.
+    /// Only the foods eaten most lately are chips (`FavoriteFoodUsage`); the rest are under
+    /// "Browse all favorites". The chips wrap onto as many lines as they need rather than
+    /// scrolling sideways, and a long name wraps instead of being cut off.
     private var quickPickRow: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 148), spacing: 8)], spacing: 8) {
-            ForEach(viewModel.favoriteFoods) { food in
+            ForEach(viewModel.quickPickFavorites) { food in
                 if food.hasMultiplePortions {
                     Menu {
                         portionMenuItems(for: food)
@@ -435,11 +440,15 @@ struct FavoriteFoodQuickPickChip: View {
                 Text(food.name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.primary)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
 
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption2)
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
             }
 
@@ -456,10 +465,9 @@ struct FavoriteFoodQuickPickChip: View {
                     .foregroundColor(.secondary)
             }
         }
-        .lineLimit(1)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 44, maxHeight: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(isSelected ? carbTintColor.opacity(0.18) : Color(.tertiarySystemFill))
@@ -475,7 +483,7 @@ struct FavoriteFoodQuickPickChip: View {
 }
 
 /// A searchable, folder-grouped list for choosing a favorite food, presented from the carb entry
-/// screen. Foods saved with several amounts list those amounts as their own rows.
+/// screen. Foods saved with several amounts show those amounts only once tapped open.
 struct FavoriteFoodPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.carbTintColor) private var carbTintColor
@@ -488,6 +496,18 @@ struct FavoriteFoodPickerView: View {
     let onSelect: (StoredFavoriteFood?, FavoriteFoodPortion?) -> Void
 
     @State private var searchText = ""
+    /// Foods with several amounts that are tapped open. The selected one starts open.
+    @State private var expandedFoodIDs: Set<String>
+
+    init(sections: [FavoriteFoodSection], selectedFood: StoredFavoriteFood?, selectedPortionID: String?, carbFormatter: QuantityFormatter, absorptionTimeFormatter: DateComponentsFormatter, onSelect: @escaping (StoredFavoriteFood?, FavoriteFoodPortion?) -> Void) {
+        self.sections = sections
+        self.selectedFood = selectedFood
+        self.selectedPortionID = selectedPortionID
+        self.carbFormatter = carbFormatter
+        self.absorptionTimeFormatter = absorptionTimeFormatter
+        self.onSelect = onSelect
+        _expandedFoodIDs = State(initialValue: selectedFood.map { $0.hasMultiplePortions ? [$0.id] : [] } ?? [])
+    }
 
     private var filteredSections: [FavoriteFoodSection] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -522,11 +542,15 @@ struct FavoriteFoodPickerView: View {
                         Section(header: Text(sectionTitle(for: section))) {
                             ForEach(section.foods) { food in
                                 if food.hasMultiplePortions {
-                                    foodHeader(for: food)
+                                    Button(action: { toggleExpanded(food) }) {
+                                        foodHeader(for: food)
+                                    }
 
-                                    ForEach(food.portions) { portion in
-                                        Button(action: { onSelect(food, portion) }) {
-                                            portionRow(for: portion, in: food)
+                                    if expandedFoodIDs.contains(food.id) {
+                                        ForEach(food.portions) { portion in
+                                            Button(action: { onSelect(food, portion) }) {
+                                                portionRow(for: portion, in: food)
+                                            }
                                         }
                                     }
                                 }
@@ -585,9 +609,20 @@ struct FavoriteFoodPickerView: View {
         .contentShape(Rectangle())
     }
 
-    /// Non-tappable row naming a food whose amounts follow it.
+    private func toggleExpanded(_ food: StoredFavoriteFood) {
+        withAnimation {
+            if expandedFoodIDs.contains(food.id) {
+                expandedFoodIDs.remove(food.id)
+            } else {
+                expandedFoodIDs.insert(food.id)
+            }
+        }
+    }
+
+    /// Row naming a food with several amounts; tapping it shows or hides the amounts.
     private func foodHeader(for food: StoredFavoriteFood) -> some View {
-        HStack(spacing: 12) {
+        let isExpanded = expandedFoodIDs.contains(food.id)
+        return HStack(spacing: 12) {
             FavoriteFoodEmojiTile(emoji: food.foodType, tint: carbTintColor, size: 38)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -600,9 +635,23 @@ struct FavoriteFoodPickerView: View {
                     .foregroundColor(.secondary)
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
+
+            if selectedFood == food, !isExpanded {
+                Image(systemName: "checkmark")
+                    .font(.footnote.weight(.bold))
+                    .foregroundColor(.accentColor)
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundColor(Color(UIColor.tertiaryLabel))
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text(isExpanded ? "Hides the sizes" : "Shows the sizes", comment: "Accessibility hint on a favorite food with several sizes in the list of all favorites"))
     }
 
     private func portionRow(for portion: FavoriteFoodPortion, in food: StoredFavoriteFood) -> some View {
@@ -636,6 +685,102 @@ struct FavoriteFoodPickerView: View {
         else {
             return String(localized: "All Favorites", comment: "section header for list of existing FavoriteFoods")
         }
+    }
+}
+
+/// The meal's time: minus and plus move it five minutes, onto the nearest five-minute mark
+/// (18:43 → 18:40 or 18:45), and tapping the time opens a wheel for any time at all.
+struct MealTimeRow: View {
+    @Binding var date: Date
+    @Binding var isFocused: Bool
+
+    let minimumDate: Date
+    let maximumDate: Date
+
+    static let step: TimeInterval = .minutes(5)
+
+    /// `date` moved one step in `direction` (−1 or 1), onto the step's grid, within the limits.
+    static func stepped(_ date: Date, by direction: Int, minimumDate: Date, maximumDate: Date) -> Date {
+        // The minute shown, so seconds never make a step look skipped.
+        let minute = (date.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60
+        let target: TimeInterval
+        if minute.truncatingRemainder(dividingBy: step) == 0 {
+            target = minute + Double(direction) * step
+        } else {
+            target = (minute / step).rounded(direction > 0 ? .up : .down) * step
+        }
+        return min(max(Date(timeIntervalSinceReferenceDate: target), minimumDate), maximumDate)
+    }
+
+    private var canDecrement: Bool {
+        Calendar.current.compare(date, to: minimumDate, toGranularity: .minute) == .orderedDescending
+    }
+
+    private var canIncrement: Bool {
+        Calendar.current.compare(date, to: maximumDate, toGranularity: .minute) == .orderedAscending
+    }
+
+    private var pickerDate: Binding<Date> {
+        Binding(get: { date }, set: { date = min(max($0, minimumDate), maximumDate) })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Time", comment: "Title of the row choosing when a meal was eaten")
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                Button(action: { date = Self.stepped(date, by: -1, minimumDate: minimumDate, maximumDate: maximumDate) }) {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundColor(.accentColor)
+                        .font(.system(size: 24))
+                        .opacity(canDecrement ? 1 : 0.7)
+                }
+                .buttonStyle(.borderless)
+                .disabled(!canDecrement)
+                .accessibilityLabel(Text("5 minutes earlier", comment: "Accessibility label of the button moving a meal's time 5 minutes back"))
+
+                Text(dateString)
+                    .foregroundColor(isFocused ? .accentColor : Color(UIColor.secondaryLabel))
+                    .monospacedDigit()
+
+                Button(action: { date = Self.stepped(date, by: 1, minimumDate: minimumDate, maximumDate: maximumDate) }) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.accentColor)
+                        .font(.system(size: 24))
+                        .opacity(canIncrement ? 1 : 0.7)
+                }
+                .buttonStyle(.borderless)
+                .disabled(!canIncrement)
+                .accessibilityLabel(Text("5 minutes later", comment: "Accessibility label of the button moving a meal's time 5 minutes forward"))
+            }
+
+            if isFocused {
+                DatePicker(selection: pickerDate, in: minimumDate...maximumDate, label: { EmptyView() })
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation {
+                isFocused.toggle()
+            }
+        }
+    }
+
+    private var dateString: String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        if Calendar.current.isDateInToday(date) {
+            formatter.dateStyle = .none
+        } else {
+            formatter.dateStyle = .short
+            formatter.doesRelativeDateFormatting = true
+        }
+        return formatter.string(from: date)
     }
 }
 

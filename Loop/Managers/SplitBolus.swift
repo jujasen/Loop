@@ -34,7 +34,9 @@ struct SplitBolusSettings: Codable, Equatable {
     }
 
     static let nowShareRange: ClosedRange<Double> = 0.4...0.8
-    static let delayRange: ClosedRange<TimeInterval> = .minutes(90) ... .hours(3)
+    /// No real upper limit: the rise after fat can come many hours later (milk at seven, high
+    /// at eleven). Twelve hours only keeps the stepper finite.
+    static let delayRange: ClosedRange<TimeInterval> = .minutes(90) ... .hours(12)
     /// Extra on the rest, on top of its carbs, learned from evenings that still went high.
     static let extraRange: ClosedRange<Double> = 0...0.5
     static let nowShareStep = 0.05
@@ -206,15 +208,18 @@ struct SplitBolusPlan: Codable, Equatable, Identifiable {
 enum SplitBolusPlanner {
     /// The rest waits this long the one time glucose is low or falling when it is due.
     static let postponement = TimeInterval.minutes(30)
-    /// A rest nobody logged is let go this long after it was due.
-    static let restWindow = TimeInterval.hours(2)
+    /// A rest nobody logged is let go this long after it was due, so a rest given late in the
+    /// evening, well after its reminder, still counts.
+    static let restWindow = TimeInterval.hours(6)
     /// No rest with glucose below this.
     static let lowGlucoseMgdl = 90.0 // 5.0 mmol/L
     /// No rest with glucose falling more than this over 15 minutes: 0.1 mmol/L a minute.
     static let fallingMgdlPer15Minutes = -27.0
     static let maximumGlucoseAge = TimeInterval.minutes(15)
-    /// Outcomes are read until this long after the meal.
+    /// Outcomes are read until at least this long after the meal, and three hours after a late rest.
     static let outcomeSpan = TimeInterval.hours(6)
+    /// Glucose is read this long after the rest to see what it did.
+    static let afterRestSpan = TimeInterval.hours(3)
     /// Glucose this far over its low point after eating counts as the rise.
     static let riseMgdl = 27.0 // 1.5 mmol/L
     /// Risen this far over its low point when the rest was logged: the rest came too late.
@@ -513,15 +518,16 @@ enum SplitBolusPlanner {
     /// split called off by hand, or when too few readings cover it.
     static func outcome(of plan: SplitBolusPlan, glucose: [GlucoseValue], calibration: SplitBolusCalibration, settings: SplitBolusSettings, now: Date) -> SplitBolusOutcome? {
         guard [.given, .skipped, .expired].contains(plan.state) else { return nil }
-        let end = plan.mealDate.addingTimeInterval(outcomeSpan)
+        let end = outcomeEnd(of: plan)
         guard now >= end else { return nil }
+        let span = end.timeIntervalSince(plan.mealDate)
 
         let unit = HKUnit.milligramsPerDeciliter
         let window = glucose
             .filter { $0.startDate >= plan.mealDate && $0.startDate <= end }
             .sorted { $0.startDate < $1.startDate }
             .map { (date: $0.startDate, mgdl: $0.quantity.doubleValue(for: unit)) }
-        guard Double(window.count) >= outcomeSpan / .minutes(5) * 0.7 else { return nil }
+        guard Double(window.count) >= span / .minutes(5) * 0.7 else { return nil }
 
         let restDate = plan.state == .given ? (plan.givenAt ?? plan.due) : nil
         let earlyEnd = restDate ?? plan.mealDate.addingTimeInterval(.hours(2))
@@ -531,7 +537,7 @@ enum SplitBolusPlanner {
         var lowestAfter: Double?
         var roseBeforeRest = false
         if let restDate {
-            lowestAfter = window.filter { $0.date >= restDate && $0.date <= restDate.addingTimeInterval(.hours(3)) }.map(\.mgdl).min()
+            lowestAfter = window.filter { $0.date >= restDate && $0.date <= restDate.addingTimeInterval(afterRestSpan) }.map(\.mgdl).min()
             if let atRest = window.min(by: { abs($0.date.timeIntervalSince(restDate)) < abs($1.date.timeIntervalSince(restDate)) }),
                abs(atRest.date.timeIntervalSince(restDate)) <= .minutes(10) {
                 // Measured from where glucose started when it dipped below that, so coming back
@@ -584,6 +590,12 @@ enum SplitBolusPlanner {
             extraBefore: extraBefore,
             extraAfter: clampedExtra(extra)
         )
+    }
+
+    /// When a split's evening is over: six hours after the meal, or three after a late rest.
+    static func outcomeEnd(of plan: SplitBolusPlan) -> Date {
+        let rest = plan.state == .given ? (plan.givenAt ?? plan.due) : plan.due
+        return max(plan.mealDate.addingTimeInterval(outcomeSpan), rest.addingTimeInterval(afterRestSpan))
     }
 
     /// Applies an outcome. Share and delay are only kept as learned once they move, so a change
@@ -712,6 +724,11 @@ final class SplitBolusManager {
         plans.filter { $0.state == .notified }.min { $0.due < $1.due }
     }
 
+    /// The rest to offer first: one that is due, or else the next one ahead.
+    var nextRest: SplitBolusPlan? {
+        dueRest ?? openPlans.first
+    }
+
     /// Splits whose rest is still ahead or due.
     var openPlans: [SplitBolusPlan] {
         plans.filter(\.isOpen).sorted { $0.due < $1.due }
@@ -800,7 +817,9 @@ final class SplitBolusManager {
             return
         }
         let carbStart = current.filter(\.isOpen).map(\.mealDate).min()
-        fetchGlucose(date.addingTimeInterval(-(SplitBolusPlanner.outcomeSpan + .hours(2)))) { result in
+        // Back to the oldest meal still to learn from, which with a late rest can be many hours ago.
+        let glucoseStart = current.filter { !$0.isEvaluated }.map(\.mealDate).min() ?? date
+        fetchGlucose(min(glucoseStart, date.addingTimeInterval(-(SplitBolusPlanner.outcomeSpan + .hours(2))))) { result in
             let glucose: [GlucoseValue]
             switch result {
             case .success(let samples):
@@ -887,7 +906,7 @@ final class SplitBolusManager {
                 log.default("Split bolus for %{public}@ learned: share %.2f → %.2f, delay %.0f → %.0f min, extra %.2f → %.2f",
                             plan.mealDescription, outcome.nowShareBefore, outcome.nowShareAfter,
                             outcome.delayBefore / 60, outcome.delayAfter / 60, outcome.extraBefore, outcome.extraAfter)
-            } else if plan.state == .cancelled || now > plan.mealDate.addingTimeInterval(SplitBolusPlanner.outcomeSpan + .hours(2)) {
+            } else if plan.state == .cancelled || now > SplitBolusPlanner.outcomeEnd(of: plan).addingTimeInterval(.hours(2)) {
                 // Called off, or the readings never covered it well enough to tell.
                 plans[index].isEvaluated = true
             }

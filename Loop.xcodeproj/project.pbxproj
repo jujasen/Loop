@@ -16,6 +16,7 @@
 		FA0040010000000000000001 /* FatProteinBoost.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0040010000000000000002 /* FatProteinBoost.swift */; };
 		FB0050010000000000000001 /* SplitBolus.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0050010000000000000002 /* SplitBolus.swift */; };
 		FB0050010000000000000007 /* SplitBolusNightscout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0050010000000000000008 /* SplitBolusNightscout.swift */; };
+		FB0060010000000000000001 /* FavoriteFoodUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0060010000000000000002 /* FavoriteFoodUsage.swift */; };
 		FB0050010000000000000009 /* SplitBolusNightscoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB005001000000000000000A /* SplitBolusNightscoutTests.swift */; };
 		FB0070030000000000000009 /* PumpDeliveryFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070030000000000000010 /* PumpDeliveryFixtures.swift */; };
 		FB0070030000000000000007 /* PumpDeliveryCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070030000000000000008 /* PumpDeliveryCheckTests.swift */; };
@@ -32,6 +33,7 @@
 		FB0050010000000000000003 /* SplitBolusViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0050010000000000000004 /* SplitBolusViews.swift */; };
 		FA0040010000000000000007 /* FatProteinBoostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0040010000000000000008 /* FatProteinBoostTests.swift */; };
 		FB0050010000000000000005 /* SplitBolusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0050010000000000000006 /* SplitBolusTests.swift */; };
+		FB0060010000000000000003 /* FavoriteFoodUsageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0060010000000000000004 /* FavoriteFoodUsageTests.swift */; };
 		FA0020010000000000000005 /* MealCarbEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0020010000000000000006 /* MealCarbEstimatorTests.swift */; };
 		FA0020010000000000000003 /* MealEstimateCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0020010000000000000004 /* MealEstimateCard.swift */; };
 		FA0020010000000000000001 /* MealCarbEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0020010000000000000002 /* MealCarbEstimator.swift */; };
@@ -811,6 +813,7 @@
 		FA0040010000000000000002 /* FatProteinBoost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatProteinBoost.swift; sourceTree = "<group>"; };
 		FB0050010000000000000002 /* SplitBolus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitBolus.swift; sourceTree = "<group>"; };
 		FB0050010000000000000008 /* SplitBolusNightscout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitBolusNightscout.swift; sourceTree = "<group>"; };
+		FB0060010000000000000002 /* FavoriteFoodUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoriteFoodUsage.swift; sourceTree = "<group>"; };
 		FB005001000000000000000A /* SplitBolusNightscoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitBolusNightscoutTests.swift; sourceTree = "<group>"; };
 		FB0070030000000000000010 /* PumpDeliveryFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpDeliveryFixtures.swift; sourceTree = "<group>"; };
 		FB0070030000000000000008 /* PumpDeliveryCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpDeliveryCheckTests.swift; sourceTree = "<group>"; };
@@ -827,6 +830,7 @@
 		FB0050010000000000000004 /* SplitBolusViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitBolusViews.swift; sourceTree = "<group>"; };
 		FA0040010000000000000008 /* FatProteinBoostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatProteinBoostTests.swift; sourceTree = "<group>"; };
 		FB0050010000000000000006 /* SplitBolusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitBolusTests.swift; sourceTree = "<group>"; };
+		FB0060010000000000000004 /* FavoriteFoodUsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoriteFoodUsageTests.swift; sourceTree = "<group>"; };
 		FA0020010000000000000006 /* MealCarbEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCarbEstimatorTests.swift; sourceTree = "<group>"; };
 		FA0020010000000000000004 /* MealEstimateCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealEstimateCard.swift; sourceTree = "<group>"; };
 		FA0020010000000000000002 /* MealCarbEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCarbEstimator.swift; sourceTree = "<group>"; };
@@ -1653,6 +1657,7 @@
 				FA0020010000000000000006 /* MealCarbEstimatorTests.swift */,
 				FA0040010000000000000008 /* FatProteinBoostTests.swift */,
 				FB0050010000000000000006 /* SplitBolusTests.swift */,
+				FB0060010000000000000004 /* FavoriteFoodUsageTests.swift */,
 				FB005001000000000000000A /* SplitBolusNightscoutTests.swift */,
 				FB0070030000000000000010 /* PumpDeliveryFixtures.swift */,
 				FB0070030000000000000008 /* PumpDeliveryCheckTests.swift */,
@@ -2129,6 +2134,7 @@
 				FA0040010000000000000002 /* FatProteinBoost.swift */,
 				FB0050010000000000000002 /* SplitBolus.swift */,
 				FB0050010000000000000008 /* SplitBolusNightscout.swift */,
+				FB0060010000000000000002 /* FavoriteFoodUsage.swift */,
 				FB0070030000000000000004 /* PumpDeliveryAlert.swift */,
 				FB0070030000000000000002 /* PumpDeliveryCheck.swift */,
 				FA0050010000000000000002 /* OpenAIChat.swift */,
@@ -3588,6 +3594,7 @@
 				FA0040010000000000000001 /* FatProteinBoost.swift in Sources */,
 				FB0050010000000000000001 /* SplitBolus.swift in Sources */,
 				FB0050010000000000000007 /* SplitBolusNightscout.swift in Sources */,
+				FB0060010000000000000001 /* FavoriteFoodUsage.swift in Sources */,
 				FB0070030000000000000005 /* PumpDeliveryAlertViews.swift in Sources */,
 				FB0070030000000000000003 /* PumpDeliveryAlert.swift in Sources */,
 				FB0070030000000000000001 /* PumpDeliveryCheck.swift in Sources */,
@@ -3903,6 +3910,7 @@
 				FA0020010000000000000005 /* MealCarbEstimatorTests.swift in Sources */,
 				FA0040010000000000000007 /* FatProteinBoostTests.swift in Sources */,
 				FB0050010000000000000005 /* SplitBolusTests.swift in Sources */,
+				FB0060010000000000000003 /* FavoriteFoodUsageTests.swift in Sources */,
 				FB0050010000000000000009 /* SplitBolusNightscoutTests.swift in Sources */,
 				FB0070030000000000000009 /* PumpDeliveryFixtures.swift in Sources */,
 				FB0070030000000000000007 /* PumpDeliveryCheckTests.swift in Sources */,

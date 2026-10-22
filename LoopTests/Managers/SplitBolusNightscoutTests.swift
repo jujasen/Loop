@@ -34,7 +34,7 @@ final class SplitBolusNightscoutTests: XCTestCase {
         XCTAssertEqual(document["eventType"] as? String, "Split Bolus Rest")
         XCTAssertEqual(document["created_at"] as? String, iso(milkTime.addingTimeInterval(.hours(2))))
         XCTAssertEqual(document["timestamp"] as? String, document["created_at"] as? String)
-        XCTAssertEqual(document["expiresAt"] as? String, iso(milkTime.addingTimeInterval(.hours(4))))
+        XCTAssertEqual(document["expiresAt"] as? String, iso(milkTime.addingTimeInterval(.hours(8))))
         XCTAssertEqual(document["splitBolusID"] as? String, "p")
         XCTAssertEqual(document["state"] as? String, "waiting")
         XCTAssertEqual(document["restCarbs"] as? Double, 6)
@@ -146,7 +146,8 @@ final class SplitBolusNightscoutTests: XCTestCase {
     func testOnlyARestInsideTheWindowAndNotTakenCounts() {
         let plan = plan(.notified)
         XCTAssertNil(SplitBolusPlanner.loggedRest(for: plan, in: [carb("old", milkRest, after: -10)], claimed: []), "Before the meal: an earlier evening's rest")
-        XCTAssertNil(SplitBolusPlanner.loggedRest(for: plan, in: [carb("late", milkRest, after: 245)], claimed: []), "After the rest was let go")
+        XCTAssertEqual(SplitBolusPlanner.loggedRest(for: plan, in: [carb("late", milkRest, after: 245)], claimed: [])?.id, "late", "Long after the reminder still counts")
+        XCTAssertNil(SplitBolusPlanner.loggedRest(for: plan, in: [carb("later", milkRest, after: 485)], claimed: []), "After the rest was let go")
         XCTAssertNil(SplitBolusPlanner.loggedRest(for: plan, in: [carb("taken", milkRest, after: 125)], claimed: ["taken"]))
         XCTAssertEqual(SplitBolusPlanner.loggedRest(for: plan, in: [carb("early", milkRest, after: 90)], claimed: [])?.id, "early", "Given before it was due still counts")
         var given = plan

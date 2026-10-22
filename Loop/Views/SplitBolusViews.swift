@@ -126,30 +126,55 @@ struct SplitBolusSection: View {
     }
 }
 
-/// A rest that is due, at the top of a new carb entry, or the rest being logged now.
+/// A rest not logged yet, on the home screen and at the top of a new carb entry, or the rest
+/// being logged now. Either way it can be called off from here.
 struct SplitRestCard: View {
     let plan: SplitBolusPlan
     /// `nil` once the rest is filled in.
     var onUse: (() -> Void)?
+    var onCancel: (() -> Void)?
+
+    @State private var showCancelConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(String(format: NSLocalizedString("✂️ Rest of the bolus for %@", comment: "Card title for the rest of a split bolus (1: name of the meal)"), plan.mealDescription))
                 .font(.headline)
+                .fixedSize(horizontal: false, vertical: true)
             Text(detail)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if let onUse {
-                Button(action: onUse) {
-                    Text("Log the Rest", comment: "Button filling the carb entry in with the rest of a split bolus")
-                        .frame(maxWidth: .infinity)
+            HStack(spacing: 10) {
+                if let onUse {
+                    Button(action: onUse) {
+                        Text("Log the Rest", comment: "Button filling the carb entry in with the rest of a split bolus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.carbTintColor)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.carbTintColor)
+                if onCancel != nil {
+                    Button(role: .destructive, action: { showCancelConfirmation = true }) {
+                        Text("Call Off", comment: "Button calling off the rest of a split bolus")
+                            .frame(maxWidth: onUse == nil ? .infinity : nil)
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .confirmationDialog(
+            Text("Call off the rest?", comment: "Title of the confirmation for calling off the rest of a split bolus"),
+            isPresented: $showCancelConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Call Off", comment: "Button calling off the rest of a split bolus"), role: .destructive) {
+                onCancel?()
+            }
+        } message: {
+            Text("No reminder comes, and Loop doses for nothing more of this meal.", comment: "Message of the confirmation for calling off the rest of a split bolus")
+        }
     }
 
     private var detail: String {
@@ -267,7 +292,7 @@ struct SplitBolusSettingsView: View {
         } header: {
             Text("Learned", comment: "Header above what the split bolus has learned")
         } footer: {
-            Text("Six hours after each split Loop looks back. Below 4 mmol/L before the rest: 5 % less now next time. Below 4 after the rest: less extra, or the rest 15 minutes later. Over 10 for more than an hour from 2 to 6 hours after: 10 % extra on the rest. Already 2 mmol/L up when the rest was logged (from the low point, or from the start after a dip): the rest 15 minutes earlier. Share now stays between 40 and 80 %, the rest between 1½ and 3 hours, the extra at most 50 %.", comment: "Footer explaining how the split bolus learns")
+            Text("Six hours after each split Loop looks back. Below 4 mmol/L before the rest: 5 % less now next time. Below 4 after the rest: less extra, or the rest 15 minutes later. Over 10 for more than an hour from 2 to 6 hours after: 10 % extra on the rest. Already 2 mmol/L up when the rest was logged (from the low point, or from the start after a dip): the rest 15 minutes earlier. Share now stays between 40 and 80 %, the rest at least 1½ hours after the meal, the extra at most 50 %.", comment: "Footer explaining how the split bolus learns")
         }
     }
 

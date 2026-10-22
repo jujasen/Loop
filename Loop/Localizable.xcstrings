@@ -1,6 +1,90 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Call off the rest?" : {
+      "comment" : "Title of the confirmation for calling off the rest of a split bolus",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avlyse resten?"
+          }
+        }
+      }
+    },
+    "No reminder comes, and Loop doses for nothing more of this meal." : {
+      "comment" : "Message of the confirmation for calling off the rest of a split bolus",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det kommer ingen påminnelse, og Loop doserer ikke for mer av dette måltidet."
+          }
+        }
+      }
+    },
+    "Time" : {
+      "comment" : "Title of the row choosing when a meal was eaten",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tid"
+          }
+        }
+      }
+    },
+    "5 minutes earlier" : {
+      "comment" : "Accessibility label of the button moving a meal's time 5 minutes back",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 minutter tidligere"
+          }
+        }
+      }
+    },
+    "5 minutes later" : {
+      "comment" : "Accessibility label of the button moving a meal's time 5 minutes forward",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 minutter senere"
+          }
+        }
+      }
+    },
+    "Hides the sizes" : {
+      "comment" : "Accessibility hint on a favorite food with several sizes in the list of all favorites",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skjuler størrelsene"
+          }
+        }
+      }
+    },
+    "Shows the sizes" : {
+      "comment" : "Accessibility hint on a favorite food with several sizes in the list of all favorites",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viser størrelsene"
+          }
+        }
+      }
+    },
     "" : {
 
     },
@@ -45852,13 +45936,13 @@
         }
       }
     },
-    "Six hours after each split Loop looks back. Below 4 mmol/L before the rest: 5 % less now next time. Below 4 after the rest: less extra, or the rest 15 minutes later. Over 10 for more than an hour from 2 to 6 hours after: 10 % extra on the rest. Already 2 mmol/L up when the rest was logged (from the low point, or from the start after a dip): the rest 15 minutes earlier. Share now stays between 40 and 80 %, the rest between 1½ and 3 hours, the extra at most 50 %." : {
+    "Six hours after each split Loop looks back. Below 4 mmol/L before the rest: 5 % less now next time. Below 4 after the rest: less extra, or the rest 15 minutes later. Over 10 for more than an hour from 2 to 6 hours after: 10 % extra on the rest. Already 2 mmol/L up when the rest was logged (from the low point, or from the start after a dip): the rest 15 minutes earlier. Share now stays between 40 and 80 %, the rest at least 1½ hours after the meal, the extra at most 50 %." : {
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seks timer etter hver deling ser Loop tilbake. Under 4 mmol/L før resten: 5 % mindre nå neste gang. Under 4 etter resten: mindre ekstra, eller resten 15 minutter senere. Over 10 i mer enn en time fra 2 til 6 timer etter: 10 % ekstra på resten. Allerede 2 mmol/L opp da resten ble lagt inn (fra bunnen, eller fra start etter en dipp): resten 15 minutter tidligere. Andel nå holdes mellom 40 og 80 %, resten mellom 1½ og 3 timer, ekstra maks 50 %."
+            "value" : "Seks timer etter hver deling ser Loop tilbake. Under 4 mmol/L før resten: 5 % mindre nå neste gang. Under 4 etter resten: mindre ekstra, eller resten 15 minutter senere. Over 10 i mer enn en time fra 2 til 6 timer etter: 10 % ekstra på resten. Allerede 2 mmol/L opp da resten ble lagt inn (fra bunnen, eller fra start etter en dipp): resten 15 minutter tidligere. Andel nå holdes mellom 40 og 80 %, resten minst 1½ time etter måltidet, ekstra maks 50 %."
           }
         }
       }

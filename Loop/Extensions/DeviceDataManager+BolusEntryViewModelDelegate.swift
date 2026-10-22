@@ -24,6 +24,16 @@ extension DeviceDataManager: CarbEntryViewModelDelegate {
             }
         }
     }
+
+    func carbEntries(since start: Date, completion: @escaping ([StoredCarbEntry]) -> Void) {
+        carbStore.getCarbEntries(start: start, end: nil) { result in
+            if case .success(let entries) = result {
+                completion(entries)
+            } else {
+                completion([])
+            }
+        }
+    }
 }
 
 extension DeviceDataManager: BolusEntryViewModelDelegate, ManualDoseViewModelDelegate {

@@ -18,10 +18,18 @@ protocol CarbEntryViewModelDelegate: AnyObject, BolusEntryViewModelDelegate {
     /// Carb entries from the last few hours, so the fat and protein boost can count earlier parts
     /// of the meal.
     func recentCarbEntries(completion: @escaping ([StoredCarbEntry]) -> Void)
+
+    /// Every carb entry the phone still holds from `start` on (about a week), so the favorite
+    /// foods eaten most can be shown first.
+    func carbEntries(since start: Date, completion: @escaping ([StoredCarbEntry]) -> Void)
 }
 
 extension CarbEntryViewModelDelegate {
     func recentCarbEntries(completion: @escaping ([StoredCarbEntry]) -> Void) {
+        completion([])
+    }
+
+    func carbEntries(since start: Date, completion: @escaping ([StoredCarbEntry]) -> Void) {
         completion([])
     }
 }
@@ -93,6 +101,9 @@ final class CarbEntryViewModel: ObservableObject {
     }
     
     @Published var favoriteFoods = UserDefaults.standard.favoriteFoods
+    /// The favorite foods eaten most lately, shown as chips on the screen; all of them are under
+    /// "Browse all favorites".
+    @Published private(set) var quickPickFavorites: [StoredFavoriteFood] = []
 
     /// What the fat and protein boost would do for this meal, or `nil` without any carbs yet.
     @Published private(set) var fatProteinBoost: FatProteinBoostPreview?
@@ -112,8 +123,8 @@ final class CarbEntryViewModel: ObservableObject {
     @Published private(set) var splitBolus: SplitBolusSuggestion?
     /// The split whose rest this entry logs, when opened from its notification or card.
     @Published private(set) var splitRestPlan: SplitBolusPlan?
-    /// A rest that is due and not logged yet, offered on a new entry's screen.
-    @Published private(set) var dueSplitRest: SplitBolusPlan?
+    /// A rest not logged yet, offered on a new entry's screen: the one due first.
+    @Published private(set) var openSplitRest: SplitBolusPlan?
     @Published var favoriteFoodFolders = UserDefaults.standard.favoriteFoodFolders
     @Published var selectedFavoriteFoodIndex = -1
     /// `id` of the amount applied from the selected favorite food, for foods that have several.
@@ -154,6 +165,7 @@ final class CarbEntryViewModel: ObservableObject {
         
         observeAbsorptionTimeChange()
         observeFavoriteFoodChange()
+        observeFavoriteFoodUsage()
         observeLoopUpdates()
         observeFatProteinInputs()
         observeSplitBolusInputs()
@@ -388,6 +400,31 @@ final class CarbEntryViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
+    private func observeFavoriteFoodUsage() {
+        $favoriteFoods
+            .removeDuplicates()
+            .sink { [weak self] favorites in
+                self?.quickPickFavorites = FavoriteFoodUsage.mostUsed(favorites, log: UserDefaults.standard.favoriteFoodUsage, now: Date())
+            }
+            .store(in: &cancellables)
+
+        // The week of entries on the phone goes into the longer log, then the order is worked out again.
+        delegate?.carbEntries(since: Date().addingTimeInterval(-FavoriteFoodUsage.window)) { [weak self] entries in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                let now = Date()
+                let log = FavoriteFoodUsage.recording(
+                    entries.map { FavoriteFoodUsage.LoggedEntry(foodType: $0.foodType, date: $0.startDate) },
+                    favorites: self.favoriteFoods,
+                    into: UserDefaults.standard.favoriteFoodUsage,
+                    now: now
+                )
+                UserDefaults.standard.favoriteFoodUsage = log
+                self.quickPickFavorites = FavoriteFoodUsage.mostUsed(self.favoriteFoods, log: log, now: now)
+            }
+        }
+    }
+
     private func applyClearedFavoriteFood() {
         self.absorptionEditIsProgrammatic = true
         self.carbsQuantity = 0
@@ -504,15 +541,26 @@ final class CarbEntryViewModel: ObservableObject {
         }
     }
 
-    private func updateDueSplitRest() {
-        dueSplitRest = originalCarbEntry == nil && splitRestPlan == nil ? SplitBolusManager.current?.dueRest : nil
+    private func updateOpenSplitRest() {
+        openSplitRest = originalCarbEntry == nil && splitRestPlan == nil ? SplitBolusManager.current?.nextRest : nil
+    }
+
+    /// Calls a rest off, from its card on this screen.
+    func cancelSplitRest(_ plan: SplitBolusPlan) {
+        SplitBolusManager.current?.cancel(planID: plan.id)
+        if splitRestPlan?.id == plan.id {
+            // The entry held the rest: empty it, so it is not logged by mistake after all.
+            splitRestPlan = nil
+            selectFavoriteFood(nil)
+        }
+        updateOpenSplitRest()
     }
 
     private func observeSplitBolusInputs() {
-        updateDueSplitRest()
+        updateOpenSplitRest()
         NotificationCenter.default.publisher(for: .splitBolusDidChange)
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.updateDueSplitRest() }
+            .sink { [weak self] _ in self?.updateOpenSplitRest() }
             .store(in: &cancellables)
 
         Publishers.CombineLatest4($time, $carbsQuantity, $foodName, $foodType)
@@ -527,7 +575,7 @@ final class CarbEntryViewModel: ObservableObject {
         let entry = plan.laterEntry(at: Date())
         splitRestPlan = plan
         isSplitBolusOn = false
-        dueSplitRest = nil
+        openSplitRest = nil
         selectedFavoriteFoodIndex = -1
         selectedPortionID = nil
         absorptionEditIsProgrammatic = true

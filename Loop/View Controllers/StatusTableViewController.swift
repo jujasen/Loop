@@ -55,6 +55,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         tableView.register(AlertPermissionsDisabledWarningCell.self, forCellReuseIdentifier: AlertPermissionsDisabledWarningCell.className)
         tableView.register(MuteAlertsWarningCell.self, forCellReuseIdentifier: MuteAlertsWarningCell.className)
         tableView.register(BolusRecoveryBannerCell.self, forCellReuseIdentifier: BolusRecoveryBannerCell.className)
+        tableView.register(SplitRestCell.self, forCellReuseIdentifier: SplitRestCell.className)
         tableView.register(ChartDetailsHeaderCell.self, forCellReuseIdentifier: ChartDetailsHeaderCell.className)
         tableView.register(ChartDetailsNavigationCell.self, forCellReuseIdentifier: ChartDetailsNavigationCell.className)
 
@@ -158,6 +159,22 @@ final class StatusTableViewController: LoopChartsTableViewController {
             }
             .store(in: &cancellables)
 
+        // Rests of split boluses still to come, the way LoopFollow shows them.
+        splitRestPlans = SplitBolusManager.current?.openPlans ?? []
+        notificationCenter.publisher(for: .splitBolusDidChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                let plans = SplitBolusManager.current?.openPlans ?? []
+                guard plans != self.splitRestPlans else { return }
+                // Snapshot and reload in the same turn, as for `bolusRecoveryAttempt`.
+                self.splitRestPlans = plans
+                guard self.isViewLoaded else { return }
+                self.tableView.reloadSections(IndexSet(integer: Section.splitRest.rawValue), with: .automatic)
+                self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
+                self.updateScrollEnabled()
+            }
+            .store(in: &cancellables)
 
         alertMuter.$configuration
             .removeDuplicates()
@@ -816,6 +833,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case alertWarning
         case hud
         case status
+        /// Rests of split boluses not logged yet, each with a way to log it or call it off.
+        case splitRest
         case charts
         /// Outcome of the last manual bolus, shown while it is in flight and after it failed.
         /// Last on purpose: it sits under the statistics rather than pushing the glucose chart
@@ -880,6 +899,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
     private static let detailsHeaderRowHeight: CGFloat = 44
     private static let statusRowEstimatedHeight: CGFloat = 54
     private static let bannerRowEstimatedHeight: CGFloat = 74
+    private static let splitRestRowEstimatedHeight: CGFloat = 132
 
     /// Rows whose content is text grow with the text size chosen in iOS Settings, so a
     /// larger setting makes the row taller instead of clipping what is in it. The main
@@ -1046,6 +1066,10 @@ final class StatusTableViewController: LoopChartsTableViewController {
     /// is the one that crashes). This only changes in the same turn as the reload that
     /// tells the table about it, so the data source and the table never disagree.
     private var bolusRecoveryAttempt: ManualBolusRecovery.Attempt?
+
+    /// Split boluses whose rest is still to come. A snapshot for the same reason as
+    /// `bolusRecoveryAttempt`: it only changes together with a reload of its section.
+    private var splitRestPlans: [SplitBolusPlan] = []
 
     private var shouldShowBannerWarning: Bool {
         alertPermissionsChecker.showWarning || alertMuter.configuration.shouldMute
@@ -1253,6 +1277,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         switch Section(rawValue: section)! {
         case .bolusRecovery:
             return bolusRecoveryAttempt != nil ? 1 : 0
+        case .splitRest:
+            return splitRestPlans.count
         case .alertWarning:
             return shouldShowBannerWarning ? 1 : 0
         case .hud:
@@ -1491,6 +1517,39 @@ final class StatusTableViewController: LoopChartsTableViewController {
         }
     }
 
+    /// A rest of a split bolus not logged yet. The card's own buttons log it or call it off.
+    private class SplitRestCell: UITableViewCell {
+        func configure(plan: SplitBolusPlan, onUse: @escaping () -> Void, onCancel: @escaping () -> Void) {
+            selectionStyle = .none
+            backgroundColor = .clear
+            if #available(iOS 16.0, *) {
+                contentConfiguration = UIHostingConfiguration {
+                    SplitRestCard(plan: plan, onUse: onUse, onCancel: onCancel)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal)
+                        .background(CardBackground())
+                }
+                .margins(.horizontal, 10)
+                .margins(.vertical, 4)
+            } else {
+                var content = defaultContentConfiguration()
+                content.text = String(format: NSLocalizedString("✂️ Rest of the bolus for %@", comment: "Card title for the rest of a split bolus (1: name of the meal)"), plan.mealDescription)
+                content.secondaryText = String(format: NSLocalizedString("Planned for %1$@: %2$@", comment: "When and how much the rest of a split bolus is (1: time)(2: carbs)"), FatProteinBoostPlanner.time(plan.due), SplitBolusPlanner.grams(plan.laterCarbs))
+                contentConfiguration = content
+            }
+        }
+    }
+
+    private func logSplitRest(_ plan: SplitBolusPlan) {
+        let activity = NSUserActivity.forNewCarbEntry()
+        activity.addUserInfoEntries(from: [SplitBolusManager.planIDUserInfoKey: plan.id])
+        presentCarbEntryScreen(activity)
+    }
+
+    private func cancelSplitRest(_ plan: SplitBolusPlan) {
+        SplitBolusManager.current?.cancel(planID: plan.id)
+    }
+
     /// Retries only the insulin. The carbs were saved before the bolus was requested, so this
     /// never routes back to the meal screen — that route is what doubled people's carb entries.
     private func bolusRecoveryBannerTapped() {
@@ -1534,6 +1593,15 @@ final class StatusTableViewController: LoopChartsTableViewController {
             let cell = tableView.dequeueReusableCell(withIdentifier: BolusRecoveryBannerCell.className, for: indexPath) as! BolusRecoveryBannerCell
             cell.attempt = bolusRecoveryAttempt
             cell.setNeedsUpdateConfiguration()
+            return cell
+        case .splitRest:
+            let cell = tableView.dequeueReusableCell(withIdentifier: SplitRestCell.className, for: indexPath) as! SplitRestCell
+            let plan = splitRestPlans[indexPath.row]
+            cell.configure(
+                plan: plan,
+                onUse: { [weak self] in self?.logSplitRest(plan) },
+                onCancel: { [weak self] in self?.cancelSplitRest(plan) }
+            )
             return cell
         case .alertWarning:
             if alertPermissionsChecker.showWarning {
@@ -1775,7 +1843,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     cell.setSubtitleLabel(label: nil)
                 }
             }
-        case .hud, .status, .alertWarning, .bolusRecovery:
+        case .hud, .status, .alertWarning, .bolusRecovery, .splitRest:
             break
         }
     }
@@ -1815,6 +1883,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 if let attempt = bolusRecoveryAttempt {
                     remaining -= BolusRecoveryBannerCell.estimatedHeight(for: attempt, width: tableView.bounds.width)
                 }
+                remaining -= CGFloat(splitRestPlans.count) * UIFontMetrics(forTextStyle: .body).scaledValue(for: Self.splitRestRowEstimatedHeight)
                 for row in visibleChartRows where row != .glucose {
                     remaining -= fixedChartRowHeight(row)
                 }
@@ -1824,7 +1893,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             case .iob, .dose, .cob:
                 return max(106, 0.21 * availableSize)
             }
-        case .hud, .status, .alertWarning, .bolusRecovery:
+        case .hud, .status, .alertWarning, .bolusRecovery, .splitRest:
             return UITableView.automaticDimension
         }
     }
@@ -1834,6 +1903,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case .bolusRecovery:
             tableView.deselectRow(at: indexPath, animated: true)
             bolusRecoveryBannerTapped()
+        case .splitRest:
+            tableView.deselectRow(at: indexPath, animated: true)
         case .alertWarning:
             if alertPermissionsChecker.showWarning {
                 tableView.deselectRow(at: indexPath, animated: true)

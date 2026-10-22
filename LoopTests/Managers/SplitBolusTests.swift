@@ -103,7 +103,10 @@ final class SplitBolusPlannerTests: XCTestCase {
     func testValuesStayWithinTheirLimits() {
         let split = suggestion(share: 0.95, delay: .hours(5))
         XCTAssertEqual(split.nowShare, 0.8)
-        XCTAssertEqual(split.delay, .hours(3))
+        // No real upper limit on the rest: five hours stays five hours.
+        XCTAssertEqual(split.delay, .hours(5))
+        XCTAssertEqual(suggestion(delay: .hours(30)).delay, .hours(12))
+        XCTAssertEqual(suggestion(delay: .minutes(20)).delay, .minutes(90))
     }
 
     func testTheRestIsItsOwnFood() {
@@ -191,7 +194,9 @@ final class SplitBolusPlannerTests: XCTestCase {
     }
 
     func testAnUnloggedRestExpires() {
-        let now = milkTime.addingTimeInterval(.hours(4) + .minutes(1))
+        let stillOpen = milkTime.addingTimeInterval(.hours(7))
+        XCTAssertEqual(SplitBolusPlanner.decide(plan(.notified), glucose: [], now: stillOpen), .wait)
+        let now = milkTime.addingTimeInterval(.hours(8) + .minutes(1))
         XCTAssertEqual(SplitBolusPlanner.decide(plan(.notified), glucose: [], now: now), .expire)
         XCTAssertEqual(SplitBolusPlanner.decide(plan(.given), glucose: [], now: now), .wait)
     }
@@ -200,6 +205,19 @@ final class SplitBolusPlannerTests: XCTestCase {
 
     private func outcome(_ plan: SplitBolusPlan, calibration: SplitBolusCalibration = SplitBolusCalibration(), _ value: (Double) -> Double) -> SplitBolusOutcome? {
         SplitBolusPlanner.outcome(of: plan, glucose: evening(from: milkTime, value), calibration: calibration, settings: settings, now: milkTime.addingTimeInterval(.hours(6) + .minutes(5)))
+    }
+
+    func testALateRestIsLearnedFromThreeHoursAfterIt() {
+        var late = plan(.given, givenAfter: .hours(5))
+        late.delay = .hours(5)
+        late.due = milkTime.addingTimeInterval(.hours(5))
+        let glucose = readings(stride(from: 0.0, through: 480, by: 5).map { $0 >= 300 && $0 <= 330 ? 3.8 : 7 }, from: milkTime)
+        XCTAssertEqual(SplitBolusPlanner.outcomeEnd(of: late), milkTime.addingTimeInterval(.hours(8)))
+        XCTAssertNil(SplitBolusPlanner.outcome(of: late, glucose: glucose, calibration: SplitBolusCalibration(), settings: settings, now: milkTime.addingTimeInterval(.hours(7))))
+        let result = SplitBolusPlanner.outcome(of: late, glucose: glucose, calibration: SplitBolusCalibration(), settings: settings, now: milkTime.addingTimeInterval(.hours(8) + .minutes(5)))!
+        // Low after the late rest: the rest goes another 15 minutes later, past the old 3-hour limit.
+        XCTAssertEqual(result.lowestAfterRestMgdl!, 3.8 * 18.0182, accuracy: 0.5)
+        XCTAssertEqual(result.delayAfter, .minutes(315))
     }
 
     func testNothingIsLearnedBeforeSixHours() {
