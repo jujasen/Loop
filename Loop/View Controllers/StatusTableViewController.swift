@@ -2165,6 +2165,10 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 
                 Task { @MainActor in
                     await viewModel.generateRecommendationAndStartObserving()
+                    // Starting to observe clears the entered bolus; the suggestion's dose goes in after.
+                    if let mealWatchSuggestion {
+                        viewModel.updateEnteredBolus(mealWatchSuggestion.units)
+                    }
                 }
                 
                 viewModel.analyticsServicesManager = deviceManager.analyticsServicesManager
