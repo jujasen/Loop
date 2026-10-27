@@ -20,6 +20,7 @@
 		FB0070030000000000000005 /* PumpDeliveryAlertViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070030000000000000006 /* PumpDeliveryAlertViews.swift */; };
 		FB0070030000000000000003 /* PumpDeliveryAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070030000000000000004 /* PumpDeliveryAlert.swift */; };
 		FB0070030000000000000001 /* PumpDeliveryCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070030000000000000002 /* PumpDeliveryCheck.swift */; };
+		FB0070010000000000000101 /* LoopNow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070010000000000000102 /* LoopNow.swift */; };
 		FA0050010000000000000001 /* AIChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000002 /* AIChat.swift */; };
 		FA0050010000000000000003 /* AIDoseAdvisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000004 /* AIDoseAdvisor.swift */; };
 		FA0050010000000000000005 /* BolusEntryViewModel+AIDoseAdvice.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000006 /* BolusEntryViewModel+AIDoseAdvice.swift */; };
@@ -813,6 +814,7 @@
 		FB0070030000000000000006 /* PumpDeliveryAlertViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpDeliveryAlertViews.swift; sourceTree = "<group>"; };
 		FB0070030000000000000004 /* PumpDeliveryAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpDeliveryAlert.swift; sourceTree = "<group>"; };
 		FB0070030000000000000002 /* PumpDeliveryCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpDeliveryCheck.swift; sourceTree = "<group>"; };
+		FB0070010000000000000102 /* LoopNow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopNow.swift; sourceTree = "<group>"; };
 		FA0050010000000000000002 /* AIChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChat.swift; sourceTree = "<group>"; };
 		FA0050010000000000000004 /* AIDoseAdvisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIDoseAdvisor.swift; sourceTree = "<group>"; };
 		FA0050010000000000000006 /* BolusEntryViewModel+AIDoseAdvice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BolusEntryViewModel+AIDoseAdvice.swift"; sourceTree = "<group>"; };
@@ -2125,6 +2127,7 @@
 				FB0060010000000000000002 /* FavoriteFoodUsage.swift */,
 				FB0070030000000000000004 /* PumpDeliveryAlert.swift */,
 				FB0070030000000000000002 /* PumpDeliveryCheck.swift */,
+				FB0070010000000000000102 /* LoopNow.swift */,
 				FA0050010000000000000002 /* AIChat.swift */,
 				FA0050010000000000000004 /* AIDoseAdvisor.swift */,
 				FA0060010000000000000002 /* GlucoseInsight.swift */,
@@ -3583,6 +3586,7 @@
 				FB0070030000000000000005 /* PumpDeliveryAlertViews.swift in Sources */,
 				FB0070030000000000000003 /* PumpDeliveryAlert.swift in Sources */,
 				FB0070030000000000000001 /* PumpDeliveryCheck.swift in Sources */,
+				FB0070010000000000000101 /* LoopNow.swift in Sources */,
 				FA0050010000000000000001 /* AIChat.swift in Sources */,
 				FA0050010000000000000003 /* AIDoseAdvisor.swift in Sources */,
 				FA0060010000000000000001 /* GlucoseInsight.swift in Sources */,

@@ -1,30 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Call off the rest?" : {
-      "comment" : "Title of the confirmation for calling off the rest of a split bolus",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avlyse resten?"
-          }
-        }
-      }
-    },
-    "No reminder comes, and Loop doses for nothing more of this meal." : {
-      "comment" : "Message of the confirmation for calling off the rest of a split bolus",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Det kommer ingen påminnelse, og Loop doserer ikke for mer av dette måltidet."
-          }
-        }
-      }
-    },
     "Time" : {
       "comment" : "Title of the row choosing when a meal was eaten",
       "extractionState" : "manual",
@@ -3505,17 +3481,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fjern bilde"
-          }
-        }
-      }
-    },
-    "Rest of split bolus %1$@ · %2$@" : {
-      "comment" : "Nightscout note for the waiting rest of a split bolus (1: carbs)(2: name of the meal)",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rest av delt bolus %1$@ · %2$@"
           }
         }
       }
@@ -44356,7 +44321,7 @@
       }
     },
     "Now" : {
-      "comment" : "Header above the running and waiting fat and protein boosts",
+      "comment" : "Header of the situation now in the glucose insight",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
@@ -45135,102 +45100,6 @@
         }
       }
     },
-    "Days 8–%d" : {
-      "comment" : "Glucose insight: the days before the last seven (1: days kept)",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dag 8–%d"
-          }
-        }
-      }
-    },
-    "09–15 weekday / weekend" : {
-      "comment" : "Glucose insight: daytime on weekdays against weekends",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "09–15 hverdag / helg"
-          }
-        }
-      }
-    },
-    "The Weeks Behind" : {
-      "comment" : "Header of the long-term section in the glucose insight",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Siste uker"
-          }
-        }
-      }
-    },
-    "Parts of the Day" : {
-      "comment" : "Header of the parts of the day in the glucose insight",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tider på døgnet"
-          }
-        }
-      }
-    },
-    "Loop 2 h: how far glucose ended above (+) or below (−) Loop's forecast two hours on. Meals: only those without extra carbs, corrections or treated lows." : {
-      "comment" : "Footer explaining the parts of the day in the glucose insight",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loop 2 t: hvor mye blodsukkeret endte over (+) eller under (−) Loops prognose to timer fram. Måltider: bare de uten ekstra karbo, korreksjon eller behandlet føling."
-          }
-        }
-      }
-    },
-    "Shown / used" : {
-      "comment" : "Glucose insight: AI doses shown and used",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vist / brukt"
-          }
-        }
-      }
-    },
-    "Low after a used AI dose" : {
-      "comment" : "Glucose insight: lows within four hours of a used AI dose",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Føling etter brukt AI-dose"
-          }
-        }
-      }
-    },
-    "AI Doses" : {
-      "comment" : "Header of the AI dose outcomes in the glucose insight",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI-doser"
-          }
-        }
-      }
-    },
     "Update Now" : {
       "comment" : "Button updating the glucose insight",
       "extractionState" : "manual",
@@ -45518,17 +45387,6 @@
         }
       }
     },
-    "(rest)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "(resten)"
-          }
-        }
-      }
-    },
     "%1$@ now · %2$@ at %3$@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -45584,17 +45442,6 @@
         }
       }
     },
-    "✂️ Rest of the bolus: %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✂️ Resten av bolusen: %@"
-          }
-        }
-      }
-    },
     "%1$@ carbs, about %2$@. Tap to log it and bolus." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -45617,17 +45464,6 @@
         }
       }
     },
-    "✂️ Rest of the bolus waits: %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✂️ Resten av bolusen venter: %@"
-          }
-        }
-      }
-    },
     "Glucose %1$@ is low or falling. Checking again at %2$@." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -45635,61 +45471,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "BS %1$@ er lav eller faller. Sjekker igjen kl. %2$@."
-          }
-        }
-      }
-    },
-    "✂️ No rest of the bolus: %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✂️ Ingen rest-bolus: %@"
-          }
-        }
-      }
-    },
-    "Glucose %@ is still low or falling, so the rest is skipped this time." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "BS %@ er fortsatt lav eller faller, så resten hoppes over denne gangen."
-          }
-        }
-      }
-    },
-    "✂️ Split: %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✂️ Delt: %@"
-          }
-        }
-      }
-    },
-    ", rest about %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ", resten ca. %@"
-          }
-        }
-      }
-    },
-    "✂️ Rest of the split bolus for %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✂️ Resten av delt bolus for %@"
           }
         }
       }
@@ -45705,28 +45486,6 @@
         }
       }
     },
-    "Split Bolus" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Del opp bolus"
-          }
-        }
-      }
-    },
-    "Enter the carbs to see the split." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skriv inn karbo for å se delingen."
-          }
-        }
-      }
-    },
     "Share Now" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -45738,17 +45497,6 @@
         }
       }
     },
-    "Rest After" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resten etter"
-          }
-        }
-      }
-    },
     "≈ %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -45756,83 +45504,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "≈ %@"
-          }
-        }
-      }
-    },
-    "Time learned from earlier splits." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidspunktet er lært fra tidligere delinger."
-          }
-        }
-      }
-    },
-    "Time from earlier servings in Nightscout: the rest half an hour before the usual rise." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidspunkt fra tidligere ganger i Nightscout: resten en halvtime før stigningen pleier å komme."
-          }
-        }
-      }
-    },
-    "Fat in the meal gives a late rise, so the rest comes 2 hours after." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fett i måltidet gir sen stigning, så resten kommer 2 timer etter."
-          }
-        }
-      }
-    },
-    "The rest has %@ extra, learned from evenings that stayed high." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resten har %@ ekstra, lært fra kvelder som ble høye."
-          }
-        }
-      }
-    },
-    "Loop doses only for the part now. When the rest is due you get a notification; with glucose below 5 or falling it waits half an hour, once." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loop doserer bare for delen nå. Når resten skal gis kommer et varsel; er BS under 5 eller fallende venter den en halvtime, én gang."
-          }
-        }
-      }
-    },
-    "✂️ Rest of the bolus for %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✂️ Resten av bolusen for %@"
-          }
-        }
-      }
-    },
-    "Log the Rest" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Legg inn resten"
           }
         }
       }
@@ -45914,17 +45585,6 @@
         }
       }
     },
-    "Swipe to call a rest off." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sveip for å avlyse en rest."
-          }
-        }
-      }
-    },
     "Start Values" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -45958,39 +45618,6 @@
         }
       }
     },
-    "Extra on the Rest" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ekstra på resten"
-          }
-        }
-      }
-    },
-    "Six hours after each split Loop looks back. Below 4 mmol/L before the rest: 5 % less now next time. Below 4 after the rest: less extra, or the rest 15 minutes later. Over 10 for more than an hour from 2 to 6 hours after: 10 % extra on the rest. Already 2 mmol/L up when the rest was logged (from the low point, or from the start after a dip): the rest 15 minutes earlier. Share now stays between 40 and 80 %, the rest at least 1½ hours after the meal, the extra at most 50 %." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seks timer etter hver deling ser Loop tilbake. Under 4 mmol/L før resten: 5 % mindre nå neste gang. Under 4 etter resten: mindre ekstra, eller resten 15 minutter senere. Over 10 i mer enn en time fra 2 til 6 timer etter: 10 % ekstra på resten. Allerede 2 mmol/L opp da resten ble lagt inn (fra bunnen, eller fra start etter en dipp): resten 15 minutter tidligere. Andel nå holdes mellom 40 og 80 %, resten minst 1½ time etter måltidet, ekstra maks 50 %."
-          }
-        }
-      }
-    },
-    "lowest before the rest %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "lavest før resten %@"
-          }
-        }
-      }
-    },
     "after %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -46002,17 +45629,6 @@
         }
       }
     },
-    "no rest" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ingen rest"
-          }
-        }
-      }
-    },
     "%@ over 10" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -46020,17 +45636,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ over 10"
-          }
-        }
-      }
-    },
-    "now %1$@ → %2$@, rest %3$@ → %4$@, extra %5$@ → %6$@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "nå %1$@ → %2$@, resten %3$@ → %4$@, ekstra %5$@ → %6$@"
           }
         }
       }
@@ -46079,13 +45684,134 @@
         }
       }
     },
-    "Part now, the rest later" : {
+    "Stop estimate" : {
+      "comment" : "Button label stopping the AI meal estimate so the description can be corrected",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "En del nå, resten senere"
+            "value" : "Stopp beregningen"
+          }
+        }
+      }
+    },
+    "The AI looks at the situation every half hour from 06:00." : {
+      "comment" : "Shown before the AI has written about the situation now",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-en ser på situasjonen hver halvtime fra kl. 06."
+          }
+        }
+      }
+    },
+    "This Week" : {
+      "comment" : "Header of the week section in the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne uka"
+          }
+        }
+      }
+    },
+    "The AI looks at the week each night after 04:00." : {
+      "comment" : "Shown before the AI has written about the week",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-en ser på uka hver natt etter kl. 04."
+          }
+        }
+      }
+    },
+    "Suggested Settings" : {
+      "comment" : "Header of the suggested therapy settings changes in the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forslag til innstillinger"
+          }
+        }
+      }
+    },
+    "Only patterns seen on at least three days. Talk it over with the diabetes team before changing anything." : {
+      "comment" : "Footer of the suggested therapy settings changes in the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bare mønstre som er sett minst tre dager. Snakk med diabetesteamet før du endrer noe."
+          }
+        }
+      }
+    },
+    "Show Details" : {
+      "comment" : "Disclosure for the details behind the glucose insight",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vis detaljer"
+          }
+        }
+      }
+    },
+    "AI doses shown / used" : {
+      "comment" : "Glucose insight: AI doses shown and used",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-doser vist / brukt"
+          }
+        }
+      }
+    },
+    "Carb ratio" : {
+      "comment" : "Glucose insight suggestion: carb ratio",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Karbofaktor"
+          }
+        }
+      }
+    },
+    "Insulin sensitivity" : {
+      "comment" : "Glucose insight suggestion: insulin sensitivity",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insulinfølsomhet"
+          }
+        }
+      }
+    },
+    "Basal rate" : {
+      "comment" : "Glucose insight suggestion: basal rate",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basal"
           }
         }
       }

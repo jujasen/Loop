@@ -73,7 +73,7 @@ final class GlucoseInsightManager: ObservableObject {
         }
         let attempts = defaults.glucoseInsightAttempts.on(now)
         let forceToday = force && aiEnabled
-            && now.timeIntervalSince(status.todayText?.createdAt ?? .distantPast) >= .minutes(30)
+            && now.timeIntervalSince(status.todayText?.createdAt ?? .distantPast) >= .minutes(10)
             && attempts.fast < GlucoseInsightSchedule.maximumFastCallsPerDay
             && GlucoseInsightSchedule.todayHours.contains(Calendar.current.component(.hour, from: now))
         guard due.data || due.longTermText || due.todayText || forceToday else { return }
@@ -125,9 +125,10 @@ final class GlucoseInsightManager: ObservableObject {
         }
 
         if aiDue.todayText || forceToday, let today = status.today {
-            defaults.glucoseInsightAttempts.record(.fast, at: now)
+            defaults.glucoseInsightAttempts.record(.quick, at: now)
             do {
-                status.todayText = try await writer.today(today, longTerm: status.longTerm, longTermText: status.longTermText, therapy: therapy, childProfile: profile, now: now)
+                let loopNow = await LoopNow.current()
+                status.todayText = try await writer.today(today, now: loopNow, longTerm: status.longTerm, longTermText: status.longTermText, therapy: therapy, childProfile: profile, now: now)
                 status.lastError = nil
             } catch {
                 log.error("Today's insight failed: %{public}@", String(describing: error))
@@ -182,15 +183,16 @@ enum GlucoseInsightSchedule {
 
     /// Nightscout is read again after this long.
     static let dataInterval: TimeInterval = .minutes(30)
-    /// The longest a day's text is kept before something new happens.
-    static let todayTextInterval: TimeInterval = .minutes(45)
+    /// Today's text, with the situation right now, is written again this often through the day.
+    static let todayTextInterval: TimeInterval = .minutes(30)
     /// The night's look at the weeks behind is written after this hour.
     static let nightlyHour = 4
     /// The fast model writes about today between these hours.
     static let todayHours = 6..<23
     /// The most calls a day for the insight; the dose advice is not counted here.
     static let maximumDeepCallsPerDay = 2
-    static let maximumFastCallsPerDay = 8
+    /// Today's text goes to the cheapest model (`AIChat.Tier.quick`), so it can be written often.
+    static let maximumFastCallsPerDay = 40
     /// After a failed call, the next try waits this long.
     static let retryInterval: TimeInterval = .minutes(30)
 
@@ -222,8 +224,8 @@ enum GlucoseInsightSchedule {
             due.longTermText = true
         }
 
-        // Today's text: first thing in the morning, and when a meal is over or after a low.
-        if let today = status.today,
+        // Today's text: first thing in the morning, then every half hour so "now" stays current.
+        if status.today != nil,
            todayHours.contains(calendar.component(.hour, from: now)),
            attempts.fast < maximumFastCallsPerDay,
            now.timeIntervalSince(attempts.lastFast ?? .distantPast) >= retryInterval {
@@ -231,12 +233,7 @@ enum GlucoseInsightSchedule {
             if written < calendar.startOfDay(for: now) {
                 due.todayText = true
             } else if now.timeIntervalSince(written) >= todayTextInterval {
-                let mealOver = today.meals.contains { meal in
-                    let over = meal.date.addingTimeInterval(.hours(3))
-                    return over > written && over <= now
-                }
-                let low = today.lowEpisodeStarts.contains { $0 > written }
-                due.todayText = mealOver || low
+                due.todayText = true
             }
         }
         return due
@@ -262,6 +259,7 @@ struct GlucoseInsightTherapy: Encodable, Equatable {
     var daypart: String
     var carbRatioGramsPerUnit: Double?
     var insulinSensitivityMmolPerUnit: Double?
+    var basalRateUnitsPerHour: Double?
     var targetMmol: [Double]?
 
     static func dayparts(_ settings: LoopSettings?, on date: Date, calendar: Calendar = .current) -> [GlucoseInsightTherapy] {
@@ -274,6 +272,7 @@ struct GlucoseInsightTherapy: Encodable, Equatable {
                 daypart: part.name,
                 carbRatioGramsPerUnit: settings.carbRatioSchedule?.value(at: middle),
                 insulinSensitivityMmolPerUnit: settings.insulinSensitivitySchedule.map { GlucoseInsight.round1($0.quantity(at: middle).doubleValue(for: .millimolesPerLiter)) },
+                basalRateUnitsPerHour: settings.basalRateSchedule.map { ($0.value(at: middle) * 100).rounded() / 100 },
                 targetMmol: target.map { [GlucoseInsight.round1($0.lowerBound.doubleValue(for: .millimolesPerLiter)), GlucoseInsight.round1($0.upperBound.doubleValue(for: .millimolesPerLiter))] }
             )
         }
@@ -321,7 +320,7 @@ extension UserDefaults {
 
 // MARK: - Writing the texts
 
-/// Asks the model what the numbers mean.
+/// Asks the model what the numbers mean, in as few words as will do.
 struct GlucoseInsightWriter {
     let chat: AIChat
 
@@ -334,17 +333,19 @@ struct GlucoseInsightWriter {
             var today: GlucoseInsightToday?
         }
         let input = Input(localTime: Self.localTime(now), childProfile: childProfile, therapy: therapy, longTerm: longTerm, today: today)
-        let body = try Self.requestBody(system: Self.longTermPrompt, input: input, reasoning: "high")
-        return try Self.parse(try await chat.send(body, timeout: 300, tier: .deep), now: now)
+        let body = try Self.requestBody(system: Self.longTermPrompt, input: input, reasoning: "high", schema: Self.longTermSchema)
+        var text = try Self.parseLongTerm(try await chat.send(body, timeout: 300, tier: .deep), now: now)
+        text.suggestions = GlucoseInsight.validSuggestions(text.suggestions ?? [], patterns: longTerm.patterns ?? [], therapy: therapy)
+        return text
     }
 
-    func today(_ today: GlucoseInsightToday, longTerm: GlucoseInsightLongTerm?, longTermText: GlucoseInsightText?, therapy: [GlucoseInsightTherapy], childProfile: String, now: Date) async throws -> GlucoseInsightText {
+    func today(_ today: GlucoseInsightToday, now loop: LoopNow?, longTerm: GlucoseInsightLongTerm?, longTermText: GlucoseInsightText?, therapy: [GlucoseInsightTherapy], childProfile: String, now: Date) async throws -> GlucoseInsightText {
         struct Input: Encodable {
             var localTime: String
             var childProfile: String
             var therapy: [GlucoseInsightTherapy]
-            var longTermSummary: String?
-            var longTermPoints: [String]
+            var now: LoopNow?
+            var weekSummary: String?
             var longTermDoseHints: [String]
             var dayparts: [GlucoseInsightDaypart]
             var today: GlucoseInsightToday
@@ -353,14 +354,14 @@ struct GlucoseInsightWriter {
             localTime: Self.localTime(now),
             childProfile: childProfile,
             therapy: therapy,
-            longTermSummary: longTermText?.summary,
-            longTermPoints: longTermText?.points ?? [],
+            now: loop,
+            weekSummary: longTermText?.summary,
             longTermDoseHints: longTermText?.doseHints ?? [],
             dayparts: longTerm?.dayparts ?? [],
             today: today
         )
-        let body = try Self.requestBody(system: Self.todayPrompt, input: input, reasoning: "medium")
-        return try Self.parse(try await chat.send(body, timeout: 120, tier: .quick), now: now)
+        let body = try Self.requestBody(system: Self.todayPrompt, input: input, reasoning: "low", schema: Self.todaySchema)
+        return try Self.parseToday(try await chat.send(body, timeout: 120, tier: .quick), now: now)
     }
 
     static func localTime(_ date: Date) -> String {
@@ -381,7 +382,7 @@ struct GlucoseInsightWriter {
         return encoder
     }
 
-    static func requestBody<T: Encodable>(system: String, input: T, reasoning: String) throws -> [String: Any] {
+    static func requestBody<T: Encodable>(system: String, input: T, reasoning: String, schema: [String: Any]) throws -> [String: Any] {
         let json = String(data: try encoder().encode(input), encoding: .utf8) ?? "{}"
         return [
             "reasoning_effort": reasoning,
@@ -400,7 +401,7 @@ struct GlucoseInsightWriter {
         ]
     }
 
-    static func parse(_ data: Data, now: Date) throws -> GlucoseInsightText {
+    private static func content(of data: Data) throws -> Data {
         struct Completion: Decodable {
             struct Choice: Decodable {
                 struct Message: Decodable { var content: String? }
@@ -408,64 +409,135 @@ struct GlucoseInsightWriter {
             }
             var choices: [Choice]
         }
-        struct Answer: Decodable {
-            var summary: String
-            var points: [String]
-            var dose_hints: [String]
-        }
-        guard let content = (try? JSONDecoder().decode(Completion.self, from: data))?.choices.first?.message.content?.data(using: .utf8),
-              let answer = try? JSONDecoder().decode(Answer.self, from: content)
-        else {
+        guard let content = (try? JSONDecoder().decode(Completion.self, from: data))?.choices.first?.message.content?.data(using: .utf8) else {
             throw AIDoseAdvisor.AdviceError.unreadableResponse
         }
-        return GlucoseInsightText(summary: answer.summary, points: answer.points, doseHints: answer.dose_hints, createdAt: now)
+        return content
     }
 
-    private static let schema: [String: Any] = [
+    static func parseToday(_ data: Data, now: Date) throws -> GlucoseInsightText {
+        struct Answer: Decodable {
+            var now: String
+            var action: String
+            var today: String
+            var dose_hints: [String]
+        }
+        guard let answer = try? JSONDecoder().decode(Answer.self, from: try content(of: data)) else {
+            throw AIDoseAdvisor.AdviceError.unreadableResponse
+        }
+        let action = answer.action.trimmingCharacters(in: .whitespacesAndNewlines)
+        return GlucoseInsightText(
+            summary: answer.today,
+            points: [],
+            doseHints: answer.dose_hints,
+            createdAt: now,
+            now: answer.now,
+            action: action.isEmpty ? nil : action
+        )
+    }
+
+    static func parseLongTerm(_ data: Data, now: Date) throws -> GlucoseInsightText {
+        struct Answer: Decodable {
+            struct Suggestion: Decodable {
+                var setting: GlucoseInsightSuggestion.Setting
+                var daypart: String
+                var current: Double
+                var proposed: Double
+                var reason: String
+            }
+            var week: String
+            var points: [String]
+            var dose_hints: [String]
+            var suggestions: [Suggestion]
+        }
+        guard let answer = try? JSONDecoder().decode(Answer.self, from: try content(of: data)) else {
+            throw AIDoseAdvisor.AdviceError.unreadableResponse
+        }
+        return GlucoseInsightText(
+            summary: answer.week,
+            points: answer.points,
+            doseHints: answer.dose_hints,
+            createdAt: now,
+            suggestions: answer.suggestions.map {
+                GlucoseInsightSuggestion(setting: $0.setting, daypart: $0.daypart, startHour: 0, endHour: 0, current: $0.current, proposed: $0.proposed, reason: $0.reason, evidenceDays: 0)
+            }
+        )
+    }
+
+    private static let strings: [String: Any] = ["type": "array", "items": ["type": "string"]]
+
+    static let todaySchema: [String: Any] = [
         "type": "object",
         "additionalProperties": false,
-        "required": ["summary", "points", "dose_hints"],
+        "required": ["now", "action", "today", "dose_hints"],
         "properties": [
-            "summary": ["type": "string"],
-            "points": ["type": "array", "items": ["type": "string"]] as [String: Any],
-            "dose_hints": ["type": "array", "items": ["type": "string"]] as [String: Any],
+            "now": ["type": "string"],
+            "action": ["type": "string"],
+            "today": ["type": "string"],
+            "dose_hints": strings,
+        ] as [String: Any],
+    ]
+
+    static let longTermSchema: [String: Any] = [
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["week", "points", "dose_hints", "suggestions"],
+        "properties": [
+            "week": ["type": "string"],
+            "points": strings,
+            "dose_hints": strings,
+            "suggestions": [
+                "type": "array",
+                "items": [
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["setting", "daypart", "current", "proposed", "reason"],
+                    "properties": [
+                        "setting": ["type": "string", "enum": GlucoseInsightSuggestion.Setting.allCases.map(\.rawValue)] as [String: Any],
+                        "daypart": ["type": "string", "enum": GlucoseInsight.dayparts.map(\.name)] as [String: Any],
+                        "current": ["type": "number"],
+                        "proposed": ["type": "number"],
+                        "reason": ["type": "string"],
+                    ] as [String: Any],
+                ] as [String: Any],
+            ] as [String: Any],
         ] as [String: Any],
     ]
 
     static let commonRules = """
         Tallene er regnet ut i appen og er riktige; ikke regn dem om, og ikke finn på tall som ikke står der. Blodsukker er i mmol/L, målområdet 3,9–10.
         - loop_forecast_error: faktisk minus Loops prognose (median). Positivt betyr at Loop spår for lavt der og trenger mer insulin enn den tror; negativt at den spår for høyt.
-        - Måltider med flags (extra_carbs, correction, treated_low, started_low) er forstyrret og teller ikke i mønstrene; clean_meals er de rene.
-        - median_grams_per_unit er karbo per enhet måltidsbolus i rene måltider; sammenlign med karboratioen i therapy.
-        - Siste 7 dager veier tyngre enn de 30 når de spriker: barnet vokser, og sykdom og pod-bytter endrer ting.
-        - Et lite barn er svært følsomt for insulin; føling er farligere enn et forbigående høyt blodsukker. Si fra om alt som tyder på føling.
-        - Vær konkret og kort, på norsk. Ingen generelle råd om diabetes; bare det disse tallene viser. Si det når grunnlaget er tynt (få måltider eller målinger).
+        - Måltider med flags (extra_carbs, correction, treated_low, started_low) er forstyrret og teller ikke i mønstrene.
+        - Et lite barn er svært følsomt for insulin; føling er farligere enn et forbigående høyt blodsukker.
+        - Skriv på norsk, kort og rett på sak, som en erfaren diabetessykepleier som sender en melding til en travel forelder. Ingen innledning, ingen forbehold, ingen generelle diabetesråd. Bruk tall bare når de sier noe.
         """
 
     static let longTermPrompt = """
-        Du lager en oversikt over blodsukkeret til et lite barn med type 1-diabetes som bruker Loop (automatisk insulin, Omnipod DASH). Oversikten lagres og leses senere av en annen modell som foreslår bolusdoser, og av omsorgspersonen i appen.
+        Du ser på blodsukkeret til et lite barn med type 1-diabetes som bruker Loop (automatisk insulin, Omnipod DASH). Omsorgspersonen leser det du skriver på telefonen, og en annen modell bruker dose_hints når den foreslår bolus.
 
-        Du får de siste ukene ferdig regnet ut: tid i mål per del av døgnet (siste 7 og 30 dager), hvor mye Loops prognose bommer per del av døgnet, hvordan måltidene gikk, hverdag mot helg på dagtid, hvordan AI-dosene som ble vist gikk, terapiinnstillingene og det omsorgspersonen har skrevet om barnet.
+        Du får de siste ukene ferdig regnet ut, terapiinnstillingene per del av døgnet (therapy) og patterns: hvor mange dager de siste to ukene hver del av døgnet gikk likt (høyt etter måltid, lavt etter måltid, lave, høye dager, stigende/fallende netter).
 
         \(commonRules)
 
         Svar med:
-        - summary: 2–3 setninger om hvordan det går og det viktigste mønsteret.
-        - points: 3–6 korte funn, hvert med tid på døgnet og tallene det bygger på (for eksempel «Kveld 19–24: Loop spår 3,8 for lavt etter 2 t; 4 av 6 rene middager over 10 etter 3 t»).
-        - dose_hints: 2–5 konkrete hint for bolus per del av døgnet eller mattype, slik en som skal foreslå en dose kan bruke dem (for eksempel «Frokost: rene måltider ender ofte lavt – ikke mer enn Loop»). Ingen hint uten grunnlag i tallene.
+        - week: hvordan uka har vært, i én eller to korte setninger (maks 30 ord). Det viktigste først.
+        - points: 0–3 korte funn (maks 15 ord hver) som er verdt å vite, med tid på døgnet.
+        - dose_hints: 0–4 korte hint for bolus per del av døgnet eller mattype.
+        - suggestions: endringer i terapiinnstillingene, bare når patterns viser samme mønster minst 3 dager. setting er carb_ratio (g/E; lavere tall gir mer insulin), insulin_sensitivity (mmol/L per E; lavere tall gir mer insulin) eller basal_rate (E/t). current er dagens verdi fra therapy for den delen av døgnet, proposed den nye (maks 20 % endring, helst 10 %). reason: én setning med mønsteret og antall dager. Foreslå heller færre enn flere, og aldri mer insulin der det har vært føling. Tom liste når ingenting holder.
         """
 
     static let todayPrompt = """
-        Du skriver en kort status for i dag om blodsukkeret til et lite barn med type 1-diabetes som bruker Loop (automatisk insulin, Omnipod DASH). Den leses av omsorgspersonen i appen og av en modell som foreslår bolusdoser resten av dagen.
+        Du skriver en kort status om blodsukkeret til et lite barn med type 1-diabetes som bruker Loop (automatisk insulin, Omnipod DASH). Omsorgspersonen ser den på telefonen flere ganger om dagen.
 
-        Du får dagens tall (tid i mål så langt, lave perioder, timer over 10, dagens måltider og hvordan de gikk, hvor mye Loop bommer i dag mot vanlig for de samme timene), mønstrene fra de siste ukene og oversikten som ble skrevet i natt.
+        Du får situasjonen akkurat nå fra Loop (now: blodsukker, endring siste 15 min, insulin og karbo om bord, Loops prognose og hva Loop ville anbefalt i bolus), dagens tall, mønstrene fra de siste ukene og oppsummeringen av uka.
 
         \(commonRules)
-        - forecast_deviation_mmol: dagens prognosefeil minus den vanlige. Over +1 betyr at barnet trenger mer insulin enn vanlig i dag (for eksempel sykdom); under −1 mindre (for eksempel mye aktivitet).
+        - forecast_deviation_mmol i today: dagens prognosefeil minus den vanlige. Over +1 betyr at barnet trenger mer insulin enn vanlig i dag; under −1 mindre.
 
         Svar med:
-        - summary: 1–2 setninger om hvordan dagen går og om den skiller seg fra vanlig.
-        - points: 0–4 korte funn fra i dag.
-        - dose_hints: 0–3 hint for resten av dagen (for eksempel «Mer følsom enn vanlig i dag – to lave etter lunsj; vurder litt mindre til middag»). Tom liste når dagen er som vanlig.
+        - now: situasjonen akkurat nå i én setning (maks 20 ord), for eksempel «7,8 og flatt, 0,6 E om bord – Loop ser stabilt ut de neste to timene.»
+        - action: én kort setning om hva omsorgspersonen bør gjøre nå, bare når noe faktisk bør gjøres (for eksempel «Gi 10 g raske karbo – Loop spår 3,6 om 40 min.» eller «Vurder korrigering – 13 og stigende 2 t etter middag, Loop anbefaler 0,4 E.»). Tom tekst når alt er greit. Aldri insulin når blodsukkeret er under 5 eller faller.
+        - today: dagen så langt i én setning (maks 25 ord), og om den skiller seg fra vanlig.
+        - dose_hints: 0–2 hint for resten av dagen. Tom liste når dagen er som vanlig.
         """
 }

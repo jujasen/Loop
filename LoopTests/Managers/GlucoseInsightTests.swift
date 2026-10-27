@@ -236,23 +236,20 @@ final class GlucoseInsightTests: XCTestCase {
         XCTAssertFalse(GlucoseInsightSchedule.dueWork(status: status(dataAt: monday(4, 20), longTermTextAt: written, now: monday(4, 20)), attempts: failed, aiEnabled: true, lastDataAttempt: nil, now: monday(4, 20), calendar: calendar).longTermText, "a retry waits half an hour")
     }
 
-    func testTodaysTextIsWrittenInTheMorningAndWhenAMealIsOverOrAfterALow() {
+    func testTodaysTextIsWrittenInTheMorningAndThenEveryHalfHour() {
         let attempts = GlucoseInsightAttempts()
         func due(_ status: GlucoseInsightStatus, _ now: Date, _ attempts: GlucoseInsightAttempts = GlucoseInsightAttempts()) -> Bool {
             GlucoseInsightSchedule.dueWork(status: status, attempts: attempts, aiEnabled: true, lastDataAttempt: nil, now: now, calendar: calendar).todayText
         }
         XCTAssertFalse(due(status(dataAt: monday(5), longTermTextAt: monday(4, 5), now: monday(5)), monday(5)), "not before 06")
         XCTAssertTrue(due(status(dataAt: monday(6, 5), longTermTextAt: monday(4, 5), todayTextAt: monday(21, dayOffset: -1), now: monday(6, 5)), monday(6, 5)))
-        XCTAssertFalse(due(status(dataAt: monday(10), longTermTextAt: monday(4, 5), todayTextAt: monday(7), now: monday(10)), monday(10)), "nothing new since")
-
-        let breakfast = GlucoseInsightMeal(date: monday(7, 30), daypart: "morgen 06-09", carbsGrams: 20, foods: [], bolusUnits: 1, automaticUnitsWithin3h: 0, startMmol: nil, peakMmol: nil, after2hMmol: nil, after3hMmol: nil, lowestWithin4hMmol: nil, flags: [])
-        XCTAssertTrue(due(status(dataAt: monday(10, 40), longTermTextAt: monday(4, 5), todayTextAt: monday(7), meals: [breakfast], now: monday(10, 40)), monday(10, 40)), "breakfast is three hours behind")
-        XCTAssertTrue(due(status(dataAt: monday(9), longTermTextAt: monday(4, 5), todayTextAt: monday(7), lows: [monday(8, 30)], now: monday(9)), monday(9)), "a low since")
-        XCTAssertFalse(due(status(dataAt: monday(7, 30), longTermTextAt: monday(4, 5), todayTextAt: monday(7), lows: [monday(7, 20)], now: monday(7, 30)), monday(7, 30)), "not within 45 minutes of the last")
+        XCTAssertFalse(due(status(dataAt: monday(7, 20), longTermTextAt: monday(4, 5), todayTextAt: monday(7), now: monday(7, 20)), monday(7, 20)), "not within half an hour of the last")
+        XCTAssertTrue(due(status(dataAt: monday(7, 30), longTermTextAt: monday(4, 5), todayTextAt: monday(7), now: monday(7, 30)), monday(7, 30)), "half an hour on, for the situation now")
+        XCTAssertFalse(due(status(dataAt: monday(23, 10), longTermTextAt: monday(4, 5), todayTextAt: monday(22, 30), now: monday(23, 10)), monday(23, 10)), "not after 23")
 
         var spent = attempts
-        for hour in 6..<14 { spent.record(.fast, at: monday(hour), calendar: calendar) }
-        XCTAssertFalse(due(status(dataAt: monday(15), longTermTextAt: monday(4, 5), todayTextAt: monday(7), lows: [monday(14)], now: monday(15)), monday(15), spent), "eight a day at most")
+        for half in 0..<GlucoseInsightSchedule.maximumFastCallsPerDay { spent.record(.quick, at: monday(6).addingTimeInterval(.minutes(Double(half) * 20)), calendar: calendar) }
+        XCTAssertFalse(due(status(dataAt: monday(22), longTermTextAt: monday(4, 5), todayTextAt: monday(7), now: monday(22)), monday(22), spent), "a ceiling a day")
     }
 
     func testAttemptsStartAgainEachDay() {
@@ -342,15 +339,62 @@ final class GlucoseInsightTests: XCTestCase {
     // MARK: Writing the texts
 
     func testTextRequestsUseTheRightEffortAndAnswersAreRead() throws {
-        let body = try GlucoseInsightWriter.requestBody(system: GlucoseInsightWriter.todayPrompt, input: ["a": 1], reasoning: "medium")
-        XCTAssertEqual(body["reasoning_effort"] as? String, "medium")
+        let body = try GlucoseInsightWriter.requestBody(system: GlucoseInsightWriter.todayPrompt, input: ["a": 1], reasoning: "low", schema: GlucoseInsightWriter.todaySchema)
+        XCTAssertEqual(body["reasoning_effort"] as? String, "low")
         XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: body))
 
-        let answer = #"{"summary":"Rolig dag.","points":["Frokost gikk fint"],"dose_hints":[]}"#
+        let answer = #"{"now":"7,8 og flatt.","action":"","today":"Rolig dag.","dose_hints":[]}"#
         let completion = try JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": answer]]]])
-        let text = try GlucoseInsightWriter.parse(completion, now: monday(12))
+        let text = try GlucoseInsightWriter.parseToday(completion, now: monday(12))
+        XCTAssertEqual(text.now, "7,8 og flatt.")
+        XCTAssertNil(text.action, "an empty action is no action")
         XCTAssertEqual(text.summary, "Rolig dag.")
-        XCTAssertEqual(text.points, ["Frokost gikk fint"])
         XCTAssertEqual(text.createdAt, monday(12))
+
+        let week = #"{"week":"Bra uke.","points":["Kveld høy"],"dose_hints":[],"suggestions":[{"setting":"carb_ratio","daypart":"kveld 19-24","current":15,"proposed":13.5,"reason":"Høy etter middag 4 dager."}]}"#
+        let long = try GlucoseInsightWriter.parseLongTerm(JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": week]]]]), now: monday(4))
+        XCTAssertEqual(long.summary, "Bra uke.")
+        XCTAssertEqual(long.suggestions?.first?.setting, .carbRatio)
+        XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: GlucoseInsightWriter.longTermSchema))
+    }
+
+    // MARK: Patterns and suggestions
+
+    func testNightsThatRiseWithoutCarbsAreCounted() {
+        var glucose: [NightscoutGlucoseReading] = []
+        for night in 0..<4 {
+            // Midnight 6 mmol/L rising to 10 by 05:30.
+            glucose += readings(from: monday(0, dayOffset: -night), hours: 6) { minute in 6 + Double(minute) / 360 * 4.4 }
+        }
+        // One of them had a late snack, so it does not count.
+        let snack = carbs(10, at: monday(23, dayOffset: -4))
+        let patterns = GlucoseInsight.patterns(glucose: glucose, treatments: [snack], meals: [], calendar: calendar)
+        let night = patterns.first { $0.daypart == "natt 00-06" }
+        XCTAssertEqual(night?.daysWithData, 4)
+        XCTAssertEqual(night?.risingNights, 3)
+        XCTAssertEqual(night?.fallingNights, 0)
+    }
+
+    func testSuggestionsNeedThreeDaysInTheirDirectionAndStayWithinAFifth() {
+        let therapy = [GlucoseInsightTherapy(daypart: "kveld 19-24", carbRatioGramsPerUnit: 15, insulinSensitivityMmolPerUnit: 14, basalRateUnitsPerHour: 0.2, targetMmol: nil)]
+        func pattern(high: Int, lowAfter: Int, lows: Int) -> [GlucoseInsightPattern] {
+            [GlucoseInsightPattern(daypart: "kveld 19-24", daysWithData: 7, highAfterMealDays: high, lowAfterMealDays: lowAfter, lowDays: lows, highDays: 0, risingNights: nil, fallingNights: nil)]
+        }
+        let stronger = GlucoseInsightSuggestion(setting: .carbRatio, daypart: "kveld 19-24", startHour: 0, endHour: 0, current: 18, proposed: 10, reason: "", evidenceDays: 0)
+
+        let kept = GlucoseInsight.validSuggestions([stronger], patterns: pattern(high: 4, lowAfter: 0, lows: 0), therapy: therapy)
+        XCTAssertEqual(kept.count, 1)
+        XCTAssertEqual(kept.first?.current, 15, "from the setting as it is, not the model's number")
+        XCTAssertEqual(kept.first?.proposed, 12, "no more than a fifth")
+        XCTAssertEqual(kept.first?.startHour, 19)
+        XCTAssertEqual(kept.first?.endHour, 24)
+        XCTAssertEqual(kept.first?.evidenceDays, 4)
+
+        XCTAssertTrue(GlucoseInsight.validSuggestions([stronger], patterns: pattern(high: 2, lowAfter: 0, lows: 0), therapy: therapy).isEmpty, "two days are not a pattern")
+        XCTAssertTrue(GlucoseInsight.validSuggestions([stronger], patterns: pattern(high: 5, lowAfter: 2, lows: 0), therapy: therapy).isEmpty, "never more insulin where there have been lows after meals")
+
+        let weaker = GlucoseInsightSuggestion(setting: .insulinSensitivity, daypart: "kveld 19-24", startHour: 0, endHour: 0, current: 14, proposed: 15.5, reason: "", evidenceDays: 0)
+        XCTAssertEqual(GlucoseInsight.validSuggestions([weaker], patterns: pattern(high: 0, lowAfter: 0, lows: 3), therapy: therapy).first?.proposed, 15.5)
+        XCTAssertTrue(GlucoseInsight.validSuggestions([weaker], patterns: pattern(high: 4, lowAfter: 0, lows: 1), therapy: therapy).isEmpty, "less insulin needs lows behind it")
     }
 }

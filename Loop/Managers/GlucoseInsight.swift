@@ -96,7 +96,53 @@ struct GlucoseInsightLongTerm: Codable, Equatable {
     /// Finished meals, newest last.
     var meals: [GlucoseInsightMeal]
     var advice: [GlucoseInsightAdvice]
+    /// How many of the last two weeks' days showed each pattern, per part of the day; what a
+    /// suggested settings change must rest on (see `GlucoseInsight.validSuggestions`).
+    var patterns: [GlucoseInsightPattern]?
     var computedAt: Date
+}
+
+/// Days in the last two weeks on which a part of the day went the same way.
+struct GlucoseInsightPattern: Codable, Equatable {
+    var daypart: String
+    /// Days with enough readings in this part of the day to count.
+    var daysWithData: Int
+    /// Days with a clean meal still over 10 mmol/L three hours on.
+    var highAfterMealDays: Int
+    /// Days with a clean meal followed by a low within four hours.
+    var lowAfterMealDays: Int
+    /// Days with a low (two readings under 3.9 in a row).
+    var lowDays: Int
+    /// Days whose mean in this part of the day was over 10.
+    var highDays: Int
+    /// Night only: nights without carbs that rose, or fell, 2.5 mmol/L or more from 00:30 to 05:30.
+    var risingNights: Int?
+    var fallingNights: Int?
+}
+
+/// A change to the therapy settings the AI suggests, kept only when the pattern behind it was
+/// seen on at least `GlucoseInsight.minimumPatternDays` days.
+struct GlucoseInsightSuggestion: Codable, Hashable {
+    enum Setting: String, Codable, CaseIterable {
+        case carbRatio = "carb_ratio"
+        case insulinSensitivity = "insulin_sensitivity"
+        case basalRate = "basal_rate"
+    }
+
+    var setting: Setting
+    var daypart: String
+    var startHour: Int
+    var endHour: Int
+    var current: Double
+    var proposed: Double
+    var reason: String
+    /// The days the pattern behind it was seen on, in the last two weeks.
+    var evidenceDays: Int
+
+    /// More insulin than now: a lower carb ratio or sensitivity, or a higher basal rate.
+    var givesMoreInsulin: Bool {
+        setting == .basalRate ? proposed > current : proposed < current
+    }
 }
 
 struct GlucoseInsightToday: Codable, Equatable {
@@ -115,13 +161,20 @@ struct GlucoseInsightToday: Codable, Equatable {
 
 /// What the model made of the numbers.
 struct GlucoseInsightText: Codable, Equatable {
+    /// The day so far in today's text, the week in the nightly one: one or two short sentences.
     var summary: String
     var points: [String]
     var doseHints: [String]
     var createdAt: Date
+    /// Today's text only: the situation right now, in one sentence.
+    var now: String?
+    /// Today's text only: what to do now, when something needs doing.
+    var action: String?
+    /// The nightly text only: settings changes backed by a pattern of at least three days.
+    var suggestions: [GlucoseInsightSuggestion]?
 
     enum CodingKeys: String, CodingKey {
-        case summary, points
+        case summary, points, now, action, suggestions
         case doseHints = "dose_hints"
         case createdAt = "created_at"
     }
@@ -369,6 +422,14 @@ enum GlucoseInsight {
             )
         }
 
+        let patternStart = max(start, now.addingTimeInterval(-.hours(24 * 14)))
+        let patterns = Self.patterns(
+            glucose: glucose.filter { $0.date >= patternStart },
+            treatments: treatments.filter { $0.date >= patternStart },
+            meals: meals.filter { $0.date >= patternStart },
+            calendar: calendar
+        )
+
         return GlucoseInsightLongTerm(
             days: days,
             last7Days: period(glucose.filter { $0.date >= weekStart }),
@@ -380,8 +441,117 @@ enum GlucoseInsight {
             averageDailyBolusUnits: round1(treatments.filter { !$0.isAutomatic }.compactMap(\.insulin).reduce(0, +) / Double(days)),
             meals: Array(meals.suffix(maximumMeals)),
             advice: adviceOutcomes,
+            patterns: patterns,
             computedAt: now
         )
+    }
+
+    // MARK: Patterns and suggestions
+
+    /// A settings change is only suggested on a pattern seen this many days.
+    static let minimumPatternDays = 3
+    /// The most a suggestion may change a setting, as a share of it.
+    static let maximumSuggestedChange = 0.2
+
+    static func patterns(glucose: [NightscoutGlucoseReading], treatments: [NightscoutTreatment], meals: [GlucoseInsightMeal], calendar: Calendar) -> [GlucoseInsightPattern] {
+        func day(_ date: Date) -> Date { calendar.startOfDay(for: date) }
+        func hour(_ date: Date) -> Int { calendar.component(.hour, from: date) }
+
+        return dayparts.map { part in
+            let inPart = glucose.filter { part.hours.contains(hour($0.date)) }
+            let byDay = Dictionary(grouping: inPart) { day($0.date) }
+            // At least a third of the part's readings (one every five minutes).
+            let enough = byDay.filter { $0.value.count >= part.hours.count * 4 }
+            let clean = meals.filter { $0.daypart == part.name && $0.isClean }
+            let highAfterMeal = Set(clean.filter { ($0.after3hMmol ?? 0) > 10 }.map { day($0.date) })
+            let lowAfterMeal = Set(clean.filter { ($0.lowestWithin4hMmol ?? 99) < 3.9 }.map { day($0.date) })
+            let lowDays = Set(lowEpisodeStarts(inPart).map(day))
+            let highDays = enough.filter { $0.value.map(\.mgdl).reduce(0, +) / Double($0.value.count) > rangeMgdl.upperBound }
+
+            var rising: Int?
+            var falling: Int?
+            if part.hours.lowerBound == 0 {
+                var up = 0
+                var down = 0
+                for night in enough.keys {
+                    // Carbs from 21:00 the evening before still move the night.
+                    let quietFrom = night.addingTimeInterval(-.hours(3))
+                    let quietTo = night.addingTimeInterval(.hours(6))
+                    guard !treatments.contains(where: { ($0.carbs ?? 0) > 0 && $0.date >= quietFrom && $0.date < quietTo }),
+                          let start = reading(near: night.addingTimeInterval(.minutes(30)), in: glucose),
+                          let end = reading(near: night.addingTimeInterval(.minutes(330)), in: glucose)
+                    else { continue }
+                    let change = mmol(end) - mmol(start)
+                    if change >= 2.5 { up += 1 }
+                    if change <= -2.5 { down += 1 }
+                }
+                rising = up
+                falling = down
+            }
+
+            return GlucoseInsightPattern(
+                daypart: part.name,
+                daysWithData: enough.count,
+                highAfterMealDays: highAfterMeal.count,
+                lowAfterMealDays: lowAfterMeal.count,
+                lowDays: lowDays.count,
+                highDays: highDays.count,
+                risingNights: rising,
+                fallingNights: falling
+            )
+        }
+    }
+
+    /// The AI's suggestions that the patterns bear out: in the direction the days show, at least
+    /// `minimumPatternDays` of them, from the setting as it is now and by no more than a fifth.
+    /// Anything else is dropped, so a suggestion never rests on the model's word alone.
+    static func validSuggestions(_ suggestions: [GlucoseInsightSuggestion], patterns: [GlucoseInsightPattern], therapy: [GlucoseInsightTherapy]) -> [GlucoseInsightSuggestion] {
+        suggestions.compactMap { suggestion in
+            guard let pattern = patterns.first(where: { $0.daypart == suggestion.daypart }),
+                  let settings = therapy.first(where: { $0.daypart == suggestion.daypart }),
+                  let part = dayparts.first(where: { $0.name == suggestion.daypart })
+            else { return nil }
+
+            let current: Double?
+            switch suggestion.setting {
+            case .carbRatio: current = settings.carbRatioGramsPerUnit
+            case .insulinSensitivity: current = settings.insulinSensitivityMmolPerUnit
+            case .basalRate: current = settings.basalRateUnitsPerHour
+            }
+            guard let current, current > 0, suggestion.proposed > 0, suggestion.proposed != current else { return nil }
+
+            var result = suggestion
+            result.current = current
+            result.startHour = part.hours.lowerBound
+            result.endHour = part.hours.upperBound
+            let limit = current * maximumSuggestedChange
+            let proposed = min(max(suggestion.proposed, current - limit), current + limit)
+            switch suggestion.setting {
+            case .carbRatio: result.proposed = (proposed * 2).rounded() / 2
+            case .insulinSensitivity: result.proposed = round1(proposed)
+            case .basalRate: result.proposed = (proposed * 20).rounded() / 20
+            }
+            guard result.proposed != current else { return nil }
+
+            let evidence: Int
+            switch (suggestion.setting, result.givesMoreInsulin) {
+            case (.carbRatio, true):
+                evidence = pattern.lowAfterMealDays <= 1 ? pattern.highAfterMealDays : 0
+            case (.carbRatio, false):
+                evidence = pattern.lowAfterMealDays
+            case (.insulinSensitivity, true):
+                evidence = pattern.lowDays <= 1 ? max(pattern.highAfterMealDays, pattern.highDays, pattern.risingNights ?? 0) : 0
+            case (.insulinSensitivity, false):
+                evidence = pattern.lowDays
+            case (.basalRate, true):
+                evidence = pattern.lowDays <= 1 ? max(pattern.risingNights ?? 0, pattern.highDays) : 0
+            case (.basalRate, false):
+                evidence = max(pattern.fallingNights ?? 0, pattern.lowDays)
+            }
+            guard evidence >= minimumPatternDays else { return nil }
+            result.evidenceDays = evidence
+            return result
+        }
     }
 
     static func today(history: NightscoutHistory, now: Date, calendar: Calendar = .current) -> GlucoseInsightToday {

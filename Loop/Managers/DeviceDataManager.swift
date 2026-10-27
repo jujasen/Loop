@@ -467,6 +467,7 @@ final class DeviceDataManager {
         Task { @MainActor in
             GlucoseInsightManager.shared.start(settings: { loopManager.settings })
         }
+        LoopNow.provider = { [weak self] in await self?.loopNow() }
 
         watchManager = WatchDataManager(deviceManager: self, healthStore: healthStore)
 
@@ -624,6 +625,44 @@ final class DeviceDataManager {
         return Manager.init(rawState: rawState) as? PumpManagerUI
     }
     
+    /// What Loop knows right now, for the AI texts about the moment (see `LoopNow`).
+    func loopNow() async -> LoopNow? {
+        let now = Date()
+        let glucose: [StoredGlucoseSample] = await withCheckedContinuation { continuation in
+            glucoseStore.getGlucoseSamples(start: now.addingTimeInterval(.minutes(-70)), end: nil) { result in
+                continuation.resume(returning: (try? result.get()) ?? [])
+            }
+        }
+        let settings = loopManager.settings
+        var activeOverride: String?
+        if let override = settings.preMealOverride ?? settings.scheduleOverride, override.isActive(at: now) {
+            switch override.context {
+            case .preset(let preset): activeOverride = "\(preset.symbol) \(preset.name)"
+            case .preMeal: activeOverride = "Pre-meal"
+            case .legacyWorkout: activeOverride = "Workout"
+            case .custom: activeOverride = "Custom"
+            }
+            if let scale = override.settings.insulinNeedsScaleFactor {
+                activeOverride? += " \(Int((scale * 100).rounded())) % insulinbehov"
+            }
+        }
+        let overrideName = activeOverride
+        return await withCheckedContinuation { continuation in
+            loopManager.getLoopState { _, state in
+                let recommended = try? state.recommendBolus(consideringPotentialCarbEntry: nil, replacingCarbEntry: nil, considerPositiveVelocityAndRC: true)
+                continuation.resume(returning: LoopNow.make(
+                    now: now,
+                    glucose: glucose,
+                    insulinOnBoard: state.insulinOnBoard?.value,
+                    carbsOnBoard: state.carbsOnBoard?.quantity.doubleValue(for: .gram()),
+                    forecast: state.predictedGlucoseIncludingPendingInsulin ?? state.predictedGlucose ?? [],
+                    recommendedBolus: recommended?.amount,
+                    activeOverride: overrideName
+                ))
+            }
+        }
+    }
+
     /// Split bolus was taken out of the app: drop its reminders and stored plans, once.
     private static func removeSplitBolusLeftovers() {
         let defaults = UserDefaults.standard

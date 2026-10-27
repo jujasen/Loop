@@ -19,19 +19,26 @@ struct GlucoseInsightView: View {
         UserDefaults.standard.aiDoseAdviceSettings.isEnabled && AIChat.shared != nil
     }
 
+    @State private var showsDetails = false
+
+    private var todayText: GlucoseInsightText? {
+        status.todayText.flatMap { Calendar.current.isDateInToday($0.createdAt) ? $0 : nil }
+    }
+
+    private var today: GlucoseInsightToday? {
+        status.today.flatMap { Calendar.current.isDateInToday($0.computedAt) ? $0 : nil }
+    }
+
     var body: some View {
         NavigationView {
             List {
+                nowSection
                 todaySection
-                if status.longTermText != nil || status.longTerm != nil || aiEnabled {
-                    longTermSection
+                weekSection
+                if let suggestions = status.longTermText?.suggestions, !suggestions.isEmpty {
+                    suggestionsSection(suggestions)
                 }
-                if let longTerm = status.longTerm {
-                    daypartsSection(longTerm)
-                    if !longTerm.advice.isEmpty {
-                        adviceSection(longTerm.advice)
-                    }
-                }
+                detailsSection
                 updateSection
             }
             .insetGroupedListStyle()
@@ -55,35 +62,53 @@ struct GlucoseInsightView: View {
         }
     }
 
+    // MARK: Now
+
+    @ViewBuilder
+    private var nowSection: some View {
+        Section {
+            if let text = todayText, let now = text.now {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(now)
+                        .font(.body.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let action = text.action {
+                        Label {
+                            Text(action).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: "hand.point.right.fill").foregroundColor(.orange)
+                        }
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    Text(text.createdAt.formatted(date: .omitted, time: .shortened))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 4)
+            } else if aiEnabled {
+                Text("The AI looks at the situation every half hour from 06:00.", comment: "Shown before the AI has written about the situation now")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+        } header: {
+            Text("Now", comment: "Header of the situation now in the glucose insight")
+        }
+    }
+
     // MARK: Today
 
     @ViewBuilder
     private var todaySection: some View {
         Section {
-            if let text = status.todayText, Calendar.current.isDateInToday(text.createdAt) {
-                InsightTextView(text: text)
-            } else if aiEnabled {
-                Text("The AI writes about today from 06:00, and again when a meal is over or after a low.", comment: "Shown before the AI has written about today")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
+            if let text = todayText {
+                Text(text.summary)
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            if let today = status.today, Calendar.current.isDateInToday(today.computedAt) {
-                if let period = today.period {
-                    PeriodRow(period: period, hoursAboveTen: today.hoursAboveTen)
-                }
-                if let deviation = today.forecastDeviationMmol {
-                    Label {
-                        Text(deviationText(deviation))
-                            .font(.subheadline)
-                    } icon: {
-                        Image(systemName: deviation > 0 ? "arrow.up.right" : deviation < 0 ? "arrow.down.right" : "equal")
-                            .foregroundColor(abs(deviation) >= 1 ? .orange : .secondary)
-                    }
-                }
-                ForEach(today.meals, id: \.date) { meal in
-                    MealRow(meal: meal)
-                }
+            if let today, let period = today.period {
+                PeriodRow(period: period, hoursAboveTen: today.hoursAboveTen)
             } else if status.today == nil {
                 Text("No numbers yet. They are read from Nightscout.", comment: "Shown when the glucose insight has no data yet")
                     .font(.footnote)
@@ -91,6 +116,102 @@ struct GlucoseInsightView: View {
             }
         } header: {
             Text("Today", comment: "Header of today's section in the glucose insight")
+        }
+    }
+
+    // MARK: This week
+
+    @ViewBuilder
+    private var weekSection: some View {
+        Section {
+            if let text = status.longTermText {
+                Text(text.summary)
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if aiEnabled {
+                Text("The AI looks at the week each night after 04:00.", comment: "Shown before the AI has written about the week")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+            if let week = status.longTerm?.last7Days {
+                LabeledValue(label: String(localized: "Last 7 days", comment: "Glucose insight: last seven days"), value: periodSummary(week))
+            }
+        } header: {
+            Text("This Week", comment: "Header of the week section in the glucose insight")
+        }
+    }
+
+    // MARK: Suggested settings
+
+    private func suggestionsSection(_ suggestions: [GlucoseInsightSuggestion]) -> some View {
+        Section {
+            ForEach(suggestions, id: \.self) { suggestion in
+                SuggestionRow(suggestion: suggestion)
+            }
+        } header: {
+            Text("Suggested Settings", comment: "Header of the suggested therapy settings changes in the glucose insight")
+        } footer: {
+            Text("Only patterns seen on at least three days. Talk it over with the diabetes team before changing anything.", comment: "Footer of the suggested therapy settings changes in the glucose insight")
+        }
+    }
+
+    // MARK: Details
+
+    private var detailsSection: some View {
+        Section {
+            DisclosureGroup(isExpanded: $showsDetails) {
+                if let text = todayText {
+                    hints(text.doseHints)
+                }
+                if let today, let deviation = today.forecastDeviationMmol {
+                    Label {
+                        Text(deviationText(deviation)).font(.subheadline)
+                    } icon: {
+                        Image(systemName: deviation > 0 ? "arrow.up.right" : deviation < 0 ? "arrow.down.right" : "equal")
+                            .foregroundColor(abs(deviation) >= 1 ? .orange : .secondary)
+                    }
+                }
+                if let today {
+                    ForEach(today.meals, id: \.date) { meal in
+                        MealRow(meal: meal)
+                    }
+                }
+                if let text = status.longTermText {
+                    ForEach(text.points, id: \.self) { point in
+                        Text(verbatim: "• \(point)")
+                            .font(.footnote)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    hints(text.doseHints)
+                }
+                if let longTerm = status.longTerm {
+                    ForEach(longTerm.dayparts, id: \.name) { part in
+                        DaypartRow(part: part)
+                    }
+                    if !longTerm.advice.isEmpty {
+                        let accepted = longTerm.advice.filter(\.accepted)
+                        LabeledValue(
+                            label: String(localized: "AI doses shown / used", comment: "Glucose insight: AI doses shown and used"),
+                            value: "\(longTerm.advice.count) / \(accepted.count)"
+                        )
+                        ForEach(longTerm.advice.suffix(5).reversed(), id: \.date) { record in
+                            AdviceRow(record: record)
+                        }
+                    }
+                }
+            } label: {
+                Text("Show Details", comment: "Disclosure for the details behind the glucose insight")
+            }
+        }
+    }
+
+    private func hints(_ hints: [String]) -> some View {
+        ForEach(hints, id: \.self) { hint in
+            Label {
+                Text(hint).font(.footnote).fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "lightbulb").foregroundColor(.purple)
+            }
         }
     }
 
@@ -102,71 +223,6 @@ struct GlucoseInsightView: View {
                 : String(format: NSLocalizedString("Loop is forecasting %@ mmol/L higher than usual today: less insulin is needed than usual.", comment: "Glucose insight: today's forecast deviation, less insulin needed (1: signed mmol/L)"), value)
         }
         return String(format: NSLocalizedString("Loop's forecast is about as usual today (%@ mmol/L).", comment: "Glucose insight: today's forecast deviation is small (1: signed mmol/L)"), signed(deviation))
-    }
-
-    // MARK: The weeks behind
-
-    @ViewBuilder
-    private var longTermSection: some View {
-        Section {
-            if let text = status.longTermText {
-                InsightTextView(text: text)
-            } else if aiEnabled {
-                Text("The AI writes about the weeks behind each night after 04:00.", comment: "Shown before the AI has written about the weeks behind")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
-            if let longTerm = status.longTerm {
-                if let week = longTerm.last7Days {
-                    LabeledValue(label: String(localized: "Last 7 days", comment: "Glucose insight: last seven days"), value: periodSummary(week))
-                }
-                if let earlier = longTerm.earlierDays {
-                    LabeledValue(label: String(format: NSLocalizedString("Days 8–%d", comment: "Glucose insight: the days before the last seven (1: days kept)"), longTerm.days), value: periodSummary(earlier))
-                }
-                if let weekday = longTerm.weekdayDaytime, let weekend = longTerm.weekendDaytime {
-                    LabeledValue(
-                        label: String(localized: "09–15 weekday / weekend", comment: "Glucose insight: daytime on weekdays against weekends"),
-                        value: "\(weekday.timeInRangePercent) % / \(weekend.timeInRangePercent) %"
-                    )
-                }
-            }
-        } header: {
-            Text("The Weeks Behind", comment: "Header of the long-term section in the glucose insight")
-        }
-    }
-
-    private func daypartsSection(_ longTerm: GlucoseInsightLongTerm) -> some View {
-        Section {
-            ForEach(longTerm.dayparts, id: \.name) { part in
-                DaypartRow(part: part)
-            }
-        } header: {
-            Text("Parts of the Day", comment: "Header of the parts of the day in the glucose insight")
-        } footer: {
-            Text("Loop 2 h: how far glucose ended above (+) or below (−) Loop's forecast two hours on. Meals: only those without extra carbs, corrections or treated lows.", comment: "Footer explaining the parts of the day in the glucose insight")
-        }
-    }
-
-    private func adviceSection(_ advice: [GlucoseInsightAdvice]) -> some View {
-        Section {
-            let accepted = advice.filter(\.accepted)
-            LabeledValue(
-                label: String(localized: "Shown / used", comment: "Glucose insight: AI doses shown and used"),
-                value: "\(advice.count) / \(accepted.count)"
-            )
-            let finished = accepted.compactMap(\.lowestWithin4hMmol)
-            if !finished.isEmpty {
-                LabeledValue(
-                    label: String(localized: "Low after a used AI dose", comment: "Glucose insight: lows within four hours of a used AI dose"),
-                    value: "\(finished.filter { $0 < 3.9 }.count) / \(finished.count)"
-                )
-            }
-            ForEach(advice.suffix(5).reversed(), id: \.date) { record in
-                AdviceRow(record: record)
-            }
-        } header: {
-            Text("AI Doses", comment: "Header of the AI dose outcomes in the glucose insight")
-        }
     }
 
     // MARK: Updating
@@ -231,32 +287,45 @@ private func signed(_ value: Double) -> String {
     (value > 0 ? "+" : value < 0 ? "−" : "") + mmol(abs(value))
 }
 
-private struct InsightTextView: View {
-    let text: GlucoseInsightText
+private struct SuggestionRow: View {
+    let suggestion: GlucoseInsightSuggestion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(text.summary)
-                .font(.body)
-                .fixedSize(horizontal: false, vertical: true)
-            ForEach(text.doseHints, id: \.self) { hint in
-                Label {
-                    Text(hint).font(.subheadline).fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "lightbulb").foregroundColor(.purple)
-                }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(verbatim: "\(title) \(String(format: "%02d", suggestion.startHour))–\(String(format: "%02d", suggestion.endHour))")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text(verbatim: "\(value(suggestion.current)) → \(value(suggestion.proposed)) \(unit)")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundColor(suggestion.givesMoreInsulin ? .orange : .blue)
             }
-            ForEach(text.points, id: \.self) { point in
-                Text(verbatim: "• \(point)")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Text(text.createdAt.formatted(date: .abbreviated, time: .shortened))
-                .font(.caption2)
+            Text(suggestion.reason)
+                .font(.footnote)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
+    }
+
+    private var title: String {
+        switch suggestion.setting {
+        case .carbRatio: return String(localized: "Carb ratio", comment: "Glucose insight suggestion: carb ratio")
+        case .insulinSensitivity: return String(localized: "Insulin sensitivity", comment: "Glucose insight suggestion: insulin sensitivity")
+        case .basalRate: return String(localized: "Basal rate", comment: "Glucose insight suggestion: basal rate")
+        }
+    }
+
+    private var unit: String {
+        switch suggestion.setting {
+        case .carbRatio: return "g/E"
+        case .insulinSensitivity: return "mmol/L/E"
+        case .basalRate: return "E/t"
+        }
+    }
+
+    private func value(_ number: Double) -> String {
+        number.formatted(.number.precision(.fractionLength(0...2)))
     }
 }
 
