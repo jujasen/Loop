@@ -534,6 +534,14 @@ final class CarbEntryViewModel: ObservableObject {
         ])
     }
 
+    /// Stops an estimate on its way, leaving what was typed and the photos so they can be corrected
+    /// and sent again.
+    func cancelMealEstimate() {
+        mealEstimateTask?.cancel()
+        mealEstimateTask = nil
+        isEstimatingMeal = false
+    }
+
     /// Forgets the estimate. The fields it filled in stay as they are.
     func clearMealEstimate() {
         mealEstimateTask?.cancel()

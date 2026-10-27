@@ -170,12 +170,23 @@ struct MealEstimateCard: View {
             photoButton
 
             Button(action: {
-                isInputFocused = false
-                action()
+                if viewModel.isEstimatingMeal {
+                    // Stops the estimate so the text can be corrected; the field gets the keyboard back.
+                    viewModel.cancelMealEstimate()
+                    isInputFocused = true
+                } else {
+                    isInputFocused = false
+                    action()
+                }
             }) {
                 if viewModel.isEstimatingMeal {
-                    ProgressView()
-                        .frame(width: 30, height: 30)
+                    ZStack {
+                        ProgressView()
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(carbTintColor)
+                    }
+                    .frame(width: 30, height: 30)
                 }
                 else {
                     Image(systemName: "arrow.up.circle.fill")
@@ -185,8 +196,8 @@ struct MealEstimateCard: View {
                 }
             }
             .buttonStyle(.plain)
-            .disabled(!isEnabled)
-            .accessibilityLabel(accessibilityLabel)
+            .disabled(!isEnabled && !viewModel.isEstimatingMeal)
+            .accessibilityLabel(viewModel.isEstimatingMeal ? String(localized: "Stop estimate", comment: "Button label stopping the AI meal estimate so the description can be corrected") : accessibilityLabel)
             .padding(.vertical, 5)
         }
         .padding(.leading, 12)
