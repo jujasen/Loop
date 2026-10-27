@@ -55,6 +55,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         tableView.register(AlertPermissionsDisabledWarningCell.self, forCellReuseIdentifier: AlertPermissionsDisabledWarningCell.className)
         tableView.register(MuteAlertsWarningCell.self, forCellReuseIdentifier: MuteAlertsWarningCell.className)
         tableView.register(BolusRecoveryBannerCell.self, forCellReuseIdentifier: BolusRecoveryBannerCell.className)
+        tableView.register(MealWatchCell.self, forCellReuseIdentifier: MealWatchCell.className)
         tableView.register(ChartDetailsHeaderCell.self, forCellReuseIdentifier: ChartDetailsHeaderCell.className)
         tableView.register(ChartDetailsNavigationCell.self, forCellReuseIdentifier: ChartDetailsNavigationCell.className)
 
@@ -155,6 +156,31 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 self.tableView.reloadSections(IndexSet(integer: Section.bolusRecovery.rawValue), with: .automatic)
                 // The main chart sizes itself from what the fixed rows leave over.
                 self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
+            }
+            .store(in: &cancellables)
+
+        // Watched meals and their suggestions, the way LoopFollow shows them.
+        mealWatches = MealWatchManager.shared.activeWatches
+        MealWatchManager.shared.$watches
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                let watches = MealWatchManager.shared.activeWatches
+                guard watches != self.mealWatches else { return }
+                // Snapshot and reload in the same turn, as for `bolusRecoveryAttempt`.
+                self.mealWatches = watches
+                guard self.isViewLoaded else { return }
+                self.tableView.reloadSections(IndexSet(integer: Section.mealWatch.rawValue), with: .automatic)
+                self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
+                self.updateScrollEnabled()
+            }
+            .store(in: &cancellables)
+        MealWatchManager.shared.$pendingReviewID
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] id in
+                MealWatchManager.shared.pendingReviewID = nil
+                self?.reviewMealWatchSuggestion(id)
             }
             .store(in: &cancellables)
 
@@ -815,6 +841,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case alertWarning
         case hud
         case status
+        /// Meals the AI meal watch follows, with a suggestion to review or decline.
+        case mealWatch
         case charts
         /// Outcome of the last manual bolus, shown while it is in flight and after it failed.
         /// Last on purpose: it sits under the statistics rather than pushing the glucose chart
@@ -879,6 +907,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
     private static let detailsHeaderRowHeight: CGFloat = 44
     private static let statusRowEstimatedHeight: CGFloat = 54
     private static let bannerRowEstimatedHeight: CGFloat = 74
+    private static let mealWatchRowEstimatedHeight: CGFloat = 52
+    private static let mealWatchSuggestionRowEstimatedHeight: CGFloat = 170
 
     /// Rows whose content is text grow with the text size chosen in iOS Settings, so a
     /// larger setting makes the row taller instead of clipping what is in it. The main
@@ -1045,6 +1075,10 @@ final class StatusTableViewController: LoopChartsTableViewController {
     /// is the one that crashes). This only changes in the same turn as the reload that
     /// tells the table about it, so the data source and the table never disagree.
     private var bolusRecoveryAttempt: ManualBolusRecovery.Attempt?
+
+    /// Watched meals. A snapshot for the same reason as `bolusRecoveryAttempt`: it only changes
+    /// together with a reload of its section.
+    private var mealWatches: [MealWatch] = []
 
     private var shouldShowBannerWarning: Bool {
         alertPermissionsChecker.showWarning || alertMuter.configuration.shouldMute
@@ -1252,6 +1286,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         switch Section(rawValue: section)! {
         case .bolusRecovery:
             return bolusRecoveryAttempt != nil ? 1 : 0
+        case .mealWatch:
+            return mealWatches.count
         case .alertWarning:
             return shouldShowBannerWarning ? 1 : 0
         case .hud:
@@ -1490,6 +1526,37 @@ final class StatusTableViewController: LoopChartsTableViewController {
         }
     }
 
+    /// A watched meal. The card's own buttons review, decline or stop.
+    private class MealWatchCell: UITableViewCell {
+        func configure(watch: MealWatch, onReview: @escaping (MealWatchSuggestion) -> Void, onDecline: @escaping (MealWatchSuggestion) -> Void, onStop: @escaping () -> Void) {
+            selectionStyle = .none
+            backgroundColor = .clear
+            if #available(iOS 16.0, *) {
+                contentConfiguration = UIHostingConfiguration {
+                    MealWatchCard(watch: watch, onReview: onReview, onDecline: onDecline, onStop: onStop)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal)
+                        .background(CardBackground())
+                }
+                .margins(.horizontal, 10)
+                .margins(.vertical, 4)
+            } else {
+                var content = defaultContentConfiguration()
+                content.text = watch.openSuggestion.map { "✨ \(MealWatchManager.units($0.units)) E: \($0.reason)" } ?? "✨ \(watch.mealDescription)"
+                contentConfiguration = content
+            }
+        }
+    }
+
+    /// Opens the bolus screen with the suggestion's dose in the field, to change or deliver.
+    private func reviewMealWatchSuggestion(_ suggestionID: String) {
+        guard let (_, suggestion) = MealWatchManager.shared.suggestion(withID: suggestionID), suggestion.state == .open else { return }
+        if presentedViewController != nil {
+            dismiss(animated: false)
+        }
+        presentBolusEntryView(mealWatchSuggestion: suggestion)
+    }
+
     /// Retries only the insulin. The carbs were saved before the bolus was requested, so this
     /// never routes back to the meal screen — that route is what doubled people's carb entries.
     private func bolusRecoveryBannerTapped() {
@@ -1533,6 +1600,16 @@ final class StatusTableViewController: LoopChartsTableViewController {
             let cell = tableView.dequeueReusableCell(withIdentifier: BolusRecoveryBannerCell.className, for: indexPath) as! BolusRecoveryBannerCell
             cell.attempt = bolusRecoveryAttempt
             cell.setNeedsUpdateConfiguration()
+            return cell
+        case .mealWatch:
+            let cell = tableView.dequeueReusableCell(withIdentifier: MealWatchCell.className, for: indexPath) as! MealWatchCell
+            let watch = mealWatches[indexPath.row]
+            cell.configure(
+                watch: watch,
+                onReview: { [weak self] suggestion in self?.reviewMealWatchSuggestion(suggestion.id) },
+                onDecline: { suggestion in MealWatchManager.shared.decline(suggestion.id) },
+                onStop: { MealWatchManager.shared.stop(watch.id) }
+            )
             return cell
         case .alertWarning:
             if alertPermissionsChecker.showWarning {
@@ -1774,7 +1851,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     cell.setSubtitleLabel(label: nil)
                 }
             }
-        case .hud, .status, .alertWarning, .bolusRecovery:
+        case .hud, .status, .alertWarning, .bolusRecovery, .mealWatch:
             break
         }
     }
@@ -1814,6 +1891,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 if let attempt = bolusRecoveryAttempt {
                     remaining -= BolusRecoveryBannerCell.estimatedHeight(for: attempt, width: tableView.bounds.width)
                 }
+                for watch in mealWatches {
+                    remaining -= UIFontMetrics(forTextStyle: .body).scaledValue(for: watch.openSuggestion == nil ? Self.mealWatchRowEstimatedHeight : Self.mealWatchSuggestionRowEstimatedHeight)
+                }
                 for row in visibleChartRows where row != .glucose {
                     remaining -= fixedChartRowHeight(row)
                 }
@@ -1823,7 +1903,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             case .iob, .dose, .cob:
                 return max(106, 0.21 * availableSize)
             }
-        case .hud, .status, .alertWarning, .bolusRecovery:
+        case .hud, .status, .alertWarning, .bolusRecovery, .mealWatch:
             return UITableView.automaticDimension
         }
     }
@@ -1833,6 +1913,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case .bolusRecovery:
             tableView.deselectRow(at: indexPath, animated: true)
             bolusRecoveryBannerTapped()
+        case .mealWatch:
+            tableView.deselectRow(at: indexPath, animated: true)
         case .alertWarning:
             if alertPermissionsChecker.showWarning {
                 tableView.deselectRow(at: indexPath, animated: true)
@@ -2063,7 +2145,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
     }
     
     @ViewBuilder
-    func bolusEntryView(enableManualGlucoseEntry: Bool = false) -> some View {
+    func bolusEntryView(enableManualGlucoseEntry: Bool = false, mealWatchSuggestion: MealWatchSuggestion? = nil) -> some View {
         if FeatureFlags.simpleBolusCalculatorEnabled && !automaticDosingStatus.automaticDosingEnabled {
             SimpleBolusView(
                 viewModel: SimpleBolusViewModel(
@@ -2079,6 +2161,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     screenWidth: UIScreen.main.bounds.width,
                     isManualGlucoseEntryEnabled: enableManualGlucoseEntry
                 )
+                viewModel.mealWatchSuggestion = mealWatchSuggestion
                 
                 Task { @MainActor in
                     await viewModel.generateRecommendationAndStartObserving()
@@ -2094,10 +2177,11 @@ final class StatusTableViewController: LoopChartsTableViewController {
         }
     }
 
-    func presentBolusEntryView(enableManualGlucoseEntry: Bool = false) {
+    func presentBolusEntryView(enableManualGlucoseEntry: Bool = false, mealWatchSuggestion: MealWatchSuggestion? = nil) {
         let hostingController = DismissibleHostingController(
             content: bolusEntryView(
-                enableManualGlucoseEntry: enableManualGlucoseEntry
+                enableManualGlucoseEntry: enableManualGlucoseEntry,
+                mealWatchSuggestion: mealWatchSuggestion
             )
         )
         

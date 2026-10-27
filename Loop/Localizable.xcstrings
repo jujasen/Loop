@@ -45815,6 +45815,138 @@
           }
         }
       }
+    },
+    "AI suggests %1$@ U: %2$@" : {
+      "comment" : "Nightscout note for a meal watch suggestion (1: units)(2: reason)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI foreslår %1$@ E: %2$@"
+          }
+        }
+      }
+    },
+    "✨ Suggested: %1$@ U for %2$@" : {
+      "comment" : "Meal watch notification title (1: units)(2: name of the meal)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✨ Forslag: %1$@ E til %2$@"
+          }
+        }
+      }
+    },
+    "Suggested: %1$@ U for %2$@" : {
+      "comment" : "Meal watch card title with a suggestion (1: units)(2: name of the meal)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forslag: %1$@ E til %2$@"
+          }
+        }
+      }
+    },
+    "Watch the meal" : {
+      "comment" : "Switch on the carb entry screen turning on the AI meal watch",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Følg med på måltidet"
+          }
+        }
+      }
+    },
+    "The AI looks at glucose every 15 minutes and suggests extra insulin when it is needed. It never gives insulin itself." : {
+      "comment" : "Explanation under the meal watch switch on the carb entry screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-en ser på blodsukkeret hvert kvarter og foreslår ekstra insulin når det trengs. Den gir aldri insulin selv."
+          }
+        }
+      }
+    },
+    "Lapses at %@ if not used." : {
+      "comment" : "Meal watch card: when the suggestion lapses (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faller bort kl. %@ hvis det ikke brukes."
+          }
+        }
+      }
+    },
+    "Watching %1$@ until %2$@" : {
+      "comment" : "Meal watch card while watching (1: name of the meal)(2: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Følger med på %1$@ til %2$@"
+          }
+        }
+      }
+    },
+    "✨ The meal watch follows this meal and suggests more insulin if it is needed." : {
+      "comment" : "Line under the carb entry on the bolus screen when the meal watch is on",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✨ Måltidsvakten følger med på måltidet og foreslår mer insulin om det trengs."
+          }
+        }
+      }
+    },
+    "Review" : {
+      "comment" : "Button opening the bolus screen with the meal watch suggestion",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se over"
+          }
+        }
+      }
+    },
+    "Decline" : {
+      "comment" : "Button declining the meal watch suggestion",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avslå"
+          }
+        }
+      }
+    },
+    "Stop" : {
+      "comment" : "Button stopping the meal watch",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopp"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

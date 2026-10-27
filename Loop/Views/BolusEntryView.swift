@@ -48,6 +48,13 @@ struct BolusEntryView: View {
             .navigationBarTitle(self.title)
             .supportedInterfaceOrientations(.portrait)
             .alert(item: self.$viewModel.activeAlert, content: self.alert(for:))
+            .onAppear {
+                // Opened for a meal watch suggestion: its dose is in the field, ready to change.
+                if let suggestion = viewModel.mealWatchSuggestion, !editedBolusAmount {
+                    editedBolusAmount = true
+                    enteredBolusStringBinding.wrappedValue = viewModel.formatBolusAmount(suggestion.units)
+                }
+            }
             .onDisappear {
                 viewModel.setAIDoseAdviceOpen(false)
                 viewModel.aiDosePrefetch?.task.cancel()
@@ -189,6 +196,15 @@ struct BolusEntryView: View {
                 } else {
                     recommendedBolusRow
                 }
+
+                if let suggestion = viewModel.mealWatchSuggestion {
+                    Label {
+                        Text(suggestion.reason).font(.footnote).fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "sparkles").foregroundColor(.purple)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .padding(.top, 8)
             
@@ -242,6 +258,13 @@ struct BolusEntryView: View {
                 Text(summary)
                     .font(.footnote)
                     .foregroundColor(Color(.secondaryLabel))
+            }
+
+            if viewModel.startsMealWatch {
+                Text("✨ The meal watch follows this meal and suggests more insulin if it is needed.", comment: "Line under the carb entry on the bolus screen when the meal watch is on")
+                    .font(.footnote)
+                    .foregroundColor(Color(.secondaryLabel))
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

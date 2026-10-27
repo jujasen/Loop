@@ -560,6 +560,8 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
              LoopNotificationCategory.remoteTherapySettingsFailure.rawValue,
              LoopNotificationCategory.missedMeal.rawValue:
             completionHandler([.badge, .sound, .list, .banner])
+        case let identifier where identifier.hasPrefix(MealWatchManager.notificationPrefix):
+            completionHandler([.badge, .sound, .list, .banner])
         default:
             // For all others, banners are not to be displayed while in the foreground
             completionHandler([.badge, .sound, .list])
@@ -590,7 +592,21 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
                let managerIdentifier = userInfo[LoopNotificationUserInfoKey.managerIDForAlert.rawValue] as? String {
                 alertManager?.acknowledgeAlert(identifier: Alert.Identifier(managerIdentifier: managerIdentifier, alertIdentifier: alertIdentifier))
             }
+        case MealWatchManager.declineAction:
+            if let id = response.notification.request.content.userInfo[MealWatchManager.suggestionIDUserInfoKey] as? String {
+                Task { @MainActor in MealWatchManager.shared.decline(id) }
+            }
+        case MealWatchManager.reviewAction:
+            if let id = response.notification.request.content.userInfo[MealWatchManager.suggestionIDUserInfoKey] as? String {
+                MealWatchManager.requestReview(id)
+            }
         case UNNotificationDefaultActionIdentifier:
+            // A meal watch suggestion opens the bolus screen with it filled in.
+            if let id = response.notification.request.content.userInfo[MealWatchManager.suggestionIDUserInfoKey] as? String {
+                MealWatchManager.requestReview(id)
+                break
+            }
+
             guard response.notification.request.identifier == LoopNotificationCategory.missedMeal.rawValue else {
                 break
             }

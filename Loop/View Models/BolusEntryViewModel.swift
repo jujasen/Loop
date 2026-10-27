@@ -135,6 +135,11 @@ final class BolusEntryViewModel: ObservableObject {
     /// What the boost will do for the meal, for the line under the carb entry.
     var fatProteinBoost: FatProteinBoostPreview?
 
+    /// Turned on for this meal on the carb entry screen: the meal watch starts once it is saved.
+    var startsMealWatch = false
+    /// A meal watch suggestion this screen was opened for: its dose fills the bolus field.
+    var mealWatchSuggestion: MealWatchSuggestion?
+
     /// The meal as described and photographed on the carb entry screen, for the AI dose advice.
     var aiDoseMealContext: AIDoseMealContext?
     /// The AI dose advice section below the bolus field; closed until opened.
@@ -450,6 +455,15 @@ final class BolusEntryViewModel: ObservableObject {
                     if isFatProteinBoostDeclined {
                         UserDefaults.standard.setFatProteinBoostDeclined(true, forEntry: id)
                     }
+                }
+                if startsMealWatch {
+                    MealWatchManager.shared.watch(
+                        entryID: storedCarbEntry.syncIdentifier,
+                        mealDate: storedCarbEntry.startDate,
+                        carbs: storedCarbEntry.quantity.doubleValue(for: .gram()),
+                        foodType: storedCarbEntry.foodType,
+                        absorptionTime: storedCarbEntry.absorptionTime
+                    )
                 }
                 self.dosingDecision.carbEntry = storedCarbEntry
                 self.analyticsServicesManager?.didAddCarbs(source: "Phone", amount: storedCarbEntry.quantity.doubleValue(for: .gram()))

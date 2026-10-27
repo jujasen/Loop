@@ -49,6 +49,8 @@ extension NotificationManager {
             options: .customDismissAction
         ))
 
+        categories.append(MealWatchManager.notificationCategoryDefinition)
+
         return Set(categories)
     }
 

@@ -114,6 +114,11 @@ final class CarbEntryViewModel: ObservableObject {
     /// Earlier entries that may be part of the same meal (porridge before the milk).
     private var recentCarbEntries: [StoredCarbEntry] = []
 
+    /// The AI meal watch for this meal; on by itself for a food it was on for last time.
+    @Published var isMealWatchOn = false
+    /// Changed by hand on this screen, so the food's memory no longer decides.
+    private var mealWatchWasSet = false
+
     @Published var favoriteFoodFolders = UserDefaults.standard.favoriteFoodFolders
     @Published var selectedFavoriteFoodIndex = -1
     /// `id` of the amount applied from the selected favorite food, for foods that have several.
@@ -157,6 +162,7 @@ final class CarbEntryViewModel: ObservableObject {
         observeFavoriteFoodUsage()
         observeLoopUpdates()
         observeFatProteinInputs()
+        observeMealWatchFood()
     }
     
     /// Initalizer for when`CarbEntryView` has an entry to edit
@@ -259,6 +265,7 @@ final class CarbEntryViewModel: ObservableObject {
             potentialCarbEntry: updatedCarbEntry,
             selectedCarbAbsorptionTimeEmoji: selectedDefaultAbsorptionTimeEmoji
         )
+        viewModel.startsMealWatch = canWatchMeal && isMealWatchOn
         viewModel.mealNutrition = mealNutrition
         viewModel.isFatProteinBoostDeclined = isFatProteinBoostDeclined
         viewModel.fatProteinBoost = isFatProteinBoostDeclined ? nil : fatProteinBoost
@@ -478,6 +485,29 @@ final class CarbEntryViewModel: ObservableObject {
             UserDefaults.standard.setFatProteinBoostDeclined(declined, forEntry: id)
         }
         updateFatProteinBoost()
+    }
+
+    // MARK: - Meal Watch
+
+    /// Only a new meal is watched, and only with the AI available.
+    var canWatchMeal: Bool {
+        originalCarbEntry == nil && MealWatchManager.isAvailable
+    }
+
+    func setMealWatch(_ isOn: Bool) {
+        mealWatchWasSet = true
+        isMealWatchOn = isOn
+    }
+
+    private func observeMealWatchFood() {
+        $foodName
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] name in
+                guard let self, !self.mealWatchWasSet, self.canWatchMeal else { return }
+                self.isMealWatchOn = MealWatchManager.isRemembered(foodName: name)
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Meal Estimate

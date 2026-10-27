@@ -154,6 +154,13 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
                 }
                 .padding(.bottom, 2)
             }
+
+            if viewModel.canWatchMeal {
+                CardSectionDivider()
+
+                MealWatchSection(viewModel: viewModel)
+                    .padding(.bottom, 2)
+            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal)

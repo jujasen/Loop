@@ -56,6 +56,11 @@ final class GlucoseInsightManager: ObservableObject {
         }
     }
 
+    /// The Nightscout history on the phone, without reading Nightscout again.
+    func storedHistory() async -> NightscoutHistory {
+        await store.history()
+    }
+
     private var aiEnabled: Bool {
         defaults.aiDoseAdviceSettings.isEnabled && AIChat.shared != nil
     }
