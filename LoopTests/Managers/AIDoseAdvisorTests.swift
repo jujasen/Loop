@@ -201,15 +201,15 @@ final class AIDoseAdvisorTests: XCTestCase {
         defaults.removePersistentDomain(forName: "AIDoseAdvisorTests")
         defer { defaults.removePersistentDomain(forName: "AIDoseAdvisorTests") }
 
-        let working = OpenAIChat.modelCandidates[2]
+        let working = AIChat.modelCandidates[2]
         ModelStubURLProtocol.acceptedModel = working
         ModelStubURLProtocol.requestedModels = []
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ModelStubURLProtocol.self]
-        let chat = OpenAIChat(apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
+        let chat = AIChat(provider: .openAI, apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
 
         _ = try await chat.send(["messages": [Any]()], timeout: 5)
-        XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(OpenAIChat.modelCandidates.prefix(3)))
+        XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(AIChat.modelCandidates.prefix(3)))
         XCTAssertEqual(defaults.openAIWorkingModel, working)
 
         ModelStubURLProtocol.requestedModels = []
@@ -226,7 +226,7 @@ final class AIDoseAdvisorTests: XCTestCase {
         ModelStubURLProtocol.requestedModels = []
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ModelStubURLProtocol.self]
-        let chat = OpenAIChat(apiKey: "sk-bad", session: URLSession(configuration: configuration), defaults: defaults)
+        let chat = AIChat(provider: .openAI, apiKey: "sk-bad", session: URLSession(configuration: configuration), defaults: defaults)
 
         do {
             _ = try await chat.send(["messages": [Any]()], timeout: 5)
@@ -242,15 +242,15 @@ final class AIDoseAdvisorTests: XCTestCase {
         defaults.removePersistentDomain(forName: "AIDoseAdvisorTests")
         defer { defaults.removePersistentDomain(forName: "AIDoseAdvisorTests") }
 
-        let working = OpenAIChat.Tier.fast.modelCandidates[1]
+        let working = AIChat.Tier.fast.modelCandidates[1]
         ModelStubURLProtocol.acceptedModel = working
         ModelStubURLProtocol.requestedModels = []
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ModelStubURLProtocol.self]
-        let chat = OpenAIChat(apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
+        let chat = AIChat(provider: .openAI, apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
 
         _ = try await chat.send(["messages": [Any]()], timeout: 5, tier: .fast)
-        XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(OpenAIChat.Tier.fast.modelCandidates.prefix(2)))
+        XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(AIChat.Tier.fast.modelCandidates.prefix(2)))
         XCTAssertEqual(defaults.openAIWorkingModel(for: .fast), working)
         XCTAssertNil(defaults.openAIWorkingModel, "the deep tier is remembered apart")
 
@@ -263,12 +263,89 @@ final class AIDoseAdvisorTests: XCTestCase {
         XCTAssertEqual(defaults.openAIUsage(on: Date()).dollars, 0.02182, accuracy: 0.000001)
     }
 
+    // MARK: Claude
+
+    func testAChatCompletionsBodyBecomesAClaudeRequest() throws {
+        let photo = Data([0xFF, 0xD8, 0xFF])
+        let body: [String: Any] = [
+            "model": "claude-sonnet-5-5",
+            "reasoning_effort": "medium",
+            "messages": [
+                ["role": "system", "content": "Be brief."],
+                ["role": "user", "content": [
+                    ["type": "text", "text": "Grøt"],
+                    ["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(photo.base64EncodedString())", "detail": "low"]],
+                ]],
+                ["role": "assistant", "content": "{\"carbs\":20}"],
+                ["role": "user", "content": "Bare halve"],
+            ],
+            "response_format": ["type": "json_schema", "json_schema": ["name": "x", "strict": true, "schema": ["type": "object"]]],
+        ]
+        let request = AIChat.claudeRequest(from: body)
+
+        XCTAssertEqual(request["model"] as? String, "claude-sonnet-5-5")
+        XCTAssertNotNil(request["max_tokens"])
+        XCTAssertNil(request["temperature"])
+        let system = try XCTUnwrap(request["system"] as? [[String: Any]])
+        XCTAssertEqual(system.first?["text"] as? String, "Be brief.")
+        XCTAssertNotNil(system.first?["cache_control"], "the system prompt is cached")
+
+        let messages = try XCTUnwrap(request["messages"] as? [[String: Any]])
+        XCTAssertEqual(messages.map { $0["role"] as? String }, ["user", "assistant", "user"])
+        let parts = try XCTUnwrap(messages[0]["content"] as? [[String: Any]])
+        XCTAssertEqual(parts[0]["text"] as? String, "Grøt")
+        let source = try XCTUnwrap(parts[1]["source"] as? [String: Any])
+        XCTAssertEqual(parts[1]["type"] as? String, "image")
+        XCTAssertEqual(source["media_type"] as? String, "image/jpeg")
+        XCTAssertEqual(source["data"] as? String, photo.base64EncodedString())
+        XCTAssertEqual(messages[2]["content"] as? String, "Bare halve")
+
+        let output = try XCTUnwrap(request["output_config"] as? [String: Any])
+        XCTAssertEqual(output["effort"] as? String, "medium")
+        let format = try XCTUnwrap(output["format"] as? [String: Any])
+        XCTAssertEqual(format["type"] as? String, "json_schema")
+        XCTAssertNotNil(format["schema"])
+    }
+
+    func testClaudesAnswerIsReadAsACompletion() throws {
+        let answer: [String: Any] = [
+            "content": [["type": "thinking", "thinking": ""], ["type": "text", "text": "{\"carbs\":"], ["type": "text", "text": "20}"]],
+            "stop_reason": "end_turn",
+            "usage": ["input_tokens": 50, "cache_creation_input_tokens": 850, "cache_read_input_tokens": 100, "output_tokens": 2000],
+        ]
+        let data = try AIChat.completion(fromClaude: JSONSerialization.data(withJSONObject: answer))
+        let completion = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let message = try XCTUnwrap(((completion["choices"] as? [[String: Any]])?.first)?["message"] as? [String: Any])
+        XCTAssertEqual(message["content"] as? String, "{\"carbs\":20}")
+
+        let usage = AIChat.usage(from: data, tier: .fast, provider: .anthropic)
+        XCTAssertEqual(usage.inputTokens, 900)
+        XCTAssertEqual(usage.cachedInputTokens, 100)
+        XCTAssertEqual(usage.outputTokens, 2000)
+        // Sonnet: 900 × $2 + 100 × $0.20 + 2000 × $10, per million.
+        XCTAssertEqual(usage.dollars(.fast), 0.02182, accuracy: 0.000001)
+        // Haiku is far cheaper for the same tokens.
+        XCTAssertEqual(AIChat.usage(from: data, tier: .quick, provider: .anthropic).dollars(.quick), 0.001091, accuracy: 0.000001)
+    }
+
+    func testAClaudeRefusalIsARefusal() throws {
+        let answer: [String: Any] = ["content": [], "stop_reason": "refusal", "stop_details": ["type": "refusal", "explanation": "Nei."]]
+        let data = try AIChat.completion(fromClaude: JSONSerialization.data(withJSONObject: answer))
+        let completion = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let message = try XCTUnwrap(((completion["choices"] as? [[String: Any]])?.first)?["message"] as? [String: Any])
+        XCTAssertEqual(message["refusal"] as? String, "Nei.")
+    }
+
+    func testClaudesModelNotFoundIsAnUnknownModel() {
+        XCTAssertTrue(AIChat.isUnknownModel("model: claude-sonnet-5-5 not found"))
+    }
+
     func testUnknownModelMessagesAreRecognised() {
-        XCTAssertTrue(OpenAIChat.isUnknownModel("The model `gpt-6-astra` does not exist or you do not have access to it."))
-        XCTAssertFalse(OpenAIChat.isUnknownModel("Incorrect API key provided"))
-        XCTAssertFalse(OpenAIChat.isUnknownModel("Rate limit reached"))
-        XCTAssertFalse(OpenAIChat.isUnknownModel("Unsupported parameter: 'reasoning_effort' is not supported with this model."))
-        XCTAssertTrue(OpenAIChat.isUnsupportedReasoningEffort("Unsupported parameter: 'reasoning_effort' is not supported with this model."))
+        XCTAssertTrue(AIChat.isUnknownModel("The model `gpt-6-astra` does not exist or you do not have access to it."))
+        XCTAssertFalse(AIChat.isUnknownModel("Incorrect API key provided"))
+        XCTAssertFalse(AIChat.isUnknownModel("Rate limit reached"))
+        XCTAssertFalse(AIChat.isUnknownModel("Unsupported parameter: 'reasoning_effort' is not supported with this model."))
+        XCTAssertTrue(AIChat.isUnsupportedReasoningEffort("Unsupported parameter: 'reasoning_effort' is not supported with this model."))
     }
 }
 

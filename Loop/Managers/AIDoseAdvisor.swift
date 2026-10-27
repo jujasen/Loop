@@ -179,7 +179,7 @@ enum AIDoseAdviceState: Equatable {
 // MARK: - Advisor
 
 final class AIDoseAdvisor {
-    static let shared: AIDoseAdvisor? = OpenAIChat.shared.map { AIDoseAdvisor(chat: $0) }
+    static let shared: AIDoseAdvisor? = AIChat.shared.map { AIDoseAdvisor(chat: $0) }
 
     enum AdviceError: LocalizedError {
         case unreadableResponse
@@ -189,9 +189,9 @@ final class AIDoseAdvisor {
         }
     }
 
-    private let chat: OpenAIChat
+    private let chat: AIChat
 
-    init(chat: OpenAIChat) {
+    init(chat: AIChat) {
         self.chat = chat
     }
 
@@ -330,7 +330,7 @@ final class AIDoseAdvisor {
             throw AdviceError.unreadableResponse
         }
         if let refusal = message.refusal, !refusal.isEmpty {
-            throw OpenAIChat.ChatError.server(refusal)
+            throw AIChat.ChatError.server(refusal)
         }
         guard let content = message.content?.data(using: .utf8),
               let answer = try? JSONDecoder().decode(AIDoseModelAnswer.self, from: content),

@@ -127,30 +127,30 @@ final class MealCarbEstimator {
 
     /// Built into the app at build time (`OPENAI_API_KEY` in the xcconfig, `OpenAIAPIKey` in
     /// Info.plist). Without it the feature stays hidden.
-    static let shared: MealCarbEstimator? = OpenAIChat.shared.map { MealCarbEstimator(chat: $0) }
+    static let shared: MealCarbEstimator? = AIChat.shared.map { MealCarbEstimator(chat: $0) }
 
-    private let chat: OpenAIChat
+    private let chat: AIChat
 
-    init(chat: OpenAIChat) {
+    init(chat: AIChat) {
         self.chat = chat
     }
 
     convenience init(apiKey: String, session: URLSession = .shared) {
-        self.init(chat: OpenAIChat(apiKey: apiKey, session: session))
+        self.init(chat: AIChat(provider: .openAI, apiKey: apiKey, session: session))
     }
 
     /// Asks for a complete estimate of the meal described across `conversation`, which alternates
     /// the caregiver's descriptions with the model's earlier estimates. It goes to the fast tier
-    /// (see `OpenAIChat`): it was built for a mini model, and someone is waiting for it.
+    /// (see `AIChat`): it was built for a mini model, and someone is waiting for it.
     func estimate(conversation: [Message]) async throws -> MealCarbEstimate {
         // Photos make the model take noticeably longer.
         let timeout: TimeInterval = conversation.contains { !$0.images.isEmpty } ? 120 : 60
         let data: Data
         do {
             data = try await chat.send(Self.requestBody(conversation: conversation), timeout: timeout, tier: .fast)
-        } catch OpenAIChat.ChatError.network(let error) {
+        } catch AIChat.ChatError.network(let error) {
             throw EstimateError.network(error)
-        } catch OpenAIChat.ChatError.server(let message) {
+        } catch AIChat.ChatError.server(let message) {
             throw EstimateError.server(message)
         }
         return try Self.parseResponse(data)

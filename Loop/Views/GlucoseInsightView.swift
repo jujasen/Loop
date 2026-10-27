@@ -16,7 +16,7 @@ struct GlucoseInsightView: View {
 
     private var status: GlucoseInsightStatus { manager.status }
     private var aiEnabled: Bool {
-        UserDefaults.standard.aiDoseAdviceSettings.isEnabled && OpenAIChat.shared != nil
+        UserDefaults.standard.aiDoseAdviceSettings.isEnabled && AIChat.shared != nil
     }
 
     var body: some View {

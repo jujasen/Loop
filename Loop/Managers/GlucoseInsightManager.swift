@@ -57,7 +57,7 @@ final class GlucoseInsightManager: ObservableObject {
     }
 
     private var aiEnabled: Bool {
-        defaults.aiDoseAdviceSettings.isEnabled && OpenAIChat.shared != nil
+        defaults.aiDoseAdviceSettings.isEnabled && AIChat.shared != nil
     }
 
     // MARK: Updating
@@ -107,7 +107,7 @@ final class GlucoseInsightManager: ObservableObject {
 
         // The numbers may just have arrived, so what is due is looked at again.
         let aiDue = GlucoseInsightSchedule.dueWork(status: status, attempts: defaults.glucoseInsightAttempts, aiEnabled: aiEnabled, lastDataAttempt: lastDataAttempt, now: now)
-        guard let chat = OpenAIChat.shared else { return }
+        guard let chat = AIChat.shared else { return }
         let writer = GlucoseInsightWriter(chat: chat)
         let profile = defaults.aiDoseAdviceSettings.childProfile
         let therapy = GlucoseInsightTherapy.dayparts(settings(), on: now)
@@ -294,13 +294,13 @@ struct GlucoseInsightAttempts: Codable, Equatable {
         return day == key ? self : GlucoseInsightAttempts(day: key, lastDeep: lastDeep, lastFast: lastFast)
     }
 
-    mutating func record(_ tier: OpenAIChat.Tier, at date: Date, calendar: Calendar = .current) {
+    mutating func record(_ tier: AIChat.Tier, at date: Date, calendar: Calendar = .current) {
         self = on(date, calendar: calendar)
         switch tier {
         case .deep:
             deep += 1
             lastDeep = date
-        case .fast:
+        case .fast, .quick:
             fast += 1
             lastFast = date
         }
@@ -323,7 +323,7 @@ extension UserDefaults {
 
 /// Asks the model what the numbers mean.
 struct GlucoseInsightWriter {
-    let chat: OpenAIChat
+    let chat: AIChat
 
     func longTerm(_ longTerm: GlucoseInsightLongTerm, today: GlucoseInsightToday?, therapy: [GlucoseInsightTherapy], childProfile: String, now: Date) async throws -> GlucoseInsightText {
         struct Input: Encodable {
@@ -360,7 +360,7 @@ struct GlucoseInsightWriter {
             today: today
         )
         let body = try Self.requestBody(system: Self.todayPrompt, input: input, reasoning: "medium")
-        return try Self.parse(try await chat.send(body, timeout: 120, tier: .fast), now: now)
+        return try Self.parse(try await chat.send(body, timeout: 120, tier: .quick), now: now)
     }
 
     static func localTime(_ date: Date) -> String {

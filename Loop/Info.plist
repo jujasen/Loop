@@ -6,6 +6,8 @@
 	<string>$(APP_GROUP_IDENTIFIER)</string>
 	<key>AppStoreURL</key>
 	<string>$(APP_STORE_URL)</string>
+	<key>AnthropicAPIKey</key>
+	<string>$(ANTHROPIC_API_KEY)</string>
 	<key>OpenAIAPIKey</key>
 	<string>$(OPENAI_API_KEY)</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
