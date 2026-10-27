@@ -243,13 +243,6 @@ struct BolusEntryView: View {
                     .font(.footnote)
                     .foregroundColor(Color(.secondaryLabel))
             }
-
-            if let summary = viewModel.splitBolusSummary {
-                Text(summary)
-                    .font(.footnote)
-                    .foregroundColor(Color(.secondaryLabel))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
         }
     }
 
@@ -340,8 +333,9 @@ struct BolusEntryView: View {
 
             actionButton
         }
-        .padding(.bottom) // FIXME: unnecessary on iPhone 8 size devices
-        .background(Color(.secondarySystemGroupedBackground).shadow(radius: 5))
+        // The button's own padding is enough above the home indicator; the bar's background
+        // runs to the bottom edge so no strip of the list shows under it.
+        .background(Color(.secondarySystemGroupedBackground).shadow(radius: 5).ignoresSafeArea(edges: .bottom))
     }
 
     private func warning(for notice: BolusEntryViewModel.Notice) -> some View {
