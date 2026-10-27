@@ -244,7 +244,6 @@ final class DeviceDataManager {
 
     /// Raises insulin needs after meals heavy in fat and protein once glucose turns up, right before a loop.
     private(set) var fatProteinBoost: FatProteinBoostManager!
-    private(set) var splitBolus: SplitBolusManager!
     /// Alerts when glucose keeps rising although the insulin given should have brought it down.
     private(set) var pumpDelivery: PumpDeliveryAlertManager!
 
@@ -434,25 +433,7 @@ final class DeviceDataManager {
             glucoseUnit: { [weak self] in self?.displayGlucosePreference.unit ?? .millimolesPerLiter }
         )
         FatProteinBoostManager.current = fatProteinBoost
-        splitBolus = SplitBolusManager(
-            fetchGlucose: { start, completion in
-                glucoseStore.getGlucoseSamples(start: start, end: nil, completion: completion)
-            },
-            fetchCarbs: { start, completion in
-                carbStore.getCarbEntries(start: start, end: nil) { result in
-                    switch result {
-                    case .success(let entries):
-                        completion(.success(entries.map { .init(id: $0.syncIdentifier, foodType: $0.foodType, date: $0.startDate) }))
-                    case .failure(let error):
-                        completion(.failure(error))
-                    }
-                }
-            },
-            carbRatio: { date in loopManager.settings.carbRatioSchedule?.value(at: date) },
-            glucoseUnit: { [weak self] in self?.displayGlucosePreference.unit ?? .millimolesPerLiter }
-        )
-        SplitBolusManager.current = splitBolus
-        let splitBolus = self.splitBolus!
+        Self.removeSplitBolusLeftovers()
         let doseStore = self.doseStore
         pumpDelivery = PumpDeliveryAlertManager(
             fetchGlucose: { start, end, completion in
@@ -484,7 +465,6 @@ final class DeviceDataManager {
         PumpDeliveryAlertManager.current = pumpDelivery
         pumpDelivery.start()
         Task { @MainActor in
-            SplitBolusNightscoutUploader.shared.start(manager: splitBolus)
             GlucoseInsightManager.shared.start(settings: { loopManager.settings })
         }
 
@@ -644,6 +624,21 @@ final class DeviceDataManager {
         return Manager.init(rawState: rawState) as? PumpManagerUI
     }
     
+    /// Split bolus was taken out of the app: drop its reminders and stored plans, once.
+    private static func removeSplitBolusLeftovers() {
+        let defaults = UserDefaults.standard
+        let keys = ["com.loopkit.Loop.splitBolusPlans", "com.loopkit.Loop.splitBolusSettings", "com.loopkit.Loop.splitBolusCalibration", "com.loopkit.Loop.splitBolusTreatments"]
+        guard keys.contains(where: { defaults.object(forKey: $0) != nil }) else { return }
+        keys.forEach(defaults.removeObject(forKey:))
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            center.removePendingNotificationRequests(withIdentifiers: requests.map(\.identifier).filter { $0.hasPrefix("splitBolus.") })
+        }
+        center.getDeliveredNotifications { notifications in
+            center.removeDeliveredNotifications(withIdentifiers: notifications.map(\.request.identifier).filter { $0.hasPrefix("splitBolus.") })
+        }
+    }
+
     private func checkPumpDataAndLoop() {
         guard !crashRecoveryManager.pendingCrashRecovery else {
             self.log.default("Loop paused pending crash recovery acknowledgement.")
@@ -654,18 +649,14 @@ final class DeviceDataManager {
         guard let pumpManager = pumpManager else {
             // Run loop, even if pump is missing, to ensure stored dosing decision
             fatProteinBoost.runDue {
-                self.splitBolus.runDue {
-                    self.loopManager.loop()
-                }
+                self.loopManager.loop()
             }
             return
         }
 
         pumpManager.ensureCurrentPumpData() { (lastSync) in
             self.fatProteinBoost.runDue {
-                self.splitBolus.runDue {
-                    self.loopManager.loop()
-                }
+                self.loopManager.loop()
             }
         }
     }

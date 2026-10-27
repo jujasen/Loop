@@ -114,17 +114,6 @@ final class CarbEntryViewModel: ObservableObject {
     /// Earlier entries that may be part of the same meal (porridge before the milk).
     private var recentCarbEntries: [StoredCarbEntry] = []
 
-    /// Splits the bolus: part now, the rest later. Off unless turned on for this meal.
-    @Published var isSplitBolusOn = false
-    /// Share and delay changed by hand for this meal, `nil` for the suggested ones.
-    @Published var splitChosenShare: Double?
-    @Published var splitChosenDelay: TimeInterval?
-    /// What the split would do for this meal, `nil` without any carbs or when it cannot split.
-    @Published private(set) var splitBolus: SplitBolusSuggestion?
-    /// The split whose rest this entry logs, when opened from its notification or card.
-    @Published private(set) var splitRestPlan: SplitBolusPlan?
-    /// A rest not logged yet, offered on a new entry's screen: the one due first.
-    @Published private(set) var openSplitRest: SplitBolusPlan?
     @Published var favoriteFoodFolders = UserDefaults.standard.favoriteFoodFolders
     @Published var selectedFavoriteFoodIndex = -1
     /// `id` of the amount applied from the selected favorite food, for foods that have several.
@@ -168,7 +157,6 @@ final class CarbEntryViewModel: ObservableObject {
         observeFavoriteFoodUsage()
         observeLoopUpdates()
         observeFatProteinInputs()
-        observeSplitBolusInputs()
     }
     
     /// Initalizer for when`CarbEntryView` has an entry to edit
@@ -229,20 +217,6 @@ final class CarbEntryViewModel: ObservableObject {
         }
     }
     
-    /// The entry handed to the bolus screen: with the bolus split, only the part eaten now, so
-    /// Loop doses for that part and nothing more until the rest is logged.
-    private var entryForBolus: NewCarbEntry? {
-        guard let entry = updatedCarbEntry else { return nil }
-        guard isSplitBolusOn, canSplitBolus, let split = splitBolus else { return entry }
-        return NewCarbEntry(
-            date: entry.date,
-            quantity: HKQuantity(unit: .gram(), doubleValue: split.nowCarbs),
-            startDate: entry.startDate,
-            foodType: entry.foodType,
-            absorptionTime: SplitBolusSettings.nowAbsorptionTime
-        )
-    }
-
     var continueButtonDisabled: Bool {
         get { updatedCarbEntry == nil }
     }
@@ -282,19 +256,12 @@ final class CarbEntryViewModel: ObservableObject {
             delegate: delegate,
             screenWidth: UIScreen.main.bounds.width,
             originalCarbEntry: originalCarbEntry,
-            potentialCarbEntry: entryForBolus,
+            potentialCarbEntry: updatedCarbEntry,
             selectedCarbAbsorptionTimeEmoji: selectedDefaultAbsorptionTimeEmoji
         )
         viewModel.mealNutrition = mealNutrition
         viewModel.isFatProteinBoostDeclined = isFatProteinBoostDeclined
         viewModel.fatProteinBoost = isFatProteinBoostDeclined ? nil : fatProteinBoost
-        if isSplitBolusOn, canSplitBolus, let splitBolus {
-            // The rest already answers the late rise, so the boost stays out of this meal.
-            viewModel.splitBolus = splitBolus
-            viewModel.isFatProteinBoostDeclined = true
-            viewModel.fatProteinBoost = nil
-        }
-        viewModel.splitRestPlan = splitRestPlan
         // The AI dose advice looks at the meal as it was described and photographed here.
         viewModel.aiDoseMealContext = AIDoseMealContext(
             conversation: mealConversation,
@@ -513,84 +480,6 @@ final class CarbEntryViewModel: ObservableObject {
         updateFatProteinBoost()
     }
 
-    // MARK: - Split Bolus
-
-    /// Only a new meal can be split; the rest of a split, or an entry being edited, cannot.
-    var canSplitBolus: Bool {
-        originalCarbEntry == nil && splitRestPlan == nil
-    }
-
-    private var splitFoodType: String? {
-        CarbFoodLabel(emoji: usesCustomFoodType ? foodType : selectedDefaultAbsorptionTimeEmoji, name: foodName).foodType
-    }
-
-    private func updateSplitBolus() {
-        let carbs = carbsQuantity ?? 0
-        guard canSplitBolus, carbs > 0, let manager = SplitBolusManager.current else {
-            splitBolus = nil
-            return
-        }
-        let (foodType, time, share, delay) = (splitFoodType, time, splitChosenShare, splitChosenDelay)
-        // The history behind the suggestion is weeks of readings: worked through off the main queue.
-        Task.detached(priority: .userInitiated) { [weak self] in
-            let suggestion = await manager.suggestion(carbs: carbs, foodType: foodType, mealDate: time, chosenShare: share, chosenDelay: delay)
-            await MainActor.run {
-                guard let self, self.carbsQuantity == carbs, self.time == time else { return }
-                self.splitBolus = suggestion
-            }
-        }
-    }
-
-    private func updateOpenSplitRest() {
-        openSplitRest = originalCarbEntry == nil && splitRestPlan == nil ? SplitBolusManager.current?.nextRest : nil
-    }
-
-    /// Calls a rest off, from its card on this screen.
-    func cancelSplitRest(_ plan: SplitBolusPlan) {
-        SplitBolusManager.current?.cancel(planID: plan.id)
-        if splitRestPlan?.id == plan.id {
-            // The entry held the rest: empty it, so it is not logged by mistake after all.
-            splitRestPlan = nil
-            selectFavoriteFood(nil)
-        }
-        updateOpenSplitRest()
-    }
-
-    private func observeSplitBolusInputs() {
-        updateOpenSplitRest()
-        NotificationCenter.default.publisher(for: .splitBolusDidChange)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.updateOpenSplitRest() }
-            .store(in: &cancellables)
-
-        Publishers.CombineLatest4($time, $carbsQuantity, $foodName, $foodType)
-            .combineLatest(Publishers.CombineLatest3($isSplitBolusOn, $splitChosenShare, $splitChosenDelay))
-            .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
-            .sink { [weak self] _ in self?.updateSplitBolus() }
-            .store(in: &cancellables)
-    }
-
-    /// Fills the entry in with a split's rest, so continuing logs it and doses for it.
-    func useSplitRest(_ plan: SplitBolusPlan) {
-        let entry = plan.laterEntry(at: Date())
-        splitRestPlan = plan
-        isSplitBolusOn = false
-        openSplitRest = nil
-        selectedFavoriteFoodIndex = -1
-        selectedPortionID = nil
-        absorptionEditIsProgrammatic = true
-        time = entry.startDate
-        carbsQuantity = entry.quantity.doubleValue(for: preferredCarbUnit)
-        let label = CarbFoodLabel(foodType: entry.foodType)
-        foodType = label.emoji
-        foodName = label.name
-        usesCustomFoodType = true
-        absorptionTime = entry.absorptionTime ?? SplitBolusSettings.laterAbsorptionTime
-        absorptionTimeWasEdited = true
-        mealNutrition = nil
-        splitBolus = nil
-    }
-
     // MARK: - Meal Estimate
     var canEstimateMeal: Bool {
         !isEstimatingMeal && (!mealDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !mealPhotos.isEmpty)
@@ -717,10 +606,6 @@ final class CarbEntryViewModel: ObservableObject {
             if activity.entryisMissedMeal {
                 warnings.insert(.entryIsMissedMeal)
             }
-        }
-        if let id = activity.userInfo?[SplitBolusManager.planIDUserInfoKey] as? String,
-           let plan = SplitBolusManager.current?.plan(withID: id), plan.isOpen {
-            useSplitRest(plan)
         }
     }
     
