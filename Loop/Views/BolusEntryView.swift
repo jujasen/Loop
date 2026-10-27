@@ -434,7 +434,9 @@ struct BolusEntryView: View {
         )
         .buttonStyle(ActionButtonStyle(viewModel.primaryButton == .actionButton ? .primary : .secondary))
         .disabled(viewModel.enacting)
-        .padding()
+        .padding([.horizontal, .top])
+        // The home indicator's own space is below this; a little more is enough.
+        .padding(.bottom, 4)
     }
 
     private func alert(for alert: BolusEntryViewModel.Alert) -> SwiftUI.Alert {

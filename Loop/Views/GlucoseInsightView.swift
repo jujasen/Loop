@@ -109,7 +109,7 @@ struct GlucoseInsightView: View {
             }
             if let today, let period = today.period {
                 PeriodRow(period: period, hoursAboveTen: today.hoursAboveTen)
-            } else if status.today == nil {
+            } else if todayText == nil {
                 Text("No numbers yet. They are read from Nightscout.", comment: "Shown when the glucose insight has no data yet")
                     .font(.footnote)
                     .foregroundColor(.secondary)
