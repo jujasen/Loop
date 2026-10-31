@@ -374,6 +374,21 @@ struct MealWatchNightscoutAPI {
         return first?["_id"] as? String
     }
 
+    /// Whether it is still there: gone when someone deleted it, for example from LoopFollow.
+    func exists(_ nsID: String) async throws -> Bool {
+        var components = URLComponents(url: siteURL.appendingPathComponent("api/v1/treatments.json"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "find[_id]", value: nsID), URLQueryItem(name: "count", value: "1")]
+        guard let url = components?.url else { return true }
+        var urlRequest = try request(path: "api/v1/treatments.json", method: "GET")
+        urlRequest.url = url
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw AIChat.ChatError.server("Nightscout \(http.statusCode)")
+        }
+        guard let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return true }
+        return !list.isEmpty
+    }
+
     /// Deletes it; one that is already gone is not an error.
     func delete(_ nsID: String) async throws {
         let (_, response) = try await URLSession.shared.data(for: try request(path: "api/v1/treatments/\(nsID)", method: "DELETE"))

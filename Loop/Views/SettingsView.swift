@@ -53,6 +53,7 @@ public struct SettingsView: View {
             case fatProteinBoost
             case pumpDeliveryAlert
             case aiDoseAdvice
+            case eveningWatch
         }
     }
     
@@ -130,6 +131,8 @@ public struct SettingsView: View {
                         .environmentObject(displayGlucosePreference)
                 case .aiDoseAdvice:
                     AIDoseAdviceSettingsView()
+                case .eveningWatch:
+                    EveningWatchSettingsView()
                 }
             }
         }
@@ -383,6 +386,11 @@ extension SettingsView {
                         imageView: Image(systemName: "clock.arrow.circlepath").resizable().scaledToFit().frame(width: 34, height: 34).foregroundColor(carbTintColor),
                         label: String(localized: "Fat and Protein", comment: "Title of the fat and protein boost settings row"),
                         descriptiveText: String(localized: "Extra insulin for the late rise", comment: "Descriptive text for the fat and protein boost settings row"))
+            LargeButton(action: { sheet = .eveningWatch },
+                        includeArrow: true,
+                        imageView: Image(systemName: "moon.stars").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(.insulinTintColor),
+                        label: EveningWatchText.name,
+                        descriptiveText: String(localized: "A correction when the evening runs high", comment: "Descriptive text for the evening watch settings row"))
             LargeButton(action: { sheet = .pumpDeliveryAlert },
                         includeArrow: true,
                         imageView: Image(systemName: "drop.triangle").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(.orange),

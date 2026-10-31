@@ -337,9 +337,38 @@ enum LoopAppSettings {
                         "factorAfter": outcome.factorAfter
                     ] as [String: Any]
                 }
-            ] as [String: Any]
+            ] as [String: Any],
+            "eveningWatch": eveningWatch(defaults)
         ]
         return try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+    }
+
+    /// The evening watch's settings, learned dose and last stop, for LoopFollow (mmol/L, minutes
+    /// after midnight). Its log goes to Nightscout as a treatment instead: it changes every loop.
+    private static func eveningWatch(_ defaults: UserDefaults) -> [String: Any] {
+        let settings = defaults.eveningWatchSettings
+        let state = defaults.eveningWatchState
+        var object: [String: Any] = [
+            "mode": settings.mode.rawValue,
+            "start": settings.start,
+            "end": settings.end,
+            "lateFrom": settings.lateFrom,
+            "risingFromMmol": settings.risingFrom,
+            "highFromMmol": settings.highFrom,
+            "startUnits": settings.startUnits,
+            "maximumIOB": settings.maximumIOB,
+            "maximumPerEvening": settings.maximumPerEvening,
+            "dosesPerEvening": settings.dosesPerEvening,
+            "minutesBetween": settings.minutesBetween,
+            "maximumUnits": EveningWatch.Rule.maximumUnits
+        ]
+        if let learned = state.learnedUnits {
+            object["learnedUnits"] = learned
+        }
+        if let stop = state.stop {
+            object["stop"] = ["date": ISO8601DateFormatter().string(from: stop.date), "lowestMmol": stop.lowest] as [String: Any]
+        }
+        return object
     }
 
     private static func mmol(_ mgdl: Double) -> Double {

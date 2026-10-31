@@ -56,6 +56,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         tableView.register(MuteAlertsWarningCell.self, forCellReuseIdentifier: MuteAlertsWarningCell.className)
         tableView.register(BolusRecoveryBannerCell.self, forCellReuseIdentifier: BolusRecoveryBannerCell.className)
         tableView.register(MealWatchCell.self, forCellReuseIdentifier: MealWatchCell.className)
+        tableView.register(EveningWatchCell.self, forCellReuseIdentifier: EveningWatchCell.className)
         tableView.register(ChartDetailsHeaderCell.self, forCellReuseIdentifier: ChartDetailsHeaderCell.className)
         tableView.register(ChartDetailsNavigationCell.self, forCellReuseIdentifier: ChartDetailsNavigationCell.className)
 
@@ -181,6 +182,33 @@ final class StatusTableViewController: LoopChartsTableViewController {
             .sink { [weak self] id in
                 MealWatchManager.shared.pendingReviewID = nil
                 self?.reviewMealWatchSuggestion(id)
+            }
+            .store(in: &cancellables)
+
+        // The evening watch's card shares the meal watch section, after the meals.
+        eveningWatchCard = EveningWatchManager.shared.card
+        EveningWatchManager.shared.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                // objectWillChange fires before the change; read it on the next turn.
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    let card = EveningWatchManager.shared.card
+                    guard card != self.eveningWatchCard else { return }
+                    self.eveningWatchCard = card
+                    guard self.isViewLoaded else { return }
+                    self.tableView.reloadSections(IndexSet(integer: Section.mealWatch.rawValue), with: .automatic)
+                    self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
+                    self.updateScrollEnabled()
+                }
+            }
+            .store(in: &cancellables)
+        EveningWatchManager.shared.$pendingReviewID
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] id in
+                EveningWatchManager.shared.pendingReviewID = nil
+                self?.reviewEveningWatchSuggestion(id)
             }
             .store(in: &cancellables)
 
@@ -909,6 +937,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
     private static let bannerRowEstimatedHeight: CGFloat = 74
     private static let mealWatchRowEstimatedHeight: CGFloat = 52
     private static let mealWatchSuggestionRowEstimatedHeight: CGFloat = 170
+    private static let eveningWatchRowEstimatedHeight: CGFloat = 52
 
     /// Rows whose content is text grow with the text size chosen in iOS Settings, so a
     /// larger setting makes the row taller instead of clipping what is in it. The main
@@ -1079,6 +1108,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
     /// Watched meals. A snapshot for the same reason as `bolusRecoveryAttempt`: it only changes
     /// together with a reload of its section.
     private var mealWatches: [MealWatch] = []
+
+    /// After the meal watches in their section, while there is something to show.
+    private var eveningWatchCard: EveningWatchCardContent?
 
     private var shouldShowBannerWarning: Bool {
         alertPermissionsChecker.showWarning || alertMuter.configuration.shouldMute
@@ -1287,7 +1319,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case .bolusRecovery:
             return bolusRecoveryAttempt != nil ? 1 : 0
         case .mealWatch:
-            return mealWatches.count
+            return mealWatches.count + (eveningWatchCard != nil ? 1 : 0)
         case .alertWarning:
             return shouldShowBannerWarning ? 1 : 0
         case .hud:
@@ -1548,6 +1580,47 @@ final class StatusTableViewController: LoopChartsTableViewController {
         }
     }
 
+    /// The evening watch: an open suggestion with its buttons, or what it has done tonight.
+    private class EveningWatchCell: UITableViewCell {
+        func configure(card: EveningWatchCardContent, onReview: @escaping (EveningWatchAction) -> Void, onDecline: @escaping (EveningWatchAction) -> Void) {
+            selectionStyle = .none
+            backgroundColor = .clear
+            if #available(iOS 16.0, *) {
+                contentConfiguration = UIHostingConfiguration {
+                    EveningWatchCard(card: card, onReview: onReview, onDecline: onDecline)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal)
+                        .background(CardBackground())
+                }
+                .margins(.horizontal, 10)
+                .margins(.vertical, 4)
+            } else {
+                var content = defaultContentConfiguration()
+                content.text = card.open.map { EveningWatchText.suggestionTitle($0) + " " + EveningWatchText.reason($0) } ?? "🌙 " + EveningWatchText.name
+                contentConfiguration = content
+            }
+        }
+    }
+
+    /// The bolus screen with the evening watch's dose in the field, the way a meal watch
+    /// suggestion opens it.
+    private func reviewEveningWatchSuggestion(_ actionID: String) {
+        guard let action = EveningWatchManager.shared.action(withID: actionID), action.state == .open else { return }
+        if presentedViewController != nil {
+            dismiss(animated: false)
+        }
+        presentBolusEntryView(mealWatchSuggestion: MealWatchSuggestion(
+            id: action.id,
+            date: action.date,
+            units: action.units,
+            reason: "🌙 " + EveningWatchText.reason(action),
+            glucoseMmol: action.glucose,
+            loopUnits: nil,
+            expiresAt: action.date.addingTimeInterval(EveningWatch.Rule.lifetime),
+            state: .open
+        ))
+    }
+
     /// Opens the bolus screen with the suggestion's dose in the field, to change or deliver.
     private func reviewMealWatchSuggestion(_ suggestionID: String) {
         guard let (_, suggestion) = MealWatchManager.shared.suggestion(withID: suggestionID), suggestion.state == .open else { return }
@@ -1600,6 +1673,16 @@ final class StatusTableViewController: LoopChartsTableViewController {
             let cell = tableView.dequeueReusableCell(withIdentifier: BolusRecoveryBannerCell.className, for: indexPath) as! BolusRecoveryBannerCell
             cell.attempt = bolusRecoveryAttempt
             cell.setNeedsUpdateConfiguration()
+            return cell
+        case .mealWatch where indexPath.row >= mealWatches.count:
+            let cell = tableView.dequeueReusableCell(withIdentifier: EveningWatchCell.className, for: indexPath) as! EveningWatchCell
+            if let card = eveningWatchCard {
+                cell.configure(
+                    card: card,
+                    onReview: { [weak self] action in self?.reviewEveningWatchSuggestion(action.id) },
+                    onDecline: { action in EveningWatchManager.shared.decline(action.id) }
+                )
+            }
             return cell
         case .mealWatch:
             let cell = tableView.dequeueReusableCell(withIdentifier: MealWatchCell.className, for: indexPath) as! MealWatchCell
@@ -1893,6 +1976,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 }
                 for watch in mealWatches {
                     remaining -= UIFontMetrics(forTextStyle: .body).scaledValue(for: watch.openSuggestion == nil ? Self.mealWatchRowEstimatedHeight : Self.mealWatchSuggestionRowEstimatedHeight)
+                }
+                if let card = eveningWatchCard {
+                    remaining -= UIFontMetrics(forTextStyle: .body).scaledValue(for: card.isSuggestion ? Self.mealWatchSuggestionRowEstimatedHeight : Self.eveningWatchRowEstimatedHeight)
                 }
                 for row in visibleChartRows where row != .glucose {
                     remaining -= fixedChartRowHeight(row)

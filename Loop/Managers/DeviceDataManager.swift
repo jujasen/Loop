@@ -484,6 +484,16 @@ final class DeviceDataManager {
             })
         }
 
+        Task { @MainActor in
+            EveningWatchManager.shared.start(.init(
+                input: { [weak self] now in await self?.eveningWatchInput(now: now) },
+                deliver: { [weak self] units in
+                    guard let self else { throw CancellationError() }
+                    try await self.enactBolus(units: units, activationType: .manualNoRecommendation)
+                }
+            ))
+        }
+
         watchManager = WatchDataManager(deviceManager: self, healthStore: healthStore)
 
         let remoteDataServicesManager = RemoteDataServicesManager(
@@ -676,6 +686,63 @@ final class DeviceDataManager {
                 ))
             }
         }
+    }
+
+    /// What the evening watch looks at: glucose, boluses and carbs from the stores, and from the
+    /// loop the insulin on board, its forecast and whether a dose can be given now.
+    func eveningWatchInput(now: Date) async -> EveningWatch.Input? {
+        let glucose: [StoredGlucoseSample] = await withCheckedContinuation { continuation in
+            glucoseStore.getGlucoseSamples(start: now.addingTimeInterval(-4.5 * 3600), end: nil) { result in
+                continuation.resume(returning: (try? result.get()) ?? [])
+            }
+        }
+        let doses: [DoseEntry] = await withCheckedContinuation { continuation in
+            doseStore.getNormalizedDoseEntries(start: now.addingTimeInterval(-6 * 3600), end: nil) { result in
+                if case .success(let entries) = result {
+                    continuation.resume(returning: entries)
+                } else {
+                    continuation.resume(returning: [])
+                }
+            }
+        }
+        let carbs = (try? await carbStore.getCarbEntries(start: now.addingTimeInterval(-6 * 3600), end: now.addingTimeInterval(2 * 3600))) ?? []
+        let settings = loopManager.settings
+        var reducedInsulin = false
+        if let override = settings.scheduleOverride, override.isActive(at: now), let scale = override.settings.insulinNeedsScaleFactor, scale < 1 {
+            reducedInsulin = true
+        }
+        let status = pumpManager?.status
+        var bolusing = false
+        if let state = status?.bolusState, state != .noBolus {
+            bolusing = true
+        }
+        let canDose = automaticDosingStatus.automaticDosingEnabled && status != nil && !(status?.basalDeliveryState?.isSuspended ?? true) && !bolusing
+        let loop: (iob: Double?, lowest: Double?) = await withCheckedContinuation { continuation in
+            loopManager.getLoopState { _, state in
+                let forecast = (state.predictedGlucoseIncludingPendingInsulin ?? state.predictedGlucose ?? [])
+                    .filter { $0.startDate > now && $0.startDate <= now.addingTimeInterval(3 * 3600) }
+                    .map { $0.quantity.doubleValue(for: .millimolesPerLiter) }
+                continuation.resume(returning: (state.insulinOnBoard?.value, forecast.min()))
+            }
+        }
+        return EveningWatch.Input(
+            glucose: glucose
+                .filter { !$0.wasUserEntered && !$0.isDisplayOnly }
+                .sorted { $0.startDate < $1.startDate }
+                .map { EveningWatch.Reading(date: $0.startDate, mmol: $0.quantity.doubleValue(for: .millimolesPerLiter)) },
+            manualBoluses: doses
+                .filter { $0.type == .bolus && !($0.automatic ?? false) }
+                .map { EveningWatch.Dose(date: $0.startDate, units: $0.deliveredUnits ?? $0.programmedUnits) }
+                .sorted { $0.date < $1.date },
+            carbs: carbs
+                .map { EveningWatch.Carbs(date: $0.startDate, grams: $0.quantity.doubleValue(for: .gram())) }
+                .sorted { $0.date < $1.date },
+            iob: loop.iob,
+            lowestForecast: loop.lowest,
+            maximumBolus: settings.maximumBolus,
+            canDose: canDose,
+            reducedInsulin: reducedInsulin
+        )
     }
 
     /// Split bolus was taken out of the app: drop its reminders and stored plans, once.

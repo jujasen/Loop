@@ -45947,6 +45947,858 @@
           }
         }
       }
+    },
+    "Evening Watch" : {
+      "comment" : "Name of the evening watch",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kveldsvakt"
+          }
+        }
+      }
+    },
+    "🌙 Evening watch: %@ U?" : {
+      "comment" : "Evening watch suggestion title (1: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🌙 Kveldsvakt: %@ E?"
+          }
+        }
+      }
+    },
+    "🌙 Evening watch gave %@ U" : {
+      "comment" : "Evening watch automatic dose title (1: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🌙 Kveldsvakten ga %@ E"
+          }
+        }
+      }
+    },
+    "🌙 Evening watch could not give %@ U" : {
+      "comment" : "Evening watch automatic dose that the pump did not take (1: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🌙 Kveldsvakten fikk ikke gitt %@ E"
+          }
+        }
+      }
+    },
+    "🌙 Evening watch stopped dosing" : {
+      "comment" : "Notification title when the evening watch turns automatic mode off after a low",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🌙 Kveldsvakten sluttet å gi selv"
+          }
+        }
+      }
+    },
+    "Glucose went to %1$@ after the dose at %2$@. It suggests instead until automatic is turned on again in Settings." : {
+      "comment" : "Why the evening watch turned automatic mode off (1: lowest glucose)(2: time of the dose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BS gikk ned til %1$@ etter dosen kl. %2$@. Den foreslår i stedet til automatisk slås på igjen under Innstillinger."
+          }
+        }
+      }
+    },
+    "%1$@ and up %2$@ over the last half hour." : {
+      "comment" : "Evening watch: why, glucose rising (1: glucose)(2: rise over 30 minutes)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ og opp %2$@ siste halvtime."
+          }
+        }
+      }
+    },
+    "%@ and not falling for half an hour." : {
+      "comment" : "Evening watch: why, glucose high (1: glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ og har ikke falt på en halvtime."
+          }
+        }
+      }
+    },
+    "%@ U on board." : {
+      "comment" : "Evening watch: insulin on board (1: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ E om bord."
+          }
+        }
+      }
+    },
+    "No recent glucose" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen ny BS"
+          }
+        }
+      }
+    },
+    "Readings missing in the last half hour" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mangler målinger siste halvtime"
+          }
+        }
+      }
+    },
+    "Sensor jump" : {
+      "comment" : "Evening watch log: two readings too far apart",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hopp i sensoren"
+          }
+        }
+      }
+    },
+    "Under the limit" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under grensen"
+          }
+        }
+      }
+    },
+    "Not rising enough" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stiger ikke nok"
+          }
+        }
+      }
+    },
+    "Falling" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faller"
+          }
+        }
+      }
+    },
+    "Was under %@ in the last 90 min" : {
+      "comment" : "Evening watch log (1: glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Var under %@ siste 90 min"
+          }
+        }
+      }
+    },
+    "Meal, waits until %@" : {
+      "comment" : "Evening watch log (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Måltid, venter til %@"
+          }
+        }
+      }
+    },
+    "Dose given, waits until %@" : {
+      "comment" : "Evening watch log (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dose gitt, venter til %@"
+          }
+        }
+      }
+    },
+    "Waits until %@ after the last one" : {
+      "comment" : "Evening watch log (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Venter til %@ etter forrige"
+          }
+        }
+      }
+    },
+    "Enough for tonight" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nok for i kveld"
+          }
+        }
+      }
+    },
+    "Insulin on board unknown" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukjent insulin om bord"
+          }
+        }
+      }
+    },
+    "%@ U on board" : {
+      "comment" : "Evening watch log (1: insulin on board)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ E om bord"
+          }
+        }
+      }
+    },
+    "Loop forecasts %@" : {
+      "comment" : "Evening watch log (1: lowest forecast glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop spår %@"
+          }
+        }
+      }
+    },
+    "Override with less insulin on" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overstyring med mindre insulin er på"
+          }
+        }
+      }
+    },
+    "Closed loop off or pump busy" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lukket loop av eller pumpa opptatt"
+          }
+        }
+      }
+    },
+    "Dose under 0.1 U" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dose under 0,1 E"
+          }
+        }
+      }
+    },
+    "Suggested %@ U" : {
+      "comment" : "Evening watch log (1: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foreslo %@ E"
+          }
+        }
+      }
+    },
+    "Gave %@ U" : {
+      "comment" : "Evening watch log (1: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ga %@ E"
+          }
+        }
+      }
+    },
+    "Suggestion waiting" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forslag venter"
+          }
+        }
+      }
+    },
+    "Suggestion no longer needed" : {
+      "comment" : "Evening watch log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forslaget trengs ikke lenger"
+          }
+        }
+      }
+    },
+    "Automatic turned off after %@" : {
+      "comment" : "Evening watch log (1: lowest glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisk slått av etter %@"
+          }
+        }
+      }
+    },
+    "Giving" : {
+      "comment" : "State of an evening watch automatic dose being delivered",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gir"
+          }
+        }
+      }
+    },
+    "Given %@ U" : {
+      "comment" : "State of an evening watch dose (1: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gitt %@ E"
+          }
+        }
+      }
+    },
+    "Declined" : {
+      "comment" : "State of an evening watch suggestion",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avslått"
+          }
+        }
+      }
+    },
+    "No longer needed" : {
+      "comment" : "State of an evening watch suggestion",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trengs ikke lenger"
+          }
+        }
+      }
+    },
+    "Not delivered" : {
+      "comment" : "State of an evening watch automatic dose",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke gitt"
+          }
+        }
+      }
+    },
+    "Stays until answered here or in LoopFollow, or until glucose comes down." : {
+      "comment" : "Evening watch card: how long a suggestion stays",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Står til den er besvart her eller i LoopFollow, eller til BS kommer ned."
+          }
+        }
+      }
+    },
+    "Evening watch doses until %@" : {
+      "comment" : "Evening watch card in automatic mode (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kveldsvakten gir selv til %@"
+          }
+        }
+      }
+    },
+    "Evening watch suggests until %@" : {
+      "comment" : "Evening watch card in suggestion mode (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kveldsvakten foreslår til %@"
+          }
+        }
+      }
+    },
+    "Suggest" : {
+      "comment" : "Evening watch mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foreslå"
+          }
+        }
+      }
+    },
+    "Automatic" : {
+      "comment" : "Evening watch mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisk"
+          }
+        }
+      }
+    },
+    "From" : {
+      "comment" : "Evening watch: start of the window",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fra"
+          }
+        }
+      }
+    },
+    "To" : {
+      "comment" : "Evening watch: end of the window",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Til"
+          }
+        }
+      }
+    },
+    "Late From" : {
+      "comment" : "Evening watch: when the late limits start",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sent fra"
+          }
+        }
+      }
+    },
+    "From the late time until 06:00 both limits are 1 mmol/L higher and the dose is 60 %: glucose falls by itself more often after 23:00." : {
+      "comment" : "Evening watch settings footer under the times",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fra sent-tidspunktet til kl. 06 er begge grensene 1 mmol/L høyere og dosen 60 %: etter kl. 23 faller BS oftere av seg selv."
+          }
+        }
+      }
+    },
+    "Rising From" : {
+      "comment" : "Evening watch: the rising limit",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stiger fra"
+          }
+        }
+      }
+    },
+    "High From" : {
+      "comment" : "Evening watch: the high limit",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Høy fra"
+          }
+        }
+      }
+    },
+    "Rising: at or over the limit, up at least 0.3 over 15 minutes and 0.8 over half an hour. High: every reading for half an hour near the limit, and not falling." : {
+      "comment" : "Evening watch settings footer under the limits",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stiger: på eller over grensen, opp minst 0,3 siste 15 min og 0,8 siste halvtime. Høy: alle målinger siste halvtime nær grensen, og faller ikke."
+          }
+        }
+      }
+    },
+    "Dose at 12 mmol/L" : {
+      "comment" : "Evening watch: the starting dose",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dose ved 12 mmol/L"
+          }
+        }
+      }
+    },
+    "Reset" : {
+      "comment" : "Evening watch: forget the learned dose",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nullstill"
+          }
+        }
+      }
+    },
+    "Insulin on Board Under" : {
+      "comment" : "Evening watch: maximum insulin on board",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insulin om bord under"
+          }
+        }
+      }
+    },
+    "At Most per Evening" : {
+      "comment" : "Evening watch: units per evening",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maks per kveld"
+          }
+        }
+      }
+    },
+    "Doses per Evening" : {
+      "comment" : "Evening watch: doses per evening",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doser per kveld"
+          }
+        }
+      }
+    },
+    "At Least Between" : {
+      "comment" : "Evening watch: minutes between doses",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minst mellom"
+          }
+        }
+      }
+    },
+    "%d min" : {
+      "comment" : "Minutes (1: number)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d min"
+          }
+        }
+      }
+    },
+    "Dose" : {
+      "comment" : "Evening watch settings header",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dose"
+          }
+        }
+      }
+    },
+    "Under 10 mmol/L half the dose, under 12 70 %, never over 0.8 U or the maximum bolus. After each dose given it learns from the next three hours: smaller after a low, larger when glucose was still over 12 two hours on." : {
+      "comment" : "Evening watch settings footer under the dose",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under 10 mmol/L halv dose, under 12 70 %, aldri over 0,8 E eller maks bolus. Etter hver dose som er gitt, lærer den av de neste tre timene: mindre etter en føling, større når BS fortsatt var over 12 to timer etter."
+          }
+        }
+      }
+    },
+    "Nothing when: glucose was under 6 in the last 90 minutes, carbs within 90 minutes (or entered ahead), a dose by hand within 60 minutes, Loop forecasts under 3.9, an override with less insulin is on, readings are missing or jump. Automatic also needs closed loop on and the pump free. A reading under 4 within four hours of an automatic dose turns automatic off." : {
+      "comment" : "Evening watch's fixed safety rules",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingenting når: BS var under 6 siste 90 min, karbo innen 90 min (eller lagt inn fram i tid), manuell dose siste 60 min, Loop spår under 3,9, en overstyring med mindre insulin er på, eller målinger mangler eller hopper. Automatisk krever også lukket loop og ledig pumpe. En måling under 4 innen fire timer etter en automatisk dose slår automatisk av."
+          }
+        }
+      }
+    },
+    "Always" : {
+      "comment" : "Evening watch settings header above the fixed rules",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alltid"
+          }
+        }
+      }
+    },
+    "What It Has Done" : {
+      "comment" : "Evening watch: link to the log",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hva den har gjort"
+          }
+        }
+      }
+    },
+    "Give insulin automatically?" : {
+      "comment" : "Evening watch: confirm automatic mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gi insulin automatisk?"
+          }
+        }
+      }
+    },
+    "Turn On" : {
+      "comment" : "Evening watch: confirm automatic mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slå på"
+          }
+        }
+      }
+    },
+    "In the evening window the evening watch then gives up to %1$@ U a night by itself, %2$@ at a time, without asking. Keep the low alerts on." : {
+      "comment" : "Evening watch: what automatic mode means (1: units per evening)(2: largest dose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I kveldsvinduet gir kveldsvakten da opptil %1$@ E per natt selv, høyst %2$@ om gangen, uten å spørre. Ha lav-varslene på."
+          }
+        }
+      }
+    },
+    "In the evening, when glucose keeps rising or stays high and nothing has been given or eaten for a while, the evening watch suggests a correction or gives it. It goes by glucose itself, not by Loop's forecast." : {
+      "comment" : "Evening watch settings: explanation when off",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når BS fortsetter å stige eller blir liggende høyt om kvelden, og ingenting er gitt eller spist på en stund, foreslår eller gir kveldsvakten en korreksjon. Den går etter selve BS, ikke Loops prognose."
+          }
+        }
+      }
+    },
+    "Suggests a correction here and in LoopFollow. The suggestion stays until it is given or declined, or until glucose comes down." : {
+      "comment" : "Evening watch settings: explanation of suggestion mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foreslår en korreksjon her og i LoopFollow. Forslaget står til det er gitt eller avslått, eller til BS kommer ned."
+          }
+        }
+      }
+    },
+    "Gives the correction itself and keeps watching until the window ends. Every dose shows here, in LoopFollow and in Nightscout." : {
+      "comment" : "Evening watch settings: explanation of automatic mode",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gir korreksjonen selv og følger med til vinduet slutter. Hver dose vises her, i LoopFollow og i Nightscout."
+          }
+        }
+      }
+    },
+    "%@ U" : {
+      "comment" : "Units of insulin (1: number)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ E"
+          }
+        }
+      }
+    },
+    "2 h: %1$@ · lowest %2$@ · dose %3$@ → %4$@ U" : {
+      "comment" : "Evening watch: what followed a dose (1: glucose after 2 h)(2: lowest within 3 h)(3: dose before)(4: dose after)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 t: %1$@ · lavest %2$@ · dose %3$@ → %4$@ E"
+          }
+        }
+      }
+    },
+    "Doses and Suggestions" : {
+      "comment" : "Evening watch log header",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doser og forslag"
+          }
+        }
+      }
+    },
+    "Each Reading" : {
+      "comment" : "Evening watch log header",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hver måling"
+          }
+        }
+      }
+    },
+    "A correction when the evening runs high" : {
+      "comment" : "Descriptive text for the evening watch settings row",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Korreksjon når kvelden blir høy"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
