@@ -4,7 +4,7 @@
 //
 //  Turns a free-text meal description ("en brødskive med leverpostei og et glass melk"), photos
 //  of the plate, or both, into the three things the carb entry screen needs — grams, absorption
-//  time and an emoji — by asking OpenAI. The caregiver can add details afterwards ("he only ate
+//  time and an emoji — by asking Claude. The caregiver can add details afterwards ("he only ate
 //  half"), and the whole meal is re-evaluated with everything said so far, so the conversation is
 //  kept here.
 //
@@ -125,7 +125,7 @@ final class MealCarbEstimator {
         return resized.jpegData(compressionQuality: 0.7)
     }
 
-    /// Built into the app at build time (`OPENAI_API_KEY` in the xcconfig, `OpenAIAPIKey` in
+    /// Built into the app at build time (`ANTHROPIC_API_KEY` in the xcconfig, `AnthropicAPIKey` in
     /// Info.plist). Without it the feature stays hidden.
     static let shared: MealCarbEstimator? = AIChat.shared.map { MealCarbEstimator(chat: $0) }
 
@@ -136,7 +136,7 @@ final class MealCarbEstimator {
     }
 
     convenience init(apiKey: String, session: URLSession = .shared) {
-        self.init(chat: AIChat(provider: .openAI, apiKey: apiKey, session: session))
+        self.init(chat: AIChat(apiKey: apiKey, session: session))
     }
 
     /// Asks for a complete estimate of the meal described across `conversation`, which alternates

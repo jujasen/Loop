@@ -46,11 +46,15 @@ final class EveningWatchManager: ObservableObject {
     private var observer: NSObjectProtocol?
     private var isChecking = false
     private var lastLogUpload: Date?
+    /// The card as the home screen last read it, and a timer for when the window closes.
+    private var publishedCard: EveningWatchCardContent?
+    private var cardTimer: Timer?
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         settings = defaults.eveningWatchSettings
         state = defaults.eveningWatchState
+        publishedCard = EveningWatchCardContent(settings: settings, state: state, now: Date())
     }
 
     func start(_ environment: Environment) {
@@ -59,6 +63,25 @@ final class EveningWatchManager: ObservableObject {
         observer = NotificationCenter.default.addObserver(forName: .LoopCompleted, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.check() }
         }
+        refreshCard()
+    }
+
+    /// The card depends on the time as well as on the state: when the window closes with nothing
+    /// open it must go, though nothing has changed. Tells the home screen when it is different.
+    func refreshCard(now: Date = Date()) {
+        let card = EveningWatchCardContent(settings: settings, state: state, now: now)
+        if card != publishedCard {
+            publishedCard = card
+            objectWillChange.send()
+        }
+        cardTimer?.invalidate()
+        cardTimer = nil
+        guard let card, !card.isSuggestion, card.windowEnd > now else { return }
+        let timer = Timer(fire: card.windowEnd.addingTimeInterval(1), interval: 0, repeats: false) { [weak self] _ in
+            Task { @MainActor in self?.refreshCard() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        cardTimer = timer
     }
 
     /// The card on the home screen: an open suggestion, or what the watch has done tonight while
@@ -107,6 +130,7 @@ final class EveningWatchManager: ObservableObject {
     // MARK: Checking
 
     func check(now: Date = Date()) async {
+        defer { refreshCard() }
         guard !isChecking, let environment, needsCheck(now: now) else { return }
         isChecking = true
         defer { isChecking = false }
@@ -219,7 +243,7 @@ final class EveningWatchManager: ObservableObject {
     /// Open suggestions as treatments LoopFollow shows (one deleted there counts as declined), a
     /// note for each automatic dose, and tonight's log.
     private func syncNightscout(now: Date) async {
-        guard let api = MealWatchNightscoutAPI.fromKeychain() else { return }
+        guard let api = SuggestionNightscoutAPI.fromKeychain() else { return }
         var uploads = defaults.eveningWatchUploads
         do {
             for (id, nsID) in uploads.suggestions {
@@ -280,6 +304,7 @@ final class EveningWatchManager: ObservableObject {
         guard state != self.state else { return }
         self.state = state
         defaults.eveningWatchState = state
+        publishedCard = card
     }
 }
 
@@ -312,7 +337,7 @@ struct EveningWatchCardContent: Equatable {
 /// The evening watch in Nightscout, for LoopFollow. Contract with LoopFollow
 /// (`Remote/AISuggestion/AIBolusSuggestion.swift`, `Alarm/EveningWatch`); change both apps together.
 ///
-/// - An open suggestion is an "AI Bolus Suggestion" like the meal watch's, with
+/// - An open suggestion is an "AI Bolus Suggestion", with
 ///   `source: "eveningWatch"`, `trigger` ("rising"/"high") and `mealName` "🌙 …". Deleting it in
 ///   Nightscout declines it here.
 /// - An automatic dose is a "Note" with `source: "eveningWatch"`, `actionID`, `units`, `glucose`
@@ -327,12 +352,12 @@ enum EveningWatchTreatment {
 
     static func suggestion(_ action: EveningWatchAction) -> [String: Any] {
         [
-            "eventType": MealWatchTreatment.eventType,
+            "eventType": BolusSuggestionTreatment.eventType,
             "source": source,
             "trigger": action.trigger.rawValue,
-            "created_at": MealWatchTreatment.iso8601(action.date),
-            "timestamp": MealWatchTreatment.iso8601(action.date),
-            "expiresAt": MealWatchTreatment.iso8601(action.date.addingTimeInterval(EveningWatch.Rule.lifetime)),
+            "created_at": BolusSuggestionTreatment.iso8601(action.date),
+            "timestamp": BolusSuggestionTreatment.iso8601(action.date),
+            "expiresAt": BolusSuggestionTreatment.iso8601(action.date.addingTimeInterval(EveningWatch.Rule.lifetime)),
             "suggestionID": action.id,
             "units": action.units,
             "reason": EveningWatchText.reason(action),
@@ -348,8 +373,8 @@ enum EveningWatchTreatment {
             "eventType": "Note",
             "source": source,
             "actionID": action.id,
-            "created_at": MealWatchTreatment.iso8601(action.date),
-            "timestamp": MealWatchTreatment.iso8601(action.date),
+            "created_at": BolusSuggestionTreatment.iso8601(action.date),
+            "timestamp": BolusSuggestionTreatment.iso8601(action.date),
             "units": action.givenUnits ?? action.units,
             "glucose": action.glucose,
             "state": action.state.rawValue,
@@ -380,7 +405,7 @@ enum EveningWatchTreatment {
                 "id": action.id,
                 "kind": action.kind.rawValue,
                 "trigger": action.trigger.rawValue,
-                "date": MealWatchTreatment.iso8601(action.date),
+                "date": BolusSuggestionTreatment.iso8601(action.date),
                 "glucose": action.glucose,
                 "units": action.units,
                 "state": action.state.rawValue,
@@ -391,17 +416,17 @@ enum EveningWatchTreatment {
             return item
         }
         let entryList: [[String: Any]] = entries.suffix(60).map { entry in
-            var item: [String: Any] = ["date": MealWatchTreatment.iso8601(entry.date), "kind": entry.kind.rawValue]
+            var item: [String: Any] = ["date": BolusSuggestionTreatment.iso8601(entry.date), "kind": entry.kind.rawValue]
             if let glucose = entry.glucose { item["glucose"] = glucose }
-            if let until = entry.until { item["until"] = MealWatchTreatment.iso8601(until) }
+            if let until = entry.until { item["until"] = BolusSuggestionTreatment.iso8601(until) }
             if let value = entry.value { item["value"] = value }
             return item
         }
         var body: [String: Any] = [
             "eventType": logEventType,
             "source": source,
-            "created_at": MealWatchTreatment.iso8601(start),
-            "timestamp": MealWatchTreatment.iso8601(start),
+            "created_at": BolusSuggestionTreatment.iso8601(start),
+            "timestamp": BolusSuggestionTreatment.iso8601(start),
             "enteredBy": "Loop",
             "mode": settings.mode.rawValue,
             "actions": actionList,
@@ -409,7 +434,7 @@ enum EveningWatchTreatment {
         ]
         if let learned = state.learnedUnits { body["learnedUnits"] = learned }
         if let stop = state.stop, stop.date >= start {
-            body["stop"] = ["date": MealWatchTreatment.iso8601(stop.date), "lowest": stop.lowest]
+            body["stop"] = ["date": BolusSuggestionTreatment.iso8601(stop.date), "lowest": stop.lowest]
         }
         let data = (try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])) ?? Data()
         let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -425,7 +450,7 @@ enum EveningWatchText {
     }
 
     static func units(_ value: Double) -> String {
-        MealWatchManager.units(value)
+        value.formatted(.number.precision(.fractionLength(0...2)))
     }
 
     static func glucose(_ mmol: Double) -> String {

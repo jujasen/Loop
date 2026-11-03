@@ -259,8 +259,8 @@ struct GlucoseInsightView: View {
                     EmptyView()
                 }
                 if aiEnabled {
-                    let usage = UserDefaults.standard.openAIUsage(on: Date())
-                    Text(String(format: NSLocalizedString("AI today: %1$@ calls, about $%2$@ (about %3$@ kr).", comment: "Glucose insight: OpenAI use today (1: calls)(2: dollars)(3: kroner)"),
+                    let usage = UserDefaults.standard.aiUsage(on: Date())
+                    Text(String(format: NSLocalizedString("AI today: %1$@ calls, about $%2$@ (about %3$@ kr).", comment: "Glucose insight: AI use today (1: calls)(2: dollars)(3: kroner)"),
                                 "\(usage.byTier.values.reduce(0) { $0 + $1.calls })",
                                 usage.dollars.formatted(.number.precision(.fractionLength(2))),
                                 (usage.dollars * 10.5).formatted(.number.precision(.fractionLength(0)))))

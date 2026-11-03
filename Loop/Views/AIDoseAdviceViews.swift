@@ -197,12 +197,20 @@ struct AIDoseAdviceSettingsView: View {
 
                 if settings.isEnabled {
                     Section {
+                        Toggle(isOn: $settings.calculatesAutomatically) {
+                            Text("Calculate Automatically", comment: "Toggle: work out the AI dose advice by itself when the bolus screen opens after a meal")
+                        }
+                    } footer: {
+                        Text("When you go from the meal screen to the bolus screen, the AI dose is worked out without a tap. Loop's dose is still the one in the bolus field.", comment: "Footer for calculating the AI dose advice automatically")
+                    }
+
+                    Section {
                         TextEditor(text: $settings.childProfile)
                             .frame(minHeight: 140)
                     } header: {
                         Text("About the Child", comment: "Header for the child description used by AI dose advice")
                     } footer: {
-                        Text("Age, weight, activity (for example more active at kindergarten), habits, and what usually goes wrong. Sent to OpenAI with each request.", comment: "Footer for the child description used by AI dose advice")
+                        Text("Age, weight, activity (for example more active at kindergarten), habits, and what usually goes wrong. Sent to Claude (Anthropic) with each request.", comment: "Footer for the child description used by AI dose advice")
                     }
 
                     Section {

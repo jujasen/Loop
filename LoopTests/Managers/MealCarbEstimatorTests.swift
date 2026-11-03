@@ -133,7 +133,7 @@ final class MealCarbEstimatorTests: XCTestCase {
         StubURLProtocol.response = (401, Data(#"{"error":{"message":"Incorrect API key provided"}}"#.utf8))
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
-        let estimator = MealCarbEstimator(apiKey: "sk-test", session: URLSession(configuration: configuration))
+        let estimator = MealCarbEstimator(apiKey: "sk-ant-test", session: URLSession(configuration: configuration))
 
         do {
             _ = try await estimator.estimate(conversation: [.init(role: "user", content: "eple")])
@@ -141,7 +141,8 @@ final class MealCarbEstimatorTests: XCTestCase {
         } catch {
             XCTAssertEqual(error.localizedDescription, "Incorrect API key provided")
         }
-        XCTAssertEqual(StubURLProtocol.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer sk-test")
+        XCTAssertEqual(StubURLProtocol.lastRequest?.value(forHTTPHeaderField: "x-api-key"), "sk-ant-test")
+        XCTAssertEqual(StubURLProtocol.lastRequest?.url?.host, "api.anthropic.com")
     }
 }
 

@@ -2,14 +2,14 @@
 //  AIChat.swift
 //  Loop
 //
-//  The one place the app talks to an AI model, shared by the meal estimate, the AI dose advice,
-//  the glucose insight and the meal watch. Claude (Anthropic) is used when its key is built in,
-//  OpenAI otherwise. Callers write their requests in OpenAI's chat completions shape and read
-//  the answer in that shape; for Claude, `send` translates both ways.
+//  The one place the app talks to an AI model, Claude (Anthropic), shared by the meal estimate,
+//  the AI dose advice and the glucose insight. Callers write their requests in the chat
+//  completions shape the app has always used, and read the answer in that shape; `send`
+//  translates both ways to Claude's Messages API.
 //
 //  There are three tiers: `deep` for the nightly look at the weeks behind, `fast` for what a
 //  person waits for (meal estimate, dose advice), and `quick`, the cheapest, for the frequent
-//  calls nobody waits on (the day's insight, the meal watch). Within a tier the candidates are
+//  calls nobody waits on (the day's insight). Within a tier the candidates are
 //  tried in order, and the first one accepted is remembered on the phone. What each call costs
 //  is counted per day.
 //
@@ -18,11 +18,6 @@ import Foundation
 import LoopKit
 
 struct AIChat {
-    enum Provider: String, Codable {
-        case anthropic
-        case openAI
-    }
-
     enum Tier: String, Codable, CaseIterable {
         /// The thorough model, for the nightly look back.
         case deep
@@ -32,48 +27,33 @@ struct AIChat {
         case quick
 
         /// Newest first. A model the key can't reach, or that does not exist yet, is skipped.
-        func modelCandidates(_ provider: Provider) -> [String] {
-            switch (provider, self) {
-            case (.anthropic, .deep), (.anthropic, .fast): return ["claude-sonnet-5-5", "claude-sonnet-5"]
-            case (.anthropic, .quick): return ["claude-haiku-5-5"]
-            case (.openAI, .deep): return ["gpt-6-astra", "gpt-6", "gpt-5.6", "gpt-5.5", "gpt-5.4"]
-            case (.openAI, .fast), (.openAI, .quick): return ["gpt-6.1-sol", "gpt-6-sol", "gpt-5.6-sol", "gpt-5.4-mini"]
+        var modelCandidates: [String] {
+            switch self {
+            case .deep, .fast: return ["claude-sonnet-5-5", "claude-sonnet-5"]
+            case .quick: return ["claude-haiku-5-5"]
             }
         }
 
-        /// OpenAI's candidates, as before there were providers.
-        var modelCandidates: [String] { modelCandidates(.openAI) }
+        /// Sonnet may fall back to another Claude model when a safety classifier declines;
+        /// Haiku has no such fallback.
+        var usesRefusalFallback: Bool { self != .quick }
 
         /// US dollars per million tokens: input, cached input, output (thinking counts as output).
         /// List prices in October 2026 for the first candidate; only an estimate.
-        func pricePerMillion(_ provider: Provider) -> (input: Double, cachedInput: Double, output: Double) {
-            switch (provider, self) {
-            case (.anthropic, .deep), (.anthropic, .fast): return (2, 0.2, 10)
-            case (.anthropic, .quick): return (0.1, 0.01, 0.5)
-            case (.openAI, .deep): return (10, 1, 50)
-            case (.openAI, .fast), (.openAI, .quick): return (2, 0.2, 10)
+        var pricePerMillion: (input: Double, cachedInput: Double, output: Double) {
+            switch self {
+            case .deep, .fast: return (2, 0.2, 10)
+            case .quick: return (0.1, 0.01, 0.5)
             }
         }
     }
 
-    /// OpenAI's deep tier candidates.
-    static var modelCandidates: [String] { Tier.deep.modelCandidates }
+    /// The key built into the app (`ANTHROPIC_API_KEY` in the xcconfig, `AnthropicAPIKey` in
+    /// Info.plist). Without it the AI features stay hidden.
+    static let shared: AIChat? = builtInKey().map { AIChat(apiKey: $0) }
 
-    /// The provider whose key is built into the app (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` in
-    /// the xcconfig, `AnthropicAPIKey` / `OpenAIAPIKey` in Info.plist), Claude first. Without
-    /// either the AI features stay hidden.
-    static let shared: AIChat? = {
-        if let key = builtInKey("AnthropicAPIKey") {
-            return AIChat(provider: .anthropic, apiKey: key)
-        }
-        if let key = builtInKey("OpenAIAPIKey") {
-            return AIChat(provider: .openAI, apiKey: key)
-        }
-        return nil
-    }()
-
-    private static func builtInKey(_ name: String) -> String? {
-        guard let key = Bundle.main.object(forInfoDictionaryKey: name) as? String else { return nil }
+    private static func builtInKey() -> String? {
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "AnthropicAPIKey") as? String else { return nil }
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.hasPrefix("$(") else { return nil }
         return trimmed
@@ -93,13 +73,11 @@ struct AIChat {
         }
     }
 
-    let provider: Provider
     let apiKey: String
     let session: URLSession
     let defaults: UserDefaults
 
-    init(provider: Provider, apiKey: String, session: URLSession = .shared, defaults: UserDefaults = .standard) {
-        self.provider = provider
+    init(apiKey: String, session: URLSession = .shared, defaults: UserDefaults = .standard) {
         self.apiKey = apiKey
         self.session = session
         self.defaults = defaults
@@ -107,12 +85,12 @@ struct AIChat {
 
     /// The candidates to try, the one that worked last time first.
     func models(for tier: Tier = .deep) -> [String] {
-        let candidates = tier.modelCandidates(provider)
-        guard let working = defaults.openAIWorkingModel(for: tier), let index = candidates.firstIndex(of: working) else {
+        let candidates = tier.modelCandidates
+        guard let working = defaults.aiWorkingModel(for: tier), let index = candidates.firstIndex(of: working) else {
             return candidates
         }
         // A newer model may have become available since; it is tried again once a week.
-        if let checked = defaults.openAIWorkingModelDate(for: tier), Date().timeIntervalSince(checked) > .hours(24 * 7) {
+        if let checked = defaults.aiWorkingModelDate(for: tier), Date().timeIntervalSince(checked) > .hours(24 * 7) {
             return candidates
         }
         return Array(candidates[index...])
@@ -123,25 +101,25 @@ struct AIChat {
     func send(_ body: [String: Any], timeout: TimeInterval, tier: Tier = .deep) async throws -> Data {
         var lastError: Error = ChatError.server("No AI model available")
         let models = self.models(for: tier)
-        let triedNewest = models.first == tier.modelCandidates(provider).first
+        let triedNewest = models.first == tier.modelCandidates.first
         func remember(_ model: String, _ data: Data) {
-            defaults.setOpenAIWorkingModel(model, for: tier)
+            defaults.setAIWorkingModel(model, for: tier)
             if triedNewest {
-                defaults.setOpenAIWorkingModelDate(Date(), for: tier)
+                defaults.setAIWorkingModelDate(Date(), for: tier)
             }
-            defaults.addOpenAIUsage(Self.usage(from: data, tier: tier, provider: provider), tier: tier)
+            defaults.addAIUsage(Self.usage(from: data, tier: tier), tier: tier)
         }
         for model in models {
             var withModel = body
             withModel["model"] = model
             do {
-                let data = try await post(withModel, timeout: timeout)
+                let data = try await post(withModel, timeout: timeout, tier: tier)
                 remember(model, data)
                 return data
-            } catch ChatError.server(let message) where Self.isUnsupportedReasoningEffort(message) && withModel["reasoning_effort"] != nil {
+            } catch ChatError.server(let message) where Self.isUnsupportedEffort(message) && withModel["reasoning_effort"] != nil {
                 // A model without that setting still answers without it.
                 withModel["reasoning_effort"] = nil
-                let data = try await post(withModel, timeout: timeout)
+                let data = try await post(withModel, timeout: timeout, tier: tier)
                 remember(model, data)
                 return data
             } catch ChatError.server(let message) where Self.isUnknownModel(message) {
@@ -152,19 +130,16 @@ struct AIChat {
         throw lastError
     }
 
-    private func post(_ body: [String: Any], timeout: TimeInterval) async throws -> Data {
-        var request: URLRequest
-        switch provider {
-        case .openAI:
-            request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        case .anthropic:
-            request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
-            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-            request.setValue(Self.anthropicVersion, forHTTPHeaderField: "anthropic-version")
-            request.httpBody = try JSONSerialization.data(withJSONObject: Self.claudeRequest(from: body))
+    private func post(_ body: [String: Any], timeout: TimeInterval, tier: Tier) async throws -> Data {
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue(Self.anthropicVersion, forHTTPHeaderField: "anthropic-version")
+        var claudeBody = Self.claudeRequest(from: body)
+        if tier.usesRefusalFallback {
+            request.setValue(Self.refusalFallbackBeta, forHTTPHeaderField: "anthropic-beta")
+            claudeBody["fallbacks"] = "default"
         }
+        request.httpBody = try JSONSerialization.data(withJSONObject: claudeBody)
         request.httpMethod = "POST"
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -179,17 +154,14 @@ struct AIChat {
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw ChatError.server(Self.serverMessage(from: data) ?? HTTPURLResponse.localizedString(forStatusCode: http.statusCode))
         }
-        switch provider {
-        case .openAI:
-            return data
-        case .anthropic:
-            return try Self.completion(fromClaude: data)
-        }
+        return try Self.completion(fromClaude: data)
     }
 
     // MARK: - Claude
 
     static let anthropicVersion = "2026-10-21"
+    /// Lets the server answer with another Claude model when a safety classifier declines.
+    static let refusalFallbackBeta = "server-side-fallback-2026-07-01"
 
     /// A chat completions body as a Claude Messages request: system messages become the cached
     /// system prompt, `image_url` data URLs base64 images, `response_format`'s schema the output
@@ -296,11 +268,11 @@ struct AIChat {
 
     // MARK: - Errors and usage
 
-    /// OpenAI's and Anthropic's wording when a model does not exist or the key has no access to it.
+    /// Anthropic's wording when a model does not exist or the key has no access to it.
     static func isUnknownModel(_ message: String) -> Bool {
         let lowered = message.lowercased()
-        // "'reasoning_effort' is not supported with this model" is about the setting, not the model.
-        guard !lowered.contains("reasoning_effort") else { return false }
+        // "effort is not supported with this model" is about the setting, not the model.
+        guard !lowered.contains("effort") else { return false }
         return lowered.contains("model") && (
             lowered.contains("does not exist") ||
             lowered.contains("not found") ||
@@ -310,12 +282,12 @@ struct AIChat {
         )
     }
 
-    static func isUnsupportedReasoningEffort(_ message: String) -> Bool {
-        message.lowercased().contains("reasoning_effort")
+    static func isUnsupportedEffort(_ message: String) -> Bool {
+        message.lowercased().contains("effort")
     }
 
-    /// The tokens a response says it used, priced for `tier` at `provider`; zero when it does not say.
-    static func usage(from data: Data, tier: Tier = .deep, provider: Provider = .openAI) -> OpenAIUsage {
+    /// The tokens a response says it used, priced for `tier`; zero when it does not say.
+    static func usage(from data: Data, tier: Tier = .deep) -> AIUsage {
         struct Body: Decodable {
             struct Usage: Decodable {
                 struct Details: Decodable { var cached_tokens: Int? }
@@ -325,20 +297,20 @@ struct AIChat {
             }
             var usage: Usage?
         }
-        guard let usage = (try? JSONDecoder().decode(Body.self, from: data))?.usage else { return OpenAIUsage(calls: 1) }
+        guard let usage = (try? JSONDecoder().decode(Body.self, from: data))?.usage else { return AIUsage(calls: 1) }
         let cached = usage.prompt_tokens_details?.cached_tokens ?? 0
-        var result = OpenAIUsage(
+        var result = AIUsage(
             calls: 1,
             inputTokens: max(0, (usage.prompt_tokens ?? 0) - cached),
             cachedInputTokens: cached,
             outputTokens: usage.completion_tokens ?? 0
         )
-        let price = tier.pricePerMillion(provider)
+        let price = tier.pricePerMillion
         result.cost = (Double(result.inputTokens) * price.input + Double(cached) * price.cachedInput + Double(result.outputTokens) * price.output) / 1_000_000
         return result
     }
 
-    /// The `error.message` both providers answer with on failure.
+    /// The `error.message` the API answers with on failure.
     static func serverMessage(from data: Data) -> String? {
         struct ErrorBody: Decodable {
             struct Detail: Decodable { var message: String }
@@ -349,17 +321,17 @@ struct AIChat {
 }
 
 /// Tokens used, added up per day and tier.
-struct OpenAIUsage: Codable, Equatable {
+struct AIUsage: Codable, Equatable {
     var calls = 0
     var inputTokens = 0
     var cachedInputTokens = 0
     var outputTokens = 0
     /// US dollars at the list price of the model that answered; `nil` for days counted before
-    /// there were providers, which were all OpenAI.
+    /// the cost was kept, priced now at the tier's price.
     var cost: Double?
 
-    static func + (lhs: OpenAIUsage, rhs: OpenAIUsage) -> OpenAIUsage {
-        OpenAIUsage(
+    static func + (lhs: AIUsage, rhs: AIUsage) -> AIUsage {
+        AIUsage(
             calls: lhs.calls + rhs.calls,
             inputTokens: lhs.inputTokens + rhs.inputTokens,
             cachedInputTokens: lhs.cachedInputTokens + rhs.cachedInputTokens,
@@ -373,16 +345,16 @@ struct OpenAIUsage: Codable, Equatable {
         if let cost {
             return cost
         }
-        let price = tier.pricePerMillion(.openAI)
+        let price = tier.pricePerMillion
         return (Double(inputTokens) * price.input + Double(cachedInputTokens) * price.cachedInput + Double(outputTokens) * price.output) / 1_000_000
     }
 }
 
 /// One day's use of each tier.
-struct OpenAIDailyUsage: Codable, Equatable {
+struct AIDailyUsage: Codable, Equatable {
     /// "yyyy-MM-dd" in local time.
     var day: String
-    var byTier: [AIChat.Tier: OpenAIUsage] = [:]
+    var byTier: [AIChat.Tier: AIUsage] = [:]
 
     var dollars: Double {
         byTier.reduce(0) { $0 + $1.value.dollars($1.key) }
@@ -395,60 +367,60 @@ struct OpenAIDailyUsage: Codable, Equatable {
 }
 
 extension UserDefaults {
-    private enum OpenAIKey: String {
-        case workingModel = "com.loopkit.Loop.openAIWorkingModel"
-        case workingModelDate = "com.loopkit.Loop.openAIWorkingModelDate"
-        case usage = "com.loopkit.Loop.openAIDailyUsage"
+    private enum AIKey: String {
+        case workingModel = "com.loopkit.Loop.aiWorkingModel"
+        case workingModelDate = "com.loopkit.Loop.aiWorkingModelDate"
+        case usage = "com.loopkit.Loop.aiDailyUsage"
     }
 
     /// The deep tier's keys are the ones used before there were tiers.
-    private func openAIKey(_ key: OpenAIKey, _ tier: AIChat.Tier) -> String {
+    private func aiKey(_ key: AIKey, _ tier: AIChat.Tier) -> String {
         tier == .deep ? key.rawValue : "\(key.rawValue).\(tier.rawValue)"
     }
 
-    /// The newest deep model OpenAI last accepted.
-    var openAIWorkingModel: String? {
-        get { openAIWorkingModel(for: .deep) }
-        set { setOpenAIWorkingModel(newValue, for: .deep) }
+    /// The newest deep model last accepted.
+    var aiWorkingModel: String? {
+        get { aiWorkingModel(for: .deep) }
+        set { setAIWorkingModel(newValue, for: .deep) }
     }
 
-    func openAIWorkingModel(for tier: AIChat.Tier) -> String? {
-        string(forKey: openAIKey(.workingModel, tier))
+    func aiWorkingModel(for tier: AIChat.Tier) -> String? {
+        string(forKey: aiKey(.workingModel, tier))
     }
 
-    func setOpenAIWorkingModel(_ model: String?, for tier: AIChat.Tier) {
-        set(model, forKey: openAIKey(.workingModel, tier))
+    func setAIWorkingModel(_ model: String?, for tier: AIChat.Tier) {
+        set(model, forKey: aiKey(.workingModel, tier))
     }
 
-    func openAIWorkingModelDate(for tier: AIChat.Tier) -> Date? {
-        object(forKey: openAIKey(.workingModelDate, tier)) as? Date
+    func aiWorkingModelDate(for tier: AIChat.Tier) -> Date? {
+        object(forKey: aiKey(.workingModelDate, tier)) as? Date
     }
 
-    func setOpenAIWorkingModelDate(_ date: Date?, for tier: AIChat.Tier) {
-        set(date, forKey: openAIKey(.workingModelDate, tier))
+    func setAIWorkingModelDate(_ date: Date?, for tier: AIChat.Tier) {
+        set(date, forKey: aiKey(.workingModelDate, tier))
     }
 
     /// The last two weeks, newest last.
-    var openAIDailyUsage: [OpenAIDailyUsage] {
+    var aiDailyUsage: [AIDailyUsage] {
         get {
-            guard let data = data(forKey: OpenAIKey.usage.rawValue) else { return [] }
-            return (try? JSONDecoder().decode([OpenAIDailyUsage].self, from: data)) ?? []
+            guard let data = data(forKey: AIKey.usage.rawValue) else { return [] }
+            return (try? JSONDecoder().decode([AIDailyUsage].self, from: data)) ?? []
         }
-        set { set(try? JSONEncoder().encode(Array(newValue.suffix(14))), forKey: OpenAIKey.usage.rawValue) }
+        set { set(try? JSONEncoder().encode(Array(newValue.suffix(14))), forKey: AIKey.usage.rawValue) }
     }
 
-    func openAIUsage(on date: Date) -> OpenAIDailyUsage {
-        let day = OpenAIDailyUsage.dayKey(date)
-        return openAIDailyUsage.last { $0.day == day } ?? OpenAIDailyUsage(day: day)
+    func aiUsage(on date: Date) -> AIDailyUsage {
+        let day = AIDailyUsage.dayKey(date)
+        return aiDailyUsage.last { $0.day == day } ?? AIDailyUsage(day: day)
     }
 
-    func addOpenAIUsage(_ usage: OpenAIUsage, tier: AIChat.Tier, now: Date = Date()) {
-        var days = openAIDailyUsage
-        let day = OpenAIDailyUsage.dayKey(now)
+    func addAIUsage(_ usage: AIUsage, tier: AIChat.Tier, now: Date = Date()) {
+        var days = aiDailyUsage
+        let day = AIDailyUsage.dayKey(now)
         if days.last?.day != day {
-            days.append(OpenAIDailyUsage(day: day))
+            days.append(AIDailyUsage(day: day))
         }
-        days[days.count - 1].byTier[tier] = (days[days.count - 1].byTier[tier] ?? OpenAIUsage()) + usage
-        openAIDailyUsage = days
+        days[days.count - 1].byTier[tier] = (days[days.count - 1].byTier[tier] ?? AIUsage()) + usage
+        aiDailyUsage = days
     }
 }

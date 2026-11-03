@@ -27,6 +27,9 @@ import LoopKit
 struct AIDoseAdviceSettings: Codable, Equatable {
     /// Off until turned on; while off, the bolus screen shows nothing of it.
     var isEnabled = false
+    /// Opens the section by itself when the bolus screen comes from the carb entry screen, so the
+    /// advice is worked out without a tap. Loop's dose stays in the bolus field.
+    var calculatesAutomatically = true
     /// What the caregiver wants the model to know about the child: age, weight, activity,
     /// habits, what usually goes wrong.
     var childProfile = ""
@@ -45,6 +48,7 @@ struct AIDoseAdviceSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let standard = AIDoseAdviceSettings()
         isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? standard.isEnabled
+        calculatesAutomatically = try container.decodeIfPresent(Bool.self, forKey: .calculatesAutomatically) ?? standard.calculatesAutomatically
         childProfile = try container.decodeIfPresent(String.self, forKey: .childProfile) ?? standard.childProfile
         maximumAboveLoop = try container.decodeIfPresent(Double.self, forKey: .maximumAboveLoop) ?? standard.maximumAboveLoop
         historyDays = try container.decodeIfPresent(Int.self, forKey: .historyDays) ?? standard.historyDays
@@ -269,7 +273,7 @@ final class AIDoseAdvisor {
         let encoder = GlucoseInsightWriter.encoder()
         let situationJSON = String(data: try encoder.encode(situation), encoding: .utf8) ?? "{}"
 
-        // What changes least goes first, so OpenAI can reuse it from one request to the next.
+        // What changes least goes first, so Claude can reuse it from its cache from one request to the next.
         var parts: [[String: Any]] = []
         if let status {
             let statusJSON = String(data: try encoder.encode(status), encoding: .utf8) ?? "{}"

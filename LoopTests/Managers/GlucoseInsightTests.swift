@@ -312,8 +312,8 @@ final class GlucoseInsightTests: XCTestCase {
         var status = GlucoseInsightStatus()
         status.dataUpdatedAt = monday(12)
         status.longTerm = GlucoseInsightLongTerm(days: 30, last7Days: nil, earlierDays: nil, dayparts: [], weekdayDaytime: nil, weekendDaytime: nil, averageDailyCarbsGrams: 120, averageDailyBolusUnits: 5, meals: [GlucoseInsightMeal(date: monday(8), daypart: "morgen 06-09", carbsGrams: 20, foods: [], bolusUnits: 1, automaticUnitsWithin3h: 0, startMmol: nil, peakMmol: nil, after2hMmol: nil, after3hMmol: nil, lowestWithin4hMmol: nil, flags: [])], advice: [], computedAt: monday(12))
-        var usage = OpenAIDailyUsage(day: "2026-10-12")
-        usage.byTier[.fast] = OpenAIUsage(calls: 3, inputTokens: 10_000, cachedInputTokens: 0, outputTokens: 10_000)
+        var usage = AIDailyUsage(day: "2026-10-12")
+        usage.byTier[.fast] = AIUsage(calls: 3, inputTokens: 10_000, cachedInputTokens: 0, outputTokens: 10_000)
 
         let document = GlucoseInsightDocument(status: status, aiEnabled: true, usage: usage, now: monday(12, 5))
         let json = try document.json()

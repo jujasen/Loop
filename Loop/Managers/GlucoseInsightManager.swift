@@ -149,7 +149,7 @@ final class GlucoseInsightManager: ObservableObject {
             try? data.write(to: fileURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         }
         // LoopFollow reads it from Nightscout.
-        uploader.upload(status, aiEnabled: aiEnabled, usage: defaults.openAIUsage(on: Date()))
+        uploader.upload(status, aiEnabled: aiEnabled, usage: defaults.aiUsage(on: Date()))
     }
 
 #if DEBUG
@@ -294,7 +294,7 @@ struct GlucoseInsightAttempts: Codable, Equatable {
 
     /// The counts for `date`'s day: zero on a new day.
     func on(_ date: Date, calendar: Calendar = .current) -> GlucoseInsightAttempts {
-        let key = OpenAIDailyUsage.dayKey(date, calendar: calendar)
+        let key = AIDailyUsage.dayKey(date, calendar: calendar)
         return day == key ? self : GlucoseInsightAttempts(day: key, lastDeep: lastDeep, lastFast: lastFast)
     }
 

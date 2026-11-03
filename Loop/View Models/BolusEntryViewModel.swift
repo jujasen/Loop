@@ -135,10 +135,8 @@ final class BolusEntryViewModel: ObservableObject {
     /// What the boost will do for the meal, for the line under the carb entry.
     var fatProteinBoost: FatProteinBoostPreview?
 
-    /// Turned on for this meal on the carb entry screen: the meal watch starts once it is saved.
-    var startsMealWatch = false
-    /// A meal watch suggestion this screen was opened for: its dose fills the bolus field.
-    var mealWatchSuggestion: MealWatchSuggestion?
+    /// A suggestion this screen was opened for (the evening watch's): its dose fills the bolus field.
+    var bolusSuggestion: BolusSuggestion?
 
     /// The meal as described and photographed on the carb entry screen, for the AI dose advice.
     var aiDoseMealContext: AIDoseMealContext?
@@ -147,6 +145,8 @@ final class BolusEntryViewModel: ObservableObject {
     var aiDoseAdviceTask: Task<Void, Never>?
     /// Advice asked for before the section was opened (see `prefetchAIDoseAdvice`).
     var aiDosePrefetch: AIDosePrefetch?
+    /// The section was opened by itself once (see `calculatesAutomatically`); closed by hand, it stays closed.
+    var aiDoseAdviceOpenedAutomatically = false
 
     /// "🧈 130 % for 3 hr from 21:10 if glucose rises", or `nil` when the meal gets no boost.
     var fatProteinBoostSummary: String? {
@@ -455,15 +455,6 @@ final class BolusEntryViewModel: ObservableObject {
                     if isFatProteinBoostDeclined {
                         UserDefaults.standard.setFatProteinBoostDeclined(true, forEntry: id)
                     }
-                }
-                if startsMealWatch {
-                    MealWatchManager.shared.watch(
-                        entryID: storedCarbEntry.syncIdentifier,
-                        mealDate: storedCarbEntry.startDate,
-                        carbs: storedCarbEntry.quantity.doubleValue(for: .gram()),
-                        foodType: storedCarbEntry.foodType,
-                        absorptionTime: storedCarbEntry.absorptionTime
-                    )
                 }
                 self.dosingDecision.carbEntry = storedCarbEntry
                 self.analyticsServicesManager?.didAddCarbs(source: "Phone", amount: storedCarbEntry.quantity.doubleValue(for: .gram()))

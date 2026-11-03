@@ -560,7 +560,7 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
              LoopNotificationCategory.remoteTherapySettingsFailure.rawValue,
              LoopNotificationCategory.missedMeal.rawValue:
             completionHandler([.badge, .sound, .list, .banner])
-        case let identifier where identifier.hasPrefix(MealWatchManager.notificationPrefix) || identifier.hasPrefix(EveningWatchManager.notificationPrefix):
+        case let identifier where identifier.hasPrefix(EveningWatchManager.notificationPrefix):
             completionHandler([.badge, .sound, .list, .banner])
         default:
             // For all others, banners are not to be displayed while in the foreground
@@ -592,14 +592,6 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
                let managerIdentifier = userInfo[LoopNotificationUserInfoKey.managerIDForAlert.rawValue] as? String {
                 alertManager?.acknowledgeAlert(identifier: Alert.Identifier(managerIdentifier: managerIdentifier, alertIdentifier: alertIdentifier))
             }
-        case MealWatchManager.declineAction:
-            if let id = response.notification.request.content.userInfo[MealWatchManager.suggestionIDUserInfoKey] as? String {
-                Task { @MainActor in MealWatchManager.shared.decline(id) }
-            }
-        case MealWatchManager.reviewAction:
-            if let id = response.notification.request.content.userInfo[MealWatchManager.suggestionIDUserInfoKey] as? String {
-                MealWatchManager.requestReview(id)
-            }
         case EveningWatchManager.declineAction:
             if let id = response.notification.request.content.userInfo[EveningWatchManager.actionIDUserInfoKey] as? String {
                 Task { @MainActor in EveningWatchManager.shared.decline(id) }
@@ -609,11 +601,7 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
                 EveningWatchManager.requestReview(id)
             }
         case UNNotificationDefaultActionIdentifier:
-            // A meal watch suggestion opens the bolus screen with it filled in.
-            if let id = response.notification.request.content.userInfo[MealWatchManager.suggestionIDUserInfoKey] as? String {
-                MealWatchManager.requestReview(id)
-                break
-            }
+            // An evening watch suggestion opens the bolus screen with it filled in.
             if let id = response.notification.request.content.userInfo[EveningWatchManager.actionIDUserInfoKey] as? String {
                 EveningWatchManager.requestReview(id)
                 break

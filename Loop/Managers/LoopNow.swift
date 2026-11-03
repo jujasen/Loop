@@ -3,8 +3,8 @@
 //  Loop
 //
 //  What Loop knows right now — glucose and its trend, insulin and carbs on board, its forecast and
-//  the bolus it would recommend — for the AI texts that look at the moment: the insight's "now"
-//  and the meal watch. Read from the loop's own state, not from Nightscout, so it is never older
+//  the bolus it would recommend — for the AI text that looks at the moment, the insight's "now".
+//  Read from the loop's own state, not from Nightscout, so it is never older
 //  than the last loop.
 //
 

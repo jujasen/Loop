@@ -11,10 +11,8 @@
 		FA0060010000000000000001 /* GlucoseInsight.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000002 /* GlucoseInsight.swift */; };
 		FA0060010000000000000003 /* GlucoseInsightManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000004 /* GlucoseInsightManager.swift */; };
 		FA0060010000000000000005 /* NightscoutHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000006 /* NightscoutHistoryStore.swift */; };
-		FB0070010000000000000301 /* MealWatchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070010000000000000302 /* MealWatchViews.swift */; };
 		FB0080010000000000000301 /* EveningWatchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0080010000000000000302 /* EveningWatchViews.swift */; };
 		FA0060010000000000000007 /* GlucoseInsightView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000008 /* GlucoseInsightView.swift */; };
-		FB0070010000000000000401 /* MealWatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070010000000000000402 /* MealWatchTests.swift */; };
 		FB0080010000000000000401 /* EveningWatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0080010000000000000402 /* EveningWatchTests.swift */; };
 		FA0060010000000000000009 /* GlucoseInsightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA006001000000000000000A /* GlucoseInsightTests.swift */; };
 		FA0040010000000000000001 /* FatProteinBoost.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0040010000000000000002 /* FatProteinBoost.swift */; };
@@ -25,7 +23,7 @@
 		FB0070030000000000000003 /* PumpDeliveryAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070030000000000000004 /* PumpDeliveryAlert.swift */; };
 		FB0070030000000000000001 /* PumpDeliveryCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070030000000000000002 /* PumpDeliveryCheck.swift */; };
 		FB0070010000000000000101 /* LoopNow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070010000000000000102 /* LoopNow.swift */; };
-		FB0070010000000000000201 /* MealWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070010000000000000202 /* MealWatch.swift */; };
+		FB0070010000000000000201 /* BolusSuggestionNightscout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0070010000000000000202 /* BolusSuggestionNightscout.swift */; };
 		FB0080010000000000000211 /* EveningWatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0080010000000000000212 /* EveningWatchManager.swift */; };
 		FB0080010000000000000201 /* EveningWatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0080010000000000000202 /* EveningWatch.swift */; };
 		FA0050010000000000000001 /* AIChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0050010000000000000002 /* AIChat.swift */; };
@@ -812,10 +810,8 @@
 		FA0060010000000000000002 /* GlucoseInsight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsight.swift; sourceTree = "<group>"; };
 		FA0060010000000000000004 /* GlucoseInsightManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightManager.swift; sourceTree = "<group>"; };
 		FA0060010000000000000006 /* NightscoutHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightscoutHistoryStore.swift; sourceTree = "<group>"; };
-		FB0070010000000000000302 /* MealWatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealWatchViews.swift; sourceTree = "<group>"; };
 		FB0080010000000000000302 /* EveningWatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningWatchViews.swift; sourceTree = "<group>"; };
 		FA0060010000000000000008 /* GlucoseInsightView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightView.swift; sourceTree = "<group>"; };
-		FB0070010000000000000402 /* MealWatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealWatchTests.swift; sourceTree = "<group>"; };
 		FB0080010000000000000402 /* EveningWatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningWatchTests.swift; sourceTree = "<group>"; };
 		FA006001000000000000000A /* GlucoseInsightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightTests.swift; sourceTree = "<group>"; };
 		FA0040010000000000000002 /* FatProteinBoost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatProteinBoost.swift; sourceTree = "<group>"; };
@@ -826,7 +822,7 @@
 		FB0070030000000000000004 /* PumpDeliveryAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpDeliveryAlert.swift; sourceTree = "<group>"; };
 		FB0070030000000000000002 /* PumpDeliveryCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PumpDeliveryCheck.swift; sourceTree = "<group>"; };
 		FB0070010000000000000102 /* LoopNow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopNow.swift; sourceTree = "<group>"; };
-		FB0070010000000000000202 /* MealWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealWatch.swift; sourceTree = "<group>"; };
+		FB0070010000000000000202 /* BolusSuggestionNightscout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BolusSuggestionNightscout.swift; sourceTree = "<group>"; };
 		FB0080010000000000000212 /* EveningWatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningWatchManager.swift; sourceTree = "<group>"; };
 		FB0080010000000000000202 /* EveningWatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EveningWatch.swift; sourceTree = "<group>"; };
 		FA0050010000000000000002 /* AIChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChat.swift; sourceTree = "<group>"; };
@@ -1668,7 +1664,6 @@
 				FB0070030000000000000010 /* PumpDeliveryFixtures.swift */,
 				FB0070030000000000000008 /* PumpDeliveryCheckTests.swift */,
 				FA005001000000000000000A /* AIDoseAdvisorTests.swift */,
-				FB0070010000000000000402 /* MealWatchTests.swift */,
 				FB0080010000000000000402 /* EveningWatchTests.swift */,
 				FA006001000000000000000A /* GlucoseInsightTests.swift */,
 				FA0021010000000000000004 /* CarbFoodLabelTests.swift */,
@@ -2088,7 +2083,6 @@
 				FA0040010000000000000006 /* FatProteinBoostViews.swift */,
 				FB0070030000000000000006 /* PumpDeliveryAlertViews.swift */,
 				FA0050010000000000000008 /* AIDoseAdviceViews.swift */,
-				FB0070010000000000000302 /* MealWatchViews.swift */,
 				FB0080010000000000000302 /* EveningWatchViews.swift */,
 				FA0060010000000000000008 /* GlucoseInsightView.swift */,
 				431A8C3F1EC6E8AB00823B9C /* CircleMaskView.swift */,
@@ -2146,7 +2140,7 @@
 				FB0070030000000000000004 /* PumpDeliveryAlert.swift */,
 				FB0070030000000000000002 /* PumpDeliveryCheck.swift */,
 				FB0070010000000000000102 /* LoopNow.swift */,
-				FB0070010000000000000202 /* MealWatch.swift */,
+				FB0070010000000000000202 /* BolusSuggestionNightscout.swift */,
 				FB0080010000000000000212 /* EveningWatchManager.swift */,
 				FB0080010000000000000202 /* EveningWatch.swift */,
 				FA0050010000000000000002 /* AIChat.swift */,
@@ -3591,7 +3585,6 @@
 				FA0020010000000000000003 /* MealEstimateCard.swift in Sources */,
 				FA0040010000000000000005 /* FatProteinBoostViews.swift in Sources */,
 				FA0050010000000000000007 /* AIDoseAdviceViews.swift in Sources */,
-				FB0070010000000000000301 /* MealWatchViews.swift in Sources */,
 				FB0080010000000000000301 /* EveningWatchViews.swift in Sources */,
 				FA0060010000000000000007 /* GlucoseInsightView.swift in Sources */,
 				4F11D3C020DCBEEC006E072C /* GlucoseBackfillRequestUserInfo.swift in Sources */,
@@ -3610,7 +3603,7 @@
 				FB0070030000000000000003 /* PumpDeliveryAlert.swift in Sources */,
 				FB0070030000000000000001 /* PumpDeliveryCheck.swift in Sources */,
 				FB0070010000000000000101 /* LoopNow.swift in Sources */,
-				FB0070010000000000000201 /* MealWatch.swift in Sources */,
+				FB0070010000000000000201 /* BolusSuggestionNightscout.swift in Sources */,
 				FB0080010000000000000211 /* EveningWatchManager.swift in Sources */,
 				FB0080010000000000000201 /* EveningWatch.swift in Sources */,
 				FA0050010000000000000001 /* AIChat.swift in Sources */,
@@ -3928,7 +3921,6 @@
 				FB0070030000000000000009 /* PumpDeliveryFixtures.swift in Sources */,
 				FB0070030000000000000007 /* PumpDeliveryCheckTests.swift in Sources */,
 				FA0050010000000000000009 /* AIDoseAdvisorTests.swift in Sources */,
-				FB0070010000000000000401 /* MealWatchTests.swift in Sources */,
 				FB0080010000000000000401 /* EveningWatchTests.swift in Sources */,
 				FA0060010000000000000009 /* GlucoseInsightTests.swift in Sources */,
 				FA0021010000000000000003 /* CarbFoodLabelTests.swift in Sources */,

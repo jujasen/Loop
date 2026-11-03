@@ -44788,18 +44788,6 @@
         }
       }
     },
-    "Age, weight, activity (for example more active at kindergarten), habits, and what usually goes wrong. Sent to OpenAI with each request." : {
-      "comment" : "Footer for the child description used by AI dose advice",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alder, vekt, aktivitet (for eksempel mer aktiv i barnehagen), vaner og hva som pleier å gå galt. Sendes til OpenAI ved hver forespørsel."
-          }
-        }
-      }
-    },
     "Don't Use" : {
       "comment" : "Button declining the AI dose",
       "extractionState" : "manual",
@@ -45173,7 +45161,7 @@
       }
     },
     "AI today: %1$@ calls, about $%2$@ (about %3$@ kr)." : {
-      "comment" : "Glucose insight: OpenAI use today (1: calls)(2: dollars)(3: kroner)",
+      "comment" : "Glucose insight: AI use today (1: calls)(2: dollars)(3: kroner)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
@@ -45816,42 +45804,6 @@
         }
       }
     },
-    "AI suggests %1$@ U: %2$@" : {
-      "comment" : "Nightscout note for a meal watch suggestion (1: units)(2: reason)",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI foreslår %1$@ E: %2$@"
-          }
-        }
-      }
-    },
-    "✨ Suggested: %1$@ U for %2$@" : {
-      "comment" : "Meal watch notification title (1: units)(2: name of the meal)",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✨ Forslag: %1$@ E til %2$@"
-          }
-        }
-      }
-    },
-    "Suggested: %1$@ U for %2$@" : {
-      "comment" : "Meal watch card title with a suggestion (1: units)(2: name of the meal)",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Forslag: %1$@ E til %2$@"
-          }
-        }
-      }
-    },
     "Watch the meal" : {
       "comment" : "Switch on the carb entry screen turning on the AI meal watch",
       "extractionState" : "manual",
@@ -45860,54 +45812,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Følg med på måltidet"
-          }
-        }
-      }
-    },
-    "The AI looks at glucose every 15 minutes and suggests extra insulin when it is needed. It never gives insulin itself." : {
-      "comment" : "Explanation under the meal watch switch on the carb entry screen",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AI-en ser på blodsukkeret hvert kvarter og foreslår ekstra insulin når det trengs. Den gir aldri insulin selv."
-          }
-        }
-      }
-    },
-    "Lapses at %@ if not used." : {
-      "comment" : "Meal watch card: when the suggestion lapses (1: time)",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faller bort kl. %@ hvis det ikke brukes."
-          }
-        }
-      }
-    },
-    "Watching %1$@ until %2$@" : {
-      "comment" : "Meal watch card while watching (1: name of the meal)(2: time)",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Følger med på %1$@ til %2$@"
-          }
-        }
-      }
-    },
-    "✨ The meal watch follows this meal and suggests more insulin if it is needed." : {
-      "comment" : "Line under the carb entry on the bolus screen when the meal watch is on",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "✨ Måltidsvakten følger med på måltidet og foreslår mer insulin om det trengs."
           }
         }
       }
@@ -46796,6 +46700,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Korreksjon når kvelden blir høy"
+          }
+        }
+      }
+    },
+    "Age, weight, activity (for example more active at kindergarten), habits, and what usually goes wrong. Sent to Claude (Anthropic) with each request." : {
+      "comment" : "Footer for the child description used by AI dose advice",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alder, vekt, aktivitet (for eksempel mer aktiv i barnehagen), vaner og hva som pleier å gå galt. Sendes til Claude (Anthropic) ved hver forespørsel."
+          }
+        }
+      }
+    },
+    "Calculate Automatically" : {
+      "comment" : "Toggle: work out the AI dose advice by itself when the bolus screen opens after a meal",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beregn automatisk"
+          }
+        }
+      }
+    },
+    "When you go from the meal screen to the bolus screen, the AI dose is worked out without a tap. Loop's dose is still the one in the bolus field." : {
+      "comment" : "Footer for calculating the AI dose advice automatically",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når du går fra måltidsskjermen til bolusskjermen, regnes AI-dosen ut uten at du trykker. Loops dose står fortsatt i bolusfeltet."
           }
         }
       }

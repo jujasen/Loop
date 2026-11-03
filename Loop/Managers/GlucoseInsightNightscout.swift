@@ -39,7 +39,7 @@ struct GlucoseInsightDocument: Codable, Equatable {
     var insight: GlucoseInsightStatus
 
     /// The status without what LoopFollow doesn't show: the weeks' meal list is only for the dose advice.
-    init(status: GlucoseInsightStatus, aiEnabled: Bool, usage: OpenAIDailyUsage, now: Date) {
+    init(status: GlucoseInsightStatus, aiEnabled: Bool, usage: AIDailyUsage, now: Date) {
         var status = status
         status.longTerm?.meals = []
         self.uploadedAt = now
@@ -95,7 +95,7 @@ final class GlucoseInsightUploader {
     /// Told how each upload went.
     var onResult: (GlucoseInsightSharing) -> Void = { _ in }
 
-    func upload(_ status: GlucoseInsightStatus, aiEnabled: Bool, usage: OpenAIDailyUsage, now: Date = Date()) {
+    func upload(_ status: GlucoseInsightStatus, aiEnabled: Bool, usage: AIDailyUsage, now: Date = Date()) {
         guard status != lastUploaded, status.longTerm != nil || status.today != nil else { return }
         let document = GlucoseInsightDocument(status: status, aiEnabled: aiEnabled, usage: usage, now: now)
         task?.cancel()

@@ -201,16 +201,16 @@ final class AIDoseAdvisorTests: XCTestCase {
         defaults.removePersistentDomain(forName: "AIDoseAdvisorTests")
         defer { defaults.removePersistentDomain(forName: "AIDoseAdvisorTests") }
 
-        let working = AIChat.modelCandidates[2]
+        let working = AIChat.Tier.deep.modelCandidates[1]
         ModelStubURLProtocol.acceptedModel = working
         ModelStubURLProtocol.requestedModels = []
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ModelStubURLProtocol.self]
-        let chat = AIChat(provider: .openAI, apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
+        let chat = AIChat(apiKey: "sk-ant-test", session: URLSession(configuration: configuration), defaults: defaults)
 
         _ = try await chat.send(["messages": [Any]()], timeout: 5)
-        XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(AIChat.modelCandidates.prefix(3)))
-        XCTAssertEqual(defaults.openAIWorkingModel, working)
+        XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(AIChat.Tier.deep.modelCandidates.prefix(2)))
+        XCTAssertEqual(defaults.aiWorkingModel, working)
 
         ModelStubURLProtocol.requestedModels = []
         _ = try await chat.send(["messages": [Any]()], timeout: 5)
@@ -226,7 +226,7 @@ final class AIDoseAdvisorTests: XCTestCase {
         ModelStubURLProtocol.requestedModels = []
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ModelStubURLProtocol.self]
-        let chat = AIChat(provider: .openAI, apiKey: "sk-bad", session: URLSession(configuration: configuration), defaults: defaults)
+        let chat = AIChat(apiKey: "sk-ant-bad", session: URLSession(configuration: configuration), defaults: defaults)
 
         do {
             _ = try await chat.send(["messages": [Any]()], timeout: 5)
@@ -247,20 +247,20 @@ final class AIDoseAdvisorTests: XCTestCase {
         ModelStubURLProtocol.requestedModels = []
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ModelStubURLProtocol.self]
-        let chat = AIChat(provider: .openAI, apiKey: "sk-test", session: URLSession(configuration: configuration), defaults: defaults)
+        let chat = AIChat(apiKey: "sk-ant-test", session: URLSession(configuration: configuration), defaults: defaults)
 
         _ = try await chat.send(["messages": [Any]()], timeout: 5, tier: .fast)
         XCTAssertEqual(ModelStubURLProtocol.requestedModels, Array(AIChat.Tier.fast.modelCandidates.prefix(2)))
-        XCTAssertEqual(defaults.openAIWorkingModel(for: .fast), working)
-        XCTAssertNil(defaults.openAIWorkingModel, "the deep tier is remembered apart")
+        XCTAssertEqual(defaults.aiWorkingModel(for: .fast), working)
+        XCTAssertNil(defaults.aiWorkingModel, "the deep tier is remembered apart")
 
-        let usage = defaults.openAIUsage(on: Date()).byTier[.fast]
+        let usage = defaults.aiUsage(on: Date()).byTier[.fast]
         XCTAssertEqual(usage?.calls, 1)
         XCTAssertEqual(usage?.inputTokens, 900)
         XCTAssertEqual(usage?.cachedInputTokens, 100)
         XCTAssertEqual(usage?.outputTokens, 2000)
         // 900 × $2 + 100 × $0.20 + 2000 × $10, per million.
-        XCTAssertEqual(defaults.openAIUsage(on: Date()).dollars, 0.02182, accuracy: 0.000001)
+        XCTAssertEqual(defaults.aiUsage(on: Date()).dollars, 0.02182, accuracy: 0.000001)
     }
 
     // MARK: Claude
@@ -318,14 +318,14 @@ final class AIDoseAdvisorTests: XCTestCase {
         let message = try XCTUnwrap(((completion["choices"] as? [[String: Any]])?.first)?["message"] as? [String: Any])
         XCTAssertEqual(message["content"] as? String, "{\"carbs\":20}")
 
-        let usage = AIChat.usage(from: data, tier: .fast, provider: .anthropic)
+        let usage = AIChat.usage(from: data, tier: .fast)
         XCTAssertEqual(usage.inputTokens, 900)
         XCTAssertEqual(usage.cachedInputTokens, 100)
         XCTAssertEqual(usage.outputTokens, 2000)
         // Sonnet: 900 × $2 + 100 × $0.20 + 2000 × $10, per million.
         XCTAssertEqual(usage.dollars(.fast), 0.02182, accuracy: 0.000001)
         // Haiku is far cheaper for the same tokens.
-        XCTAssertEqual(AIChat.usage(from: data, tier: .quick, provider: .anthropic).dollars(.quick), 0.001091, accuracy: 0.000001)
+        XCTAssertEqual(AIChat.usage(from: data, tier: .quick).dollars(.quick), 0.001091, accuracy: 0.000001)
     }
 
     func testAClaudeRefusalIsARefusal() throws {
@@ -336,24 +336,49 @@ final class AIDoseAdvisorTests: XCTestCase {
         XCTAssertEqual(message["refusal"] as? String, "Nei.")
     }
 
+    func testSonnetFallsBackOnARefusalButHaikuDoesNot() async throws {
+        let defaults = UserDefaults(suiteName: "AIDoseAdvisorTests")!
+        defaults.removePersistentDomain(forName: "AIDoseAdvisorTests")
+        defer { defaults.removePersistentDomain(forName: "AIDoseAdvisorTests") }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ModelStubURLProtocol.self]
+        let chat = AIChat(apiKey: "sk-ant-test", session: URLSession(configuration: configuration), defaults: defaults)
+
+        ModelStubURLProtocol.acceptedModel = AIChat.Tier.fast.modelCandidates[0]
+        ModelStubURLProtocol.fallbacks = []
+        ModelStubURLProtocol.betaHeaders = []
+        _ = try await chat.send(["messages": [Any]()], timeout: 5, tier: .fast)
+        XCTAssertEqual(ModelStubURLProtocol.fallbacks.first as? String, "default")
+        XCTAssertEqual(ModelStubURLProtocol.betaHeaders.first, AIChat.refusalFallbackBeta)
+
+        ModelStubURLProtocol.acceptedModel = AIChat.Tier.quick.modelCandidates[0]
+        ModelStubURLProtocol.fallbacks = []
+        ModelStubURLProtocol.betaHeaders = []
+        _ = try await chat.send(["messages": [Any]()], timeout: 5, tier: .quick)
+        XCTAssertNil(ModelStubURLProtocol.fallbacks.first ?? nil)
+        XCTAssertNil(ModelStubURLProtocol.betaHeaders.first ?? nil)
+    }
+
     func testClaudesModelNotFoundIsAnUnknownModel() {
         XCTAssertTrue(AIChat.isUnknownModel("model: claude-sonnet-5-5 not found"))
     }
 
     func testUnknownModelMessagesAreRecognised() {
-        XCTAssertTrue(AIChat.isUnknownModel("The model `gpt-6-astra` does not exist or you do not have access to it."))
+        XCTAssertTrue(AIChat.isUnknownModel("The model `claude-sonnet-9` does not exist or you do not have access to it."))
         XCTAssertFalse(AIChat.isUnknownModel("Incorrect API key provided"))
         XCTAssertFalse(AIChat.isUnknownModel("Rate limit reached"))
-        XCTAssertFalse(AIChat.isUnknownModel("Unsupported parameter: 'reasoning_effort' is not supported with this model."))
-        XCTAssertTrue(AIChat.isUnsupportedReasoningEffort("Unsupported parameter: 'reasoning_effort' is not supported with this model."))
+        XCTAssertFalse(AIChat.isUnknownModel("output_config.effort: effort is not supported with this model."))
+        XCTAssertTrue(AIChat.isUnsupportedEffort("output_config.effort: effort is not supported with this model."))
     }
 }
 
-/// Accepts only `acceptedModel`; answers other models as OpenAI does for an unknown model, and
+/// Accepts only `acceptedModel`; answers other models as the API does for an unknown model, and
 /// everything when `acceptedModel` is nil with a wrong-key error.
 private final class ModelStubURLProtocol: URLProtocol {
     static var acceptedModel: String?
     static var requestedModels: [String] = []
+    static var fallbacks: [Any?] = []
+    static var betaHeaders: [String?] = []
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -372,8 +397,11 @@ private final class ModelStubURLProtocol: URLProtocol {
             stream.close()
             body = data
         }
-        let model = (body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] })?["model"] as? String ?? ""
+        let json = body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let model = json?["model"] as? String ?? ""
         Self.requestedModels.append(model)
+        Self.fallbacks.append(json?["fallbacks"])
+        Self.betaHeaders.append(request.value(forHTTPHeaderField: "anthropic-beta"))
 
         let status: Int
         let data: Data
@@ -382,7 +410,7 @@ private final class ModelStubURLProtocol: URLProtocol {
             data = Data(#"{"error":{"message":"Incorrect API key provided"}}"#.utf8)
         } else if model == Self.acceptedModel {
             status = 200
-            data = Data(#"{"choices":[{"message":{"content":"{}"}}],"usage":{"prompt_tokens":1000,"completion_tokens":2000,"prompt_tokens_details":{"cached_tokens":100}}}"#.utf8)
+            data = Data(#"{"content":[{"type":"text","text":"{}"}],"stop_reason":"end_turn","usage":{"input_tokens":900,"output_tokens":2000,"cache_read_input_tokens":100}}"#.utf8)
         } else {
             status = 404
             data = Data(#"{"error":{"message":"The model `\#(model)` does not exist or you do not have access to it."}}"#.utf8)

@@ -6,8 +6,9 @@
 //  advice, holds the dose to the limits and keeps a record of what was shown and accepted.
 //
 //  When a meal comes from the carb entry screen, the advice is asked for as soon as Loop has its
-//  recommendation, while the section is still closed, so it is often ready when opened. It is
-//  shown, and recorded, only when the section is opened.
+//  recommendation: with "Calculate automatically" on, the section opens by itself and shows it;
+//  otherwise it is asked for while the section is still closed, so it is often ready when
+//  opened, and shown and recorded only then. Either way Loop's dose stays in the bolus field.
 //
 
 import Foundation
@@ -15,7 +16,7 @@ import HealthKit
 import LoopKit
 
 extension BolusEntryViewModel {
-    /// True when the section is shown at all: turned on in settings and built with an OpenAI key.
+    /// True when the section is shown at all: turned on in settings and built with an Anthropic key.
     var isAIDoseAdviceAvailable: Bool {
         UserDefaults.standard.aiDoseAdviceSettings.isEnabled && AIDoseAdvisor.shared != nil
     }
@@ -64,13 +65,20 @@ extension BolusEntryViewModel {
         }
     }
 
-    /// Asks for advice in the background for a meal from the carb entry screen, once Loop has its
-    /// recommendation. Nothing is shown until the section is opened.
+    /// Asks for advice for a meal from the carb entry screen, once Loop has its recommendation:
+    /// in the open section when it calculates automatically, otherwise in the background, with
+    /// nothing shown until the section is opened.
     func prefetchAIDoseAdvice() {
         guard isAIDoseAdviceAvailable, aiDoseMealContext != nil, potentialCarbEntry != nil,
               aiDoseAdviceState == .off, aiDosePrefetch == nil,
               let loopUnits = recommendedBolusAmount
         else { return }
+        if UserDefaults.standard.aiDoseAdviceSettings.calculatesAutomatically {
+            guard !aiDoseAdviceOpenedAutomatically else { return }
+            aiDoseAdviceOpenedAutomatically = true
+            setAIDoseAdviceOpen(true)
+            return
+        }
         let now = Date()
         guard aiDoseBlockingReason(now: now) == nil, let ask = makeAIDoseRequest(now: now) else { return }
         aiDosePrefetch = AIDosePrefetch(loopUnits: loopUnits, date: now, task: Task { try await ask() })

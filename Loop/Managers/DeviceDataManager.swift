@@ -434,6 +434,7 @@ final class DeviceDataManager {
         )
         FatProteinBoostManager.current = fatProteinBoost
         Self.removeSplitBolusLeftovers()
+        MealWatchLeftovers.remove()
         let doseStore = self.doseStore
         pumpDelivery = PumpDeliveryAlertManager(
             fetchGlucose: { start, end, completion in
@@ -468,22 +469,6 @@ final class DeviceDataManager {
             GlucoseInsightManager.shared.start(settings: { loopManager.settings })
         }
         LoopNow.provider = { [weak self] in await self?.loopNow() }
-        Task { @MainActor in
-            MealWatchManager.shared.start(settings: { loopManager.settings }, manualBoluses: { start in
-                await withCheckedContinuation { continuation in
-                    doseStore.getNormalizedDoseEntries(start: start, end: nil) { result in
-                        var doses: [DoseEntry] = []
-                        if case .success(let entries) = result {
-                            doses = entries
-                        }
-                        continuation.resume(returning: doses
-                            .filter { $0.type == .bolus && !($0.automatic ?? false) }
-                            .map { (date: $0.startDate, units: $0.deliveredUnits ?? $0.programmedUnits) })
-                    }
-                }
-            })
-        }
-
         Task { @MainActor in
             EveningWatchManager.shared.start(.init(
                 input: { [weak self] now in await self?.eveningWatchInput(now: now) },

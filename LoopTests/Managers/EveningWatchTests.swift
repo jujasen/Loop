@@ -5,6 +5,7 @@
 //  When the evening watch suggests or gives a dose, how large, and what stops it.
 //
 
+import Combine
 import XCTest
 @testable import Loop
 
@@ -182,6 +183,38 @@ final class EveningWatchTests: XCTestCase {
         }
         XCTAssertNil(state.open)
         XCTAssertEqual(state.actions.last?.state, .lapsed)
+    }
+
+    /// The bug from 2 November: what was given in the evening stayed on the home screen in the
+    /// morning, as nothing changed in the state when the window closed.
+    @MainActor
+    func testTheCardGoesWhenTheWindowClosesThoughNothingChanged() {
+        let defaults = UserDefaults(suiteName: "EveningWatchCardTests")!
+        defaults.removePersistentDomain(forName: "EveningWatchCardTests")
+        defer { defaults.removePersistentDomain(forName: "EveningWatchCardTests") }
+        let local = Calendar.current
+        let evening = local.date(bySettingHour: 22, minute: 0, second: 0, of: Date())!
+        let morning = local.date(byAdding: .hour, value: 9, to: evening)!
+
+        var state = EveningWatchState()
+        var given = action(at: evening, units: 0.25, state: .given, kind: .suggestion)
+        given.closedAt = evening
+        state.actions = [given]
+        defaults.eveningWatchSettings = settings(.suggest)
+        defaults.eveningWatchState = state
+        XCTAssertNotNil(EveningWatchCardContent(settings: settings(.suggest), state: state, now: evening, calendar: local))
+        XCTAssertNil(EveningWatchCardContent(settings: settings(.suggest), state: state, now: morning, calendar: local))
+
+        let manager = EveningWatchManager(defaults: defaults)
+        var changes = 0
+        let observer = manager.objectWillChange.sink { changes += 1 }
+        defer { observer.cancel() }
+        manager.refreshCard(now: evening)
+        changes = 0
+        manager.refreshCard(now: evening.addingTimeInterval(600))
+        XCTAssertEqual(changes, 0, "nothing new to show")
+        manager.refreshCard(now: morning)
+        XCTAssertEqual(changes, 1, "the home screen is told the card is gone")
     }
 
     func testABolusAfterTheSuggestionGivesIt() {
