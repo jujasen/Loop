@@ -52,14 +52,14 @@ final class EveningWatchTests: XCTestCase {
 
     func testWindowRunsPastMidnightAndLateStartsAt23() {
         let settings = settings()
-        XCTAssertFalse(EveningWatch.isInWindow(at(20, 29), settings: settings, calendar: calendar))
-        XCTAssertTrue(EveningWatch.isInWindow(at(20, 30), settings: settings, calendar: calendar))
+        XCTAssertFalse(EveningWatch.isInWindow(at(18, 59), settings: settings, calendar: calendar))
+        XCTAssertTrue(EveningWatch.isInWindow(at(19, 0), settings: settings, calendar: calendar))
         XCTAssertTrue(EveningWatch.isInWindow(at(0, 59), settings: settings, calendar: calendar))
         XCTAssertFalse(EveningWatch.isInWindow(at(1, 0), settings: settings, calendar: calendar))
         XCTAssertFalse(EveningWatch.isLate(at(22, 59), settings: settings, calendar: calendar))
         XCTAssertTrue(EveningWatch.isLate(at(23, 0), settings: settings, calendar: calendar))
         XCTAssertTrue(EveningWatch.isLate(at(0, 30), settings: settings, calendar: calendar))
-        XCTAssertEqual(EveningWatch.windowStart(before: at(0, 30), settings: settings, calendar: calendar), at(20, 30))
+        XCTAssertEqual(EveningWatch.windowStart(before: at(0, 30), settings: settings, calendar: calendar), at(19, 0))
     }
 
     // MARK: - Dose
@@ -117,18 +117,25 @@ final class EveningWatchTests: XCTestCase {
     }
 
     func testNothingAfterOrBeforeAMeal() {
-        XCTAssertEqual(decide(rising, at: at(21, 30), carbs: [.init(date: at(20, 30), grams: 10)]).decision.kind, .recentCarbs)
+        XCTAssertEqual(decide(rising, at: at(21, 30), carbs: [.init(date: at(20, 30), grams: 20)]).decision.kind, .recentCarbs)
         XCTAssertEqual(decide(rising, at: at(21, 30), carbs: [.init(date: at(22, 15), grams: 10)]).decision.kind, .recentCarbs)
+        // The evening milk waits only 45 minutes, but a meal before it still counts.
+        XCTAssertEqual(decide(rising, at: at(21, 30), carbs: [.init(date: at(20, 50), grams: 14)]).decision.kind, .recentCarbs)
+        XCTAssertEqual(decide(rising, at: at(21, 30), carbs: [.init(date: at(20, 45), grams: 14)]).decision.kind, .dosed)
+        let meal = decide(rising, at: at(21, 30), carbs: [.init(date: at(20, 15), grams: 25), .init(date: at(20, 40), grams: 7)]).decision
+        XCTAssertEqual(meal.kind, .recentCarbs)
+        XCTAssertEqual(meal.until, at(21, 45))
         XCTAssertEqual(decide(rising, at: at(21, 30), carbs: [.init(date: at(21, 0), grams: 2)]).decision.kind, .dosed)
     }
 
     func testNothingRightAfterADoseByHand() {
-        XCTAssertEqual(decide(rising, at: at(21, 30), boluses: [.init(date: at(20, 45), units: 0.35)]).decision.kind, .recentBolus)
-        XCTAssertEqual(decide(rising, at: at(21, 30), boluses: [.init(date: at(20, 25), units: 0.35)]).decision.kind, .dosed)
+        XCTAssertEqual(decide(rising, at: at(21, 30), boluses: [.init(date: at(20, 50), units: 0.35)]).decision.kind, .recentBolus)
+        XCTAssertEqual(decide(rising, at: at(21, 30), boluses: [.init(date: at(20, 45), units: 0.35)]).decision.kind, .dosed)
     }
 
     func testInsulinOnBoardForecastOverrideAndPump() {
-        XCTAssertEqual(decide(rising, at: at(21, 30), iob: 1.0).decision.kind, .highIOB)
+        XCTAssertEqual(decide(rising, at: at(21, 30), iob: 1.6).decision.kind, .highIOB)
+        XCTAssertEqual(decide(rising, at: at(21, 30), iob: 1.5).decision.kind, .dosed)
         XCTAssertEqual(decide(rising, at: at(21, 30), iob: nil).decision.kind, .noInsulinOnBoard)
         XCTAssertEqual(decide(rising, at: at(21, 30), forecast: 3.8).decision.kind, .forecastLow)
         XCTAssertEqual(decide(rising, at: at(21, 30), reducedInsulin: true).decision.kind, .reducedInsulin)
@@ -262,7 +269,7 @@ final class EveningWatchTests: XCTestCase {
     // MARK: - 30 October
 
     /// The evening Julia gave 0.5 U at 20:08, 0.35 U at 22:25 and 0.35 U at 00:02 by hand. With
-    /// those left out, automatic mode gives a dose of its own around 22:20 and keeps within its limits.
+    /// those left out, automatic mode gives its first dose around 20:00 and keeps within its limits.
     func testReplayOf30October() {
         let start = at(18, 0)
         func date(_ minutes: Int) -> Date { start.addingTimeInterval(Double(minutes) * 60) }
@@ -303,8 +310,9 @@ final class EveningWatchTests: XCTestCase {
         XCTAssertTrue(doses.allSatisfy { $0.units <= 0.5 })
         XCTAssertLessThanOrEqual(doses.reduce(0) { $0 + $1.units }, 1.2 + 1e-9)
         let first = doses[0].date
-        XCTAssertGreaterThanOrEqual(first, at(21, 30))
-        XCTAssertLessThanOrEqual(first, at(22, 45))
+        // Before Julia's own first correction at 20:08: the milk at 19:08 waits only 45 minutes.
+        XCTAssertGreaterThanOrEqual(first, at(19, 50))
+        XCTAssertLessThan(first, at(20, 8))
         XCTAssertNil(state.stop)
     }
 

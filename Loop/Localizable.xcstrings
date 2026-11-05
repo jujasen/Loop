@@ -46536,14 +46536,14 @@
         }
       }
     },
-    "Nothing when: glucose was under 6 in the last 90 minutes, carbs within 90 minutes (or entered ahead), a dose by hand within 60 minutes, Loop forecasts under 3.9, an override with less insulin is on, readings are missing or jump. Automatic also needs closed loop on and the pump free. A reading under 4 within four hours of an automatic dose turns automatic off." : {
+    "Nothing when: glucose was under 6 in the last 90 minutes, carbs within 90 minutes (45 under 15 g, or entered ahead), a dose by hand within 45 minutes, Loop forecasts under 3.9, an override with less insulin is on, readings are missing or jump. Automatic also needs closed loop on and the pump free. A reading under 4 within four hours of an automatic dose turns automatic off." : {
       "comment" : "Evening watch's fixed safety rules",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ingenting når: BS var under 6 siste 90 min, karbo innen 90 min (eller lagt inn fram i tid), manuell dose siste 60 min, Loop spår under 3,9, en overstyring med mindre insulin er på, eller målinger mangler eller hopper. Automatisk krever også lukket loop og ledig pumpe. En måling under 4 innen fire timer etter en automatisk dose slår automatisk av."
+            "value" : "Ingenting når: BS var under 6 siste 90 min, karbo innen 90 min (45 min under 15 g, eller lagt inn fram i tid), manuell dose siste 45 min, Loop spår under 3,9, en overstyring med mindre insulin er på, eller målinger mangler eller hopper. Automatisk krever også lukket loop og ledig pumpe. En måling under 4 innen fire timer etter en automatisk dose slår automatisk av."
           }
         }
       }

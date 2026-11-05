@@ -38,7 +38,7 @@ struct EveningWatchSettings: Codable, Equatable {
 
     var mode: Mode = .off
     /// Minutes after midnight. The window may run past midnight.
-    var start = 20 * 60 + 30
+    var start = 19 * 60
     var end = 60
     /// Rising: glucose at or above this and up over 15 and 30 minutes.
     var risingFrom = 9.0
@@ -49,7 +49,7 @@ struct EveningWatchSettings: Codable, Equatable {
     /// The dose at 12 mmol/L before anything is learned.
     var startUnits = 0.5
     /// Nothing with this much insulin on board or more.
-    var maximumIOB = 1.0
+    var maximumIOB = 1.6
     /// All doses in one evening together.
     var maximumPerEvening = 1.2
     var dosesPerEvening = 3
@@ -248,10 +248,15 @@ enum EveningWatch {
         static let lowLookback: TimeInterval = 90 * 60
         /// A meal has this long to show what it does; one entered ahead counts from this before.
         static let carbGap: TimeInterval = 90 * 60
+        /// Less than this — the evening milk or a yoghurt, given with its own bolus — has only
+        /// `smallCarbGap`. With 90 minutes, milk at 19:15 held the watch back until after Julia had
+        /// already given the first correction by hand on every evening from 28 October to 4 November.
+        static let smallCarbs = 15.0
+        static let smallCarbGap: TimeInterval = 45 * 60
         static let carbAhead: TimeInterval = 60 * 60
         static let minimumCarbs = 3.0
         /// A dose given by hand has this long.
-        static let bolusGap: TimeInterval = 60 * 60
+        static let bolusGap: TimeInterval = 45 * 60
         static let minimumBolus = 0.1
         /// Loop expects a low.
         static let forecastFloor = 3.9
@@ -360,8 +365,13 @@ enum EveningWatch {
         if input.glucose.contains(where: { latest.date.timeIntervalSince($0.date) <= Rule.lowLookback && $0.mmol < Rule.lowFloor }) {
             return no(.recentLow)
         }
-        if let carbs = input.carbs.last(where: { $0.grams >= Rule.minimumCarbs && $0.date <= now.addingTimeInterval(Rule.carbAhead) && now.timeIntervalSince($0.date) < Rule.carbGap }) {
-            return no(.recentCarbs, until: carbs.date.addingTimeInterval(Rule.carbGap))
+        let carbsWait = input.carbs
+            .filter { $0.grams >= Rule.minimumCarbs && $0.date <= now.addingTimeInterval(Rule.carbAhead) }
+            .map { $0.date.addingTimeInterval(carbGap(grams: $0.grams)) }
+            .filter { $0 > now }
+            .max()
+        if let carbsWait {
+            return no(.recentCarbs, until: carbsWait)
         }
         if let bolus = input.manualBoluses.last(where: { $0.units >= Rule.minimumBolus && $0.date <= now && now.timeIntervalSince($0.date) < Rule.bolusGap }) {
             return no(.recentBolus, until: bolus.date.addingTimeInterval(Rule.bolusGap))
@@ -402,6 +412,11 @@ enum EveningWatch {
             state: automatic ? .delivering : .open
         )
         return (EveningWatchDecision(date: latest.date, glucose: glucose, kind: automatic ? .dosed : .suggested, value: units), action)
+    }
+
+    /// How long carbs hold the watch back.
+    static func carbGap(grams: Double) -> TimeInterval {
+        grams < Rule.smallCarbs ? Rule.smallCarbGap : Rule.carbGap
     }
 
     // MARK: - Dose

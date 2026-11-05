@@ -159,7 +159,7 @@ struct EveningWatchSettingsView: View {
                 }
 
                 Section {
-                    Text("Nothing when: glucose was under 6 in the last 90 minutes, carbs within 90 minutes (or entered ahead), a dose by hand within 60 minutes, Loop forecasts under 3.9, an override with less insulin is on, readings are missing or jump. Automatic also needs closed loop on and the pump free. A reading under 4 within four hours of an automatic dose turns automatic off.", comment: "Evening watch's fixed safety rules")
+                    Text("Nothing when: glucose was under 6 in the last 90 minutes, carbs within 90 minutes (45 under 15 g, or entered ahead), a dose by hand within 45 minutes, Loop forecasts under 3.9, an override with less insulin is on, readings are missing or jump. Automatic also needs closed loop on and the pump free. A reading under 4 within four hours of an automatic dose turns automatic off.", comment: "Evening watch's fixed safety rules")
                         .font(.footnote)
                 } header: {
                     Text("Always", comment: "Evening watch settings header above the fixed rules")
