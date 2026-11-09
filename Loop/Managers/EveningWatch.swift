@@ -51,10 +51,10 @@ struct EveningWatchSettings: Codable, Equatable {
     /// Nothing with this much insulin on board or more.
     var maximumIOB = 1.6
     /// All doses in one evening together.
-    var maximumPerEvening = 1.2
-    var dosesPerEvening = 3
-    /// Between two suggestions or doses.
-    var minutesBetween = 75
+    var maximumPerEvening = 1.5
+    var dosesPerEvening = 4
+    /// Between two suggestions or doses. Julia's own corrections came 40–75 minutes apart.
+    var minutesBetween = 45
 
     static let risingRange = 8.0 ... 13.0
     static let highRange = 9.0 ... 16.0
@@ -62,7 +62,7 @@ struct EveningWatchSettings: Codable, Equatable {
     static let maximumIOBRange = 0.3 ... 2.0
     static let maximumPerEveningRange = 0.1 ... 2.0
     static let dosesPerEveningRange = 1 ... 4
-    static let minutesBetweenRange = 60 ... 180
+    static let minutesBetweenRange = 45 ... 180
 
     init() {}
 
@@ -237,26 +237,33 @@ enum EveningWatch {
         static let freshGlucose: TimeInterval = 6 * 60
         static let rise15 = 0.3
         static let rise30 = 0.8
+        /// Fast: at least this much over 15 minutes from `fastFrom`. This is when Julia gave her
+        /// corrections by hand, often 30–50 minutes after the evening milk and its bolus, so a fast
+        /// rise is not held back by small carbs or a dose by hand older than `fastAfter`.
+        static let fastFrom = 10.0
+        static let fastRise15 = 0.8
+        static let fastAfter: TimeInterval = 20 * 60
         /// A high counts when every reading for `highFor` is at most this under the limit.
         static let highMargin = 1.0
         static let highFor: TimeInterval = 30 * 60
-        static let highFalling15 = -0.2
+        static let highFalling15 = -0.5
         /// A jump this size between two readings looks like the sensor, not glucose.
         static let jump = 1.5
         /// Nothing when a reading under this was seen within `lowLookback`.
         static let lowFloor = 6.0
-        static let lowLookback: TimeInterval = 90 * 60
+        static let lowLookback: TimeInterval = 60 * 60
         /// A meal has this long to show what it does; one entered ahead counts from this before.
         static let carbGap: TimeInterval = 90 * 60
         /// Less than this — the evening milk or a yoghurt, given with its own bolus — has only
         /// `smallCarbGap`. With 90 minutes, milk at 19:15 held the watch back until after Julia had
-        /// already given the first correction by hand on every evening from 28 October to 4 November.
+        /// already given the first correction by hand on every evening from 28 October to 4 November;
+        /// her corrections came 30–80 minutes after the milk.
         static let smallCarbs = 15.0
-        static let smallCarbGap: TimeInterval = 45 * 60
+        static let smallCarbGap: TimeInterval = 30 * 60
         static let carbAhead: TimeInterval = 60 * 60
         static let minimumCarbs = 3.0
         /// A dose given by hand has this long.
-        static let bolusGap: TimeInterval = 45 * 60
+        static let bolusGap: TimeInterval = 30 * 60
         static let minimumBolus = 0.1
         /// Loop expects a low.
         static let forecastFloor = 3.9
@@ -265,8 +272,9 @@ enum EveningWatch {
         static let lateScale = 0.6
         static let lateUntil = 6 * 60
         /// The dose by glucose: this share under 10, `middleScale` under 12, all from 12.
-        static let lowScale = 0.5
-        static let middleScale = 0.7
+        /// Julia's own corrections from 10 to 12 were 0.35–0.5 U.
+        static let lowScale = 0.65
+        static let middleScale = 0.8
         static let maximumUnits = 0.8
         static let minimumUnits = 0.1
         static let learnedRange = 0.25 ... 0.8
@@ -355,8 +363,9 @@ enum EveningWatch {
         let risingLimit = settings.risingFrom + (late ? Rule.lateRaise : 0)
         let highLimit = settings.highFrom + (late ? Rule.lateRaise : 0)
         let rising = glucose >= risingLimit && change15 >= Rule.rise15 && change30 >= Rule.rise30 && glucose >= before5.mmol
+        let fast = glucose >= Rule.fastFrom + (late ? Rule.lateRaise : 0) && change15 >= Rule.fastRise15 && glucose >= before5.mmol
         let high = glucose >= highLimit && change15 >= Rule.highFalling15 && isHigh(input.glucose, latest: latest, limit: highLimit)
-        guard rising || high else {
+        guard rising || fast || high else {
             if glucose < min(risingLimit, highLimit) { return no(.belowLimit) }
             if change15 < Rule.highFalling15 { return no(.falling, value: change15) }
             return no(.notRising, value: change30)
@@ -367,14 +376,16 @@ enum EveningWatch {
         }
         let carbsWait = input.carbs
             .filter { $0.grams >= Rule.minimumCarbs && $0.date <= now.addingTimeInterval(Rule.carbAhead) }
+            .filter { !(fast && $0.grams < Rule.smallCarbs && now.timeIntervalSince($0.date) >= Rule.fastAfter) }
             .map { $0.date.addingTimeInterval(carbGap(grams: $0.grams)) }
             .filter { $0 > now }
             .max()
         if let carbsWait {
             return no(.recentCarbs, until: carbsWait)
         }
-        if let bolus = input.manualBoluses.last(where: { $0.units >= Rule.minimumBolus && $0.date <= now && now.timeIntervalSince($0.date) < Rule.bolusGap }) {
-            return no(.recentBolus, until: bolus.date.addingTimeInterval(Rule.bolusGap))
+        let bolusGap = fast ? Rule.fastAfter : Rule.bolusGap
+        if let bolus = input.manualBoluses.last(where: { $0.units >= Rule.minimumBolus && $0.date <= now && now.timeIntervalSince($0.date) < bolusGap }) {
+            return no(.recentBolus, until: bolus.date.addingTimeInterval(bolusGap))
         }
         let gap = TimeInterval(settings.minutesBetween * 60)
         if let last = state.actions.last, now.timeIntervalSince(last.date) < gap {
@@ -401,7 +412,7 @@ enum EveningWatch {
 
         let action = EveningWatchAction(
             kind: automatic ? .automatic : .suggestion,
-            trigger: rising ? .rising : .high,
+            trigger: rising || fast ? .rising : .high,
             date: now,
             glucose: glucose,
             change15: change15,
