@@ -390,26 +390,32 @@ extension ServicesManager: ServiceDelegate {
     
     func applyRemoteTherapySettings(_ change: RemoteTherapySettingsChange) async throws {
         do {
-            let current = settingsManager.loopSettings
-            var update = try Self.therapySettingsUpdate(for: change, replacing: current, pump: servicesManagerDosingDelegate?.remoteTherapySettingsPumpIncrements())
-            try await syncPumpSettings(of: &update, replacing: current)
-            let validatedUpdate = update
-            await servicesManagerDelegate?.updateTherapySettings { settings in
-                validatedUpdate.apply(to: &settings)
-            }
-            if let enabled = change.glucoseBasedPartialApplication {
-                UserDefaults.standard.glucoseBasedApplicationFactorEnabled = enabled
-            }
-            if let enabled = change.integralRetrospectiveCorrection {
-                UserDefaults.standard.integralRetrospectiveCorrectionEnabled = enabled
-            }
+            try await applyTherapySettings(change)
             log.default("Applied remote therapy settings: %{public}@", String(describing: change))
             await NotificationManager.sendRemoteTherapySettingsNotification(for: change)
-            await remoteDataServicesManager.triggerUpload(for: .settings)
         } catch {
             await NotificationManager.sendRemoteTherapySettingsFailureNotification(for: error, change: change)
             throw error
         }
+    }
+
+    /// Applies a therapy settings change through the same guardrails and pump sync as a remote one,
+    /// without the remote notification — for a change made on this phone, such as an insight suggestion.
+    func applyTherapySettings(_ change: RemoteTherapySettingsChange) async throws {
+        let current = settingsManager.loopSettings
+        var update = try Self.therapySettingsUpdate(for: change, replacing: current, pump: servicesManagerDosingDelegate?.remoteTherapySettingsPumpIncrements())
+        try await syncPumpSettings(of: &update, replacing: current)
+        let validatedUpdate = update
+        await servicesManagerDelegate?.updateTherapySettings { settings in
+            validatedUpdate.apply(to: &settings)
+        }
+        if let enabled = change.glucoseBasedPartialApplication {
+            UserDefaults.standard.glucoseBasedApplicationFactorEnabled = enabled
+        }
+        if let enabled = change.integralRetrospectiveCorrection {
+            UserDefaults.standard.integralRetrospectiveCorrectionEnabled = enabled
+        }
+        await remoteDataServicesManager.triggerUpload(for: .settings)
     }
 
     /// Sends new delivery limits, then new basal rates, to the pump the same way Loop's settings editors

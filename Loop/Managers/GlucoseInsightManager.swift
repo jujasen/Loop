@@ -26,12 +26,15 @@ final class GlucoseInsightManager: ObservableObject {
     @Published private(set) var isUpdating = false
     /// How the last upload for LoopFollow went; nil until one has been tried since launch.
     @Published private(set) var sharing: GlucoseInsightSharing?
+    /// Suggestions turned on from the insight, newest last.
+    @Published private(set) var activations: [GlucoseInsightActivation]
 
     private let log = OSLog(category: "GlucoseInsightManager")
     private let store: NightscoutHistoryStore
     private let defaults: UserDefaults
     private let fileURL: URL
     private var settings: () -> LoopSettings? = { nil }
+    private var applyChange: ((RemoteTherapySettingsChange) async throws -> Void)?
     private var observer: NSObjectProtocol?
     private var lastDataAttempt: Date?
     private let uploader = GlucoseInsightUploader()
@@ -44,12 +47,15 @@ final class GlucoseInsightManager: ObservableObject {
             .appendingPathComponent("Status.json")
         try? FileManager.default.createDirectory(at: self.fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         status = (try? Data(contentsOf: self.fileURL)).flatMap { try? JSONDecoder().decode(GlucoseInsightStatus.self, from: $0) } ?? GlucoseInsightStatus()
+        activations = defaults.glucoseInsightActivations
         uploader.onResult = { [weak self] in self?.sharing = $0 }
     }
 
-    /// Starts following the loop. `settings` gives the therapy settings the model is told about.
-    func start(settings: @escaping () -> LoopSettings?) {
+    /// Starts following the loop. `settings` gives the therapy settings the model is told about, and
+    /// `apply` saves a change to them through Loop's guardrails and pump sync.
+    func start(settings: @escaping () -> LoopSettings?, apply: ((RemoteTherapySettingsChange) async throws -> Void)? = nil) {
         self.settings = settings
+        self.applyChange = apply
         guard observer == nil else { return }
         observer = NotificationCenter.default.addObserver(forName: .LoopCompleted, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.updateIfDue() }
@@ -308,6 +314,117 @@ struct GlucoseInsightAttempts: Codable, Equatable {
             fast += 1
             lastFast = date
         }
+    }
+}
+
+// MARK: - Turning suggestions on
+
+enum GlucoseInsightActivationError: LocalizedError {
+    case unavailable
+    case noSchedule
+    case nothingToChange
+    case changedSince
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable:
+            return String(localized: "Loop isn't ready to change settings yet. Try again in a moment.", comment: "Glucose insight: a suggestion can't be turned on before Loop has started")
+        case .noSchedule:
+            return String(localized: "This setting has no schedule in Loop yet.", comment: "Glucose insight: the setting a suggestion changes isn't set up")
+        case .nothingToChange:
+            return String(localized: "The setting already has this value.", comment: "Glucose insight: a suggestion that would change nothing")
+        case .changedSince:
+            return String(localized: "The setting has been changed since, so it is left as it is.", comment: "Glucose insight: undo refused because the schedule was edited after the suggestion was turned on")
+        }
+    }
+}
+
+extension GlucoseInsightManager {
+    /// The setting's schedule now, in the suggestion's unit (g/U, mmol/L/U or U/h).
+    func scheduleItems(for setting: GlucoseInsightSuggestion.Setting) -> [RepeatingScheduleValue<Double>]? {
+        guard let settings = settings() else { return nil }
+        switch setting {
+        case .carbRatio:
+            return settings.carbRatioSchedule?.items
+        case .insulinSensitivity:
+            guard let schedule = settings.insulinSensitivitySchedule else { return nil }
+            return schedule.items.map {
+                // Not rounded: a stretch the suggestion leaves alone must go back to mg/dL just as it was.
+                RepeatingScheduleValue(startTime: $0.startTime, value: HKQuantity(unit: schedule.unit, doubleValue: $0.value).doubleValue(for: .millimolesPerLiter))
+            }
+        case .basalRate:
+            return settings.basalRateSchedule?.items
+        }
+    }
+
+    /// What turning the suggestion on would change, or nil when it would change nothing.
+    func preview(_ suggestion: GlucoseInsightSuggestion) -> [GlucoseInsightScheduleChange]? {
+        scheduleItems(for: suggestion.setting).flatMap { GlucoseInsight.applying(suggestion, to: $0)?.changes }
+    }
+
+    /// The last time this suggestion was turned on, while that is still how the setting is.
+    func activation(for suggestion: GlucoseInsightSuggestion) -> GlucoseInsightActivation? {
+        guard let activation = activations.last(where: { $0.matches(suggestion) }),
+              let items = scheduleItems(for: suggestion.setting),
+              items.map(GlucoseInsightActivation.Item.init) == activation.newItems
+        else { return nil }
+        return activation
+    }
+
+    func activate(_ suggestion: GlucoseInsightSuggestion) async throws {
+        guard let applyChange else { throw GlucoseInsightActivationError.unavailable }
+        guard let items = scheduleItems(for: suggestion.setting) else { throw GlucoseInsightActivationError.noSchedule }
+        guard let result = GlucoseInsight.applying(suggestion, to: items) else { throw GlucoseInsightActivationError.nothingToChange }
+
+        try await applyChange(try Self.change(for: suggestion.setting, items: result.items))
+        log.default("Turned on insight suggestion: %{public}@", String(describing: suggestion))
+        // As saved, if Loop has it already (the pump may round a basal rate), otherwise as sent.
+        let previous = items.map(GlucoseInsightActivation.Item.init)
+        let saved = scheduleItems(for: suggestion.setting)?.map(GlucoseInsightActivation.Item.init)
+        let activation = GlucoseInsightActivation(
+            suggestion: suggestion,
+            date: Date(),
+            previousItems: previous,
+            newItems: saved.flatMap { $0 == previous ? nil : $0 } ?? result.items.map(GlucoseInsightActivation.Item.init)
+        )
+        activations = Array((activations + [activation]).suffix(20))
+        defaults.glucoseInsightActivations = activations
+    }
+
+    /// Puts the schedule back as it was, if no one has changed it since.
+    func undo(_ activation: GlucoseInsightActivation) async throws {
+        guard let applyChange else { throw GlucoseInsightActivationError.unavailable }
+        guard let items = scheduleItems(for: activation.suggestion.setting),
+              items.map(GlucoseInsightActivation.Item.init) == activation.newItems
+        else { throw GlucoseInsightActivationError.changedSince }
+
+        try await applyChange(try Self.change(for: activation.suggestion.setting, items: activation.previousItems.map(\.scheduleValue)))
+        log.default("Undid insight suggestion: %{public}@", String(describing: activation.suggestion))
+        activations.removeAll { $0 == activation }
+        defaults.glucoseInsightActivations = activations
+    }
+
+    nonisolated static func change(for setting: GlucoseInsightSuggestion.Setting, items: [RepeatingScheduleValue<Double>]) throws -> RemoteTherapySettingsChange {
+        switch setting {
+        case .carbRatio:
+            return try RemoteTherapySettingsChange(carbRatioItems: items)
+        case .insulinSensitivity:
+            return try RemoteTherapySettingsChange(insulinSensitivityItems: items, insulinSensitivityUnit: .millimolesPerLiter)
+        case .basalRate:
+            return try RemoteTherapySettingsChange(basalRateItems: items)
+        }
+    }
+}
+
+extension UserDefaults {
+    private static let glucoseInsightActivationsKey = "com.loopkit.Loop.glucoseInsightActivations"
+
+    var glucoseInsightActivations: [GlucoseInsightActivation] {
+        get {
+            guard let data = data(forKey: Self.glucoseInsightActivationsKey) else { return [] }
+            return (try? JSONDecoder().decode([GlucoseInsightActivation].self, from: data)) ?? []
+        }
+        set { set(try? JSONEncoder().encode(newValue), forKey: Self.glucoseInsightActivationsKey) }
     }
 }
 

@@ -20,6 +20,10 @@ struct GlucoseInsightView: View {
     }
 
     @State private var showsDetails = false
+    /// The suggestion waiting for a yes before it is turned on.
+    @State private var confirming: GlucoseInsightSuggestion?
+    @State private var working: GlucoseInsightSuggestion?
+    @State private var failures: [GlucoseInsightSuggestion: String] = [:]
 
     private var todayText: GlucoseInsightText? {
         status.todayText.flatMap { Calendar.current.isDateInToday($0.createdAt) ? $0 : nil }
@@ -146,13 +150,56 @@ struct GlucoseInsightView: View {
     private func suggestionsSection(_ suggestions: [GlucoseInsightSuggestion]) -> some View {
         Section {
             ForEach(suggestions, id: \.self) { suggestion in
-                SuggestionRow(suggestion: suggestion)
+                SuggestionRow(
+                    suggestion: suggestion,
+                    activation: manager.activation(for: suggestion),
+                    canActivate: manager.preview(suggestion) != nil,
+                    isWorking: working == suggestion,
+                    failure: failures[suggestion],
+                    activate: { confirming = suggestion },
+                    undo: { activation in run(suggestion) { try await manager.undo(activation) } }
+                )
             }
         } header: {
             Text("Suggested Settings", comment: "Header of the suggested therapy settings changes in the glucose insight")
         } footer: {
             Text("Only patterns seen on at least three days. Talk it over with the diabetes team before changing anything.", comment: "Footer of the suggested therapy settings changes in the glucose insight")
         }
+        .alert(
+            Text("Activate Suggestion?", comment: "Title of the confirmation before an insight suggestion changes a setting"),
+            isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
+            presenting: confirming
+        ) { suggestion in
+            Button(String(localized: "Activate", comment: "Button turning on an insight suggestion")) {
+                run(suggestion) { try await manager.activate(suggestion) }
+            }
+            Button(String(localized: "Cancel", comment: "Button cancelling turning on an insight suggestion"), role: .cancel) {}
+        } message: { suggestion in
+            Text(confirmationText(suggestion))
+        }
+    }
+
+    private func run(_ suggestion: GlucoseInsightSuggestion, _ action: @escaping () async throws -> Void) {
+        working = suggestion
+        failures[suggestion] = nil
+        Task {
+            do {
+                try await action()
+            } catch {
+                failures[suggestion] = error.localizedDescription
+            }
+            working = nil
+        }
+    }
+
+    private func confirmationText(_ suggestion: GlucoseInsightSuggestion) -> String {
+        let changes = manager.preview(suggestion) ?? []
+        let lines = changes.map { change in
+            "\(clock(change.start))–\(clock(change.end)):  \(SuggestionRow.value(change.from, suggestion.setting)) → \(SuggestionRow.value(change.to, suggestion.setting)) \(SuggestionRow.unit(suggestion.setting))"
+        }
+        let intro = String(format: NSLocalizedString("%@ in Loop's settings changes like this:", comment: "Glucose insight: the confirmation before turning on a suggestion, followed by the changes (1: setting name)"), SuggestionRow.title(suggestion.setting))
+        let outro = String(localized: "Loop uses it from the next loop. You can undo it here as long as no one has changed the setting since.", comment: "Glucose insight: after the changes in the confirmation before turning on a suggestion")
+        return ([intro, ""] + lines + ["", outro]).joined(separator: "\n")
     }
 
     // MARK: Details
@@ -287,16 +334,27 @@ private func signed(_ value: Double) -> String {
     (value > 0 ? "+" : value < 0 ? "−" : "") + mmol(abs(value))
 }
 
+private func clock(_ seconds: TimeInterval) -> String {
+    let minutes = Int(seconds / 60)
+    return String(format: "%02d:%02d", minutes / 60, minutes % 60)
+}
+
 private struct SuggestionRow: View {
     let suggestion: GlucoseInsightSuggestion
+    let activation: GlucoseInsightActivation?
+    let canActivate: Bool
+    let isWorking: Bool
+    let failure: String?
+    let activate: () -> Void
+    let undo: (GlucoseInsightActivation) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
-                Text(verbatim: "\(title) \(String(format: "%02d", suggestion.startHour))–\(String(format: "%02d", suggestion.endHour))")
+                Text(verbatim: "\(Self.title(suggestion.setting)) \(String(format: "%02d", suggestion.startHour))–\(String(format: "%02d", suggestion.endHour))")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text(verbatim: "\(value(suggestion.current)) → \(value(suggestion.proposed)) \(unit)")
+                Text(verbatim: "\(Self.value(suggestion.current, suggestion.setting)) → \(Self.value(suggestion.proposed, suggestion.setting)) \(Self.unit(suggestion.setting))")
                     .font(.subheadline.monospacedDigit())
                     .foregroundColor(suggestion.givesMoreInsulin ? .orange : .blue)
             }
@@ -304,28 +362,78 @@ private struct SuggestionRow: View {
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            controls
+            if let failure {
+                Text(failure)
+                    .font(.footnote)
+                    .foregroundColor(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.vertical, 2)
     }
 
-    private var title: String {
-        switch suggestion.setting {
+    @ViewBuilder
+    private var controls: some View {
+        if isWorking {
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Saving…", comment: "Glucose insight: a suggestion is being turned on or undone").font(.footnote).foregroundColor(.secondary)
+            }
+        } else if let activation {
+            HStack {
+                Label {
+                    Text(String(format: NSLocalizedString("Active since %@", comment: "Glucose insight: a suggestion that was turned on (1: date and time)"),
+                                activation.date.formatted(.dateTime.weekday(.abbreviated).hour().minute())))
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                }
+                .font(.footnote)
+                Spacer()
+                Button(String(localized: "Undo", comment: "Button undoing a turned-on insight suggestion")) {
+                    undo(activation)
+                }
+                .font(.footnote.weight(.semibold))
+                .buttonStyle(.borderless)
+            }
+        } else if canActivate {
+            Button(action: activate) {
+                Label {
+                    Text("Activate", comment: "Button turning on an insight suggestion")
+                } icon: {
+                    Image(systemName: "wand.and.stars").foregroundColor(.purple)
+                }
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .tint(.purple)
+        } else {
+            Text("The setting is no longer what the suggestion was made from.", comment: "Glucose insight: a suggestion that can't be turned on because the setting has changed")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    static func title(_ setting: GlucoseInsightSuggestion.Setting) -> String {
+        switch setting {
         case .carbRatio: return String(localized: "Carb ratio", comment: "Glucose insight suggestion: carb ratio")
         case .insulinSensitivity: return String(localized: "Insulin sensitivity", comment: "Glucose insight suggestion: insulin sensitivity")
         case .basalRate: return String(localized: "Basal rate", comment: "Glucose insight suggestion: basal rate")
         }
     }
 
-    private var unit: String {
-        switch suggestion.setting {
+    static func unit(_ setting: GlucoseInsightSuggestion.Setting) -> String {
+        switch setting {
         case .carbRatio: return "g/E"
         case .insulinSensitivity: return "mmol/L/E"
         case .basalRate: return "E/t"
         }
     }
 
-    private func value(_ number: Double) -> String {
-        number.formatted(.number.precision(.fractionLength(0...2)))
+    static func value(_ number: Double, _ setting: GlucoseInsightSuggestion.Setting) -> String {
+        // Sensitivity kept in mg/dL reads as 2.775 mmol/L; it is shown as the insight shows it.
+        number.formatted(.number.precision(.fractionLength(setting == .insulinSensitivity ? 0...1 : 0...2)))
     }
 }
 

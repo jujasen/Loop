@@ -466,7 +466,13 @@ final class DeviceDataManager {
         PumpDeliveryAlertManager.current = pumpDelivery
         pumpDelivery.start()
         Task { @MainActor in
-            GlucoseInsightManager.shared.start(settings: { loopManager.settings })
+            GlucoseInsightManager.shared.start(
+                settings: { loopManager.settings },
+                apply: { [weak self] change in
+                    guard let self else { throw GlucoseInsightActivationError.unavailable }
+                    try await self.servicesManager.applyTherapySettings(change)
+                }
+            )
         }
         LoopNow.provider = { [weak self] in await self?.loopNow() }
         Task { @MainActor in

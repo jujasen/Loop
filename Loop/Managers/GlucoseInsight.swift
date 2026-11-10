@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import LoopKit
 
 // MARK: - Numbers
 
@@ -629,5 +630,122 @@ enum GlucoseInsight {
             }
         }
         return words
+    }
+}
+
+// MARK: - Turning a suggestion on
+
+/// One stretch of the day a suggestion changes, shown before it is turned on.
+struct GlucoseInsightScheduleChange: Equatable {
+    /// Seconds from midnight.
+    var start: TimeInterval
+    var end: TimeInterval
+    var from: Double
+    var to: Double
+}
+
+/// A suggestion that was turned on, with the schedule as it was, so it can be undone.
+struct GlucoseInsightActivation: Codable, Equatable {
+    struct Item: Codable, Equatable {
+        /// Seconds from midnight.
+        var start: TimeInterval
+        var value: Double
+    }
+
+    var suggestion: GlucoseInsightSuggestion
+    var date: Date
+    /// In the suggestion's unit: g/U, mmol/L/U or U/h.
+    var previousItems: [Item]
+    var newItems: [Item]
+
+    func matches(_ suggestion: GlucoseInsightSuggestion) -> Bool {
+        self.suggestion.setting == suggestion.setting
+            && self.suggestion.daypart == suggestion.daypart
+            && self.suggestion.current == suggestion.current
+            && self.suggestion.proposed == suggestion.proposed
+    }
+}
+
+extension GlucoseInsightActivation.Item {
+    init(_ item: RepeatingScheduleValue<Double>) {
+        self.init(start: item.startTime, value: item.value)
+    }
+
+    var scheduleValue: RepeatingScheduleValue<Double> {
+        RepeatingScheduleValue(startTime: start, value: value)
+    }
+}
+
+extension GlucoseInsight {
+    /// The schedule with the suggestion's hours scaled by proposed / current. Each stretch inside the
+    /// hours keeps its shape, so the stretch the suggestion was read from gets just the proposed value
+    /// and no stretch moves by more, in proportion, than the suggestion does. Values are in the
+    /// suggestion's unit (mmol/L/U for sensitivity). Nil when nothing would change, or when the
+    /// setting is no longer what the suggestion was made from.
+    static func applying(_ suggestion: GlucoseInsightSuggestion, to items: [RepeatingScheduleValue<Double>]) -> (items: [RepeatingScheduleValue<Double>], changes: [GlucoseInsightScheduleChange])? {
+        let day = TimeInterval(24 * 3600)
+        let start = TimeInterval(suggestion.startHour * 3600)
+        let end = TimeInterval(suggestion.endHour * 3600)
+        let sorted = items.sorted { $0.startTime < $1.startTime }
+        guard let first = sorted.first, suggestion.current > 0, suggestion.proposed > 0, start < end, end <= day else {
+            return nil
+        }
+        let factor = suggestion.proposed / suggestion.current
+
+        func value(at time: TimeInterval) -> Double {
+            sorted.last { $0.startTime <= time }?.value ?? first.value
+        }
+        // Only from the setting the suggestion was made from: the value in the middle of its hours.
+        // `current` was rounded as the insight shows it, so the value is held to that step.
+        let step: Double
+        switch suggestion.setting {
+        case .carbRatio: step = 0.001
+        case .insulinSensitivity: step = 0.05
+        case .basalRate: step = 0.005
+        }
+        guard abs(value(at: (start + end) / 2) - suggestion.current) <= step + 1e-9 else {
+            return nil
+        }
+
+        var starts = Set(sorted.map(\.startTime))
+        starts.insert(0)
+        starts.insert(start)
+        if end < day {
+            starts.insert(end)
+        }
+        let breaks = starts.filter { $0 >= 0 && $0 < day }.sorted()
+
+        var result: [RepeatingScheduleValue<Double>] = []
+        var changes: [GlucoseInsightScheduleChange] = []
+        for (index, time) in breaks.enumerated() {
+            let old = value(at: time)
+            var new = old
+            if time >= start && time < end {
+                new = rounded(old * factor, for: suggestion.setting)
+            }
+            if abs(new - old) > 1e-9 {
+                let stretchEnd = index + 1 < breaks.count ? breaks[index + 1] : day
+                if var last = changes.last, last.end == time, last.from == old, last.to == new {
+                    last.end = stretchEnd
+                    changes[changes.count - 1] = last
+                } else {
+                    changes.append(GlucoseInsightScheduleChange(start: time, end: stretchEnd, from: old, to: new))
+                }
+            }
+            if result.last?.value != new {
+                result.append(RepeatingScheduleValue(startTime: time, value: new))
+            }
+        }
+        guard !changes.isEmpty else { return nil }
+        return (result, changes)
+    }
+
+    /// To the steps the suggestions are given in: half grams, tenths of mmol/L, 0.05 U/h (never 0).
+    static func rounded(_ value: Double, for setting: GlucoseInsightSuggestion.Setting) -> Double {
+        switch setting {
+        case .carbRatio: return (value * 2).rounded() / 2
+        case .insulinSensitivity: return round1(value)
+        case .basalRate: return value > 0 ? max(0.05, (value * 20).rounded() / 20) : 0
+        }
     }
 }

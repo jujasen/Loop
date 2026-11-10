@@ -7,6 +7,7 @@
 //
 
 import XCTest
+import LoopKit
 @testable import Loop
 
 final class GlucoseInsightTests: XCTestCase {
@@ -396,5 +397,62 @@ final class GlucoseInsightTests: XCTestCase {
         let weaker = GlucoseInsightSuggestion(setting: .insulinSensitivity, daypart: "kveld 19-24", startHour: 0, endHour: 0, current: 14, proposed: 15.5, reason: "", evidenceDays: 0)
         XCTAssertEqual(GlucoseInsight.validSuggestions([weaker], patterns: pattern(high: 0, lowAfter: 0, lows: 3), therapy: therapy).first?.proposed, 15.5)
         XCTAssertTrue(GlucoseInsight.validSuggestions([weaker], patterns: pattern(high: 4, lowAfter: 0, lows: 1), therapy: therapy).isEmpty, "less insulin needs lows behind it")
+    }
+
+    // MARK: Turning a suggestion on
+
+    private func items(_ pairs: [(Double, Double)]) -> [RepeatingScheduleValue<Double>] {
+        pairs.map { RepeatingScheduleValue(startTime: $0.0 * 3600, value: $0.1) }
+    }
+
+    func testTurningOnScalesOnlyTheSuggestionsHoursAndKeepsTheirShape() {
+        // Walter's sensitivity 30.10: 00 10 · 07 15 · 14 17 · 20 10.
+        let schedule = items([(0, 10), (7, 15), (14, 17), (20, 10)])
+        let evening = GlucoseInsightSuggestion(setting: .insulinSensitivity, daypart: "kveld 19-24", startHour: 19, endHour: 24, current: 10, proposed: 9, reason: "", evidenceDays: 3)
+
+        let result = GlucoseInsight.applying(evening, to: schedule)
+        XCTAssertEqual(result?.items.map(\.startTime), [0, 7, 14, 19, 20].map { $0 * 3600 })
+        XCTAssertEqual(result?.items.map(\.value), [10, 15, 17, 15.3, 9], "17 at 19–20 moves by the same tenth, not to 9")
+        XCTAssertEqual(result?.changes, [
+            GlucoseInsightScheduleChange(start: 19 * 3600, end: 20 * 3600, from: 17, to: 15.3),
+            GlucoseInsightScheduleChange(start: 20 * 3600, end: 24 * 3600, from: 10, to: 9),
+        ])
+    }
+
+    func testTurningOnSplitsAtBothEndsAndJoinsEqualStretches() {
+        let schedule = items([(0, 0.2)])
+        let night = GlucoseInsightSuggestion(setting: .basalRate, daypart: "natt 00-06", startHour: 0, endHour: 6, current: 0.2, proposed: 0.25, reason: "", evidenceDays: 3)
+        let result = GlucoseInsight.applying(night, to: schedule)
+        XCTAssertEqual(result?.items.map(\.startTime), [0, 6 * 3600])
+        XCTAssertEqual(result?.items.map(\.value), [0.25, 0.2])
+
+        let ratio = GlucoseInsightSuggestion(setting: .carbRatio, daypart: "dag 09-15", startHour: 9, endHour: 15, current: 15, proposed: 13.5, reason: "", evidenceDays: 3)
+        XCTAssertEqual(GlucoseInsight.applying(ratio, to: items([(0, 15)]))?.items.map(\.value), [15, 13.5, 15])
+    }
+
+    func testStretchesOutsideTheHoursAreLeftExactlyAsTheyWere() {
+        // Sensitivity kept in mg/dL: 45 · 09 55, read as mmol/L without rounding; the insight shows 55 as 3.1.
+        let schedule = items([(0, 45 / 18.0182), (9, 55 / 18.0182)])
+        let evening = GlucoseInsightSuggestion(setting: .insulinSensitivity, daypart: "kveld 19-24", startHour: 19, endHour: 24, current: 3.1, proposed: 2.8, reason: "", evidenceDays: 3)
+        let result = GlucoseInsight.applying(evening, to: schedule)
+        XCTAssertEqual(result?.items.count, 3)
+        XCTAssertEqual(result?.items[0].value, schedule[0].value)
+        XCTAssertEqual(result?.items[1].value, schedule[1].value, "09–19 is not touched")
+        XCTAssertEqual(result?.items[2].value, 2.8)
+        XCTAssertEqual(result?.changes.count, 1)
+    }
+
+    func testTurningOnNeedsTheSettingTheSuggestionWasMadeFrom() {
+        let evening = GlucoseInsightSuggestion(setting: .insulinSensitivity, daypart: "kveld 19-24", startHour: 19, endHour: 24, current: 10, proposed: 9, reason: "", evidenceDays: 3)
+        XCTAssertNil(GlucoseInsight.applying(evening, to: items([(0, 12)])), "changed since the night it was written")
+        XCTAssertNil(GlucoseInsight.applying(evening, to: []))
+    }
+
+    func testTheChangeGoesInTheSuggestionsUnit() throws {
+        let change = try GlucoseInsightManager.change(for: .insulinSensitivity, items: items([(0, 10)]))
+        XCTAssertEqual(change.insulinSensitivityUnit, .millimolesPerLiter)
+        XCTAssertNil(change.carbRatioItems)
+        XCTAssertNil(change.basalRateItems)
+        XCTAssertEqual(try GlucoseInsightManager.change(for: .basalRate, items: items([(0, 0.2)])).basalRateItems?.first?.value, 0.2)
     }
 }

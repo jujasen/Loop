@@ -61,9 +61,7 @@
         }
       }
     },
-    "" : {
-
-    },
+    "" : {},
     " (pending: %@)" : {
       "comment" : "The string format appended to active insulin that describes pending insulin. (1: pending insulin)",
       "extractionState" : "manual",
@@ -46736,6 +46734,150 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Når du går fra måltidsskjermen til bolusskjermen, regnes AI-dosen ut uten at du trykker. Loops dose står fortsatt i bolusfeltet."
+          }
+        }
+      }
+    },
+    "Loop isn't ready to change settings yet. Try again in a moment." : {
+      "comment" : "Glucose insight: a suggestion can't be turned on before Loop has started",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop er ikke klar til å endre innstillinger ennå. Prøv igjen om litt."
+          }
+        }
+      }
+    },
+    "This setting has no schedule in Loop yet." : {
+      "comment" : "Glucose insight: the setting a suggestion changes isn't set up",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne innstillingen har ikke noe skjema i Loop ennå."
+          }
+        }
+      }
+    },
+    "The setting already has this value." : {
+      "comment" : "Glucose insight: a suggestion that would change nothing",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Innstillingen har allerede denne verdien."
+          }
+        }
+      }
+    },
+    "The setting has been changed since, so it is left as it is." : {
+      "comment" : "Glucose insight: undo refused because the schedule was edited after the suggestion was turned on",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Innstillingen er endret siden, så den blir stående som den er."
+          }
+        }
+      }
+    },
+    "Activate Suggestion?" : {
+      "comment" : "Title of the confirmation before an insight suggestion changes a setting",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivere forslaget?"
+          }
+        }
+      }
+    },
+    "Activate" : {
+      "comment" : "Button turning on an insight suggestion",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiver"
+          }
+        }
+      }
+    },
+    "%@ in Loop's settings changes like this:" : {
+      "comment" : "Glucose insight: the confirmation before turning on a suggestion, followed by the changes (1: setting name)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ i Loops innstillinger endres slik:"
+          }
+        }
+      }
+    },
+    "Loop uses it from the next loop. You can undo it here as long as no one has changed the setting since." : {
+      "comment" : "Glucose insight: after the changes in the confirmation before turning on a suggestion",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop bruker det fra neste runde. Du kan angre her så lenge ingen har endret innstillingen siden."
+          }
+        }
+      }
+    },
+    "Saving…" : {
+      "comment" : "Glucose insight: a suggestion is being turned on or undone",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagrer …"
+          }
+        }
+      }
+    },
+    "Active since %@" : {
+      "comment" : "Glucose insight: a suggestion that was turned on (1: date and time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiv siden %@"
+          }
+        }
+      }
+    },
+    "Undo" : {
+      "comment" : "Button undoing a turned-on insight suggestion",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Angre"
+          }
+        }
+      }
+    },
+    "The setting is no longer what the suggestion was made from." : {
+      "comment" : "Glucose insight: a suggestion that can't be turned on because the setting has changed",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Innstillingen er ikke lenger den forslaget bygger på."
           }
         }
       }
