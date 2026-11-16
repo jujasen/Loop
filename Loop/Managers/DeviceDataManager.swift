@@ -1757,7 +1757,44 @@ extension Notification.Name {
 extension DeviceDataManager: ServicesManagerDosingDelegate {
     
     func deliverBolus(amountInUnits: Double) async throws {
-        try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation)
+        // A remote command is fetched right after a Loop run, which is when Loop's own automatic
+        // bolus is being delivered. The pump refuses a second bolus meanwhile ("Bolus in progress"),
+        // so wait for Loop's own dose to finish instead of rejecting the remote one.
+        await waitForAutomaticBolusToFinish()
+        do {
+            try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation)
+        } catch PumpManagerError.deviceState(let deviceError) {
+            // Loop started an automatic bolus between the wait and the remote one: try once more.
+            guard await automaticBolusIsRunning() else {
+                throw PumpManagerError.deviceState(deviceError)
+            }
+            await waitForAutomaticBolusToFinish()
+            try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation)
+        }
+    }
+
+    /// Waits up to a minute while the pump is busy with a bolus Loop gave itself. A bolus someone
+    /// gave by hand is not waited for: the remote one then fails, as it would have.
+    @MainActor
+    private func waitForAutomaticBolusToFinish(timeout: TimeInterval = 60) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline, automaticBolusIsRunning() {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+        }
+    }
+
+    @MainActor
+    private func automaticBolusIsRunning() -> Bool {
+        guard let bolusState = pumpManager?.status.bolusState else { return false }
+        switch bolusState {
+        case .noBolus:
+            return false
+        case .initiating, .canceling:
+            // Short-lived; it is Loop's own unless someone is at the phone, and then waiting is harmless.
+            return true
+        case .inProgress(let dose):
+            return dose.automatic == true
+        }
     }
 
     func remoteTherapySettingsPumpIncrements() -> RemoteTherapySettingsPumpIncrements? {

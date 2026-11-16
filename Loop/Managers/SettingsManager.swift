@@ -338,7 +338,10 @@ enum LoopAppSettings {
                     ] as [String: Any]
                 }
             ] as [String: Any],
-            "eveningWatch": eveningWatch(defaults)
+            "eveningWatch": eveningWatch(defaults),
+            // This Loop fetches remote commands from Nightscout ("Remote Command" treatments) on
+            // every run and writes their outcome back, so LoopFollow may send them that way.
+            "remoteCommandInbox": 1
         ]
         return try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
     }
