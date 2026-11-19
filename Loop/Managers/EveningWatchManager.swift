@@ -487,19 +487,51 @@ enum EveningWatchText {
         )
     }
 
-    /// "10,8 og stiger 0,9 siste halvtime. 0,4 E om bord."
+    /// Why, and why it is safe, in two short lines:
+    /// "Hvorfor: 10,8 og steg 0,9 siste halvtime. Ingenting spist eller gitt siden 18:40.
+    ///  Trygt: bare 0,4 E om bord, Loop spår ikke under 6,2, og ikke under 6 siste time."
     static func reason(_ action: EveningWatchAction) -> String {
+        [why(action), safe(action)].compactMap { $0 }.joined(separator: "\n")
+    }
+
+    static func why(_ action: EveningWatchAction) -> String {
         var text: String
         switch action.trigger {
         case .rising:
-            text = String(format: NSLocalizedString("%1$@ and up %2$@ over the last half hour.", comment: "Evening watch: why, glucose rising (1: glucose)(2: rise over 30 minutes)"), glucose(action.glucose), glucose(action.change30 ?? 0))
+            if let change30 = action.change30, change30 >= EveningWatch.Rule.rise30 {
+                text = String(format: NSLocalizedString("Why: %1$@ and up %2$@ over the last half hour.", comment: "Evening watch: why, glucose rising (1: glucose)(2: rise over 30 minutes)"), glucose(action.glucose), glucose(change30))
+            } else {
+                text = String(format: NSLocalizedString("Why: %1$@ and up %2$@ in a quarter of an hour.", comment: "Evening watch: why, glucose rising fast (1: glucose)(2: rise over 15 minutes)"), glucose(action.glucose), glucose(action.change15 ?? 0))
+            }
         case .high:
-            text = String(format: NSLocalizedString("%@ and not falling for half an hour.", comment: "Evening watch: why, glucose high (1: glucose)"), glucose(action.glucose))
+            text = String(format: NSLocalizedString("Why: %@ and not falling for half an hour.", comment: "Evening watch: why, glucose high (1: glucose)"), glucose(action.glucose))
         }
-        if let iob = action.iob {
-            text += " " + String(format: NSLocalizedString("%@ U on board.", comment: "Evening watch: insulin on board (1: units)"), units(iob))
+        if let last = action.lastFoodOrBolus, action.date.timeIntervalSince(last) < 12 * 3600 {
+            text += " " + String(format: NSLocalizedString("Nothing eaten or given since %@.", comment: "Evening watch: why, nothing eaten or bolused since (1: time)"), time(last))
         }
         return text
+    }
+
+    /// Nil for actions saved before the safety facts were kept.
+    static func safe(_ action: EveningWatchAction) -> String? {
+        var parts: [String] = []
+        if let iob = action.iob {
+            parts.append(String(format: NSLocalizedString("only %@ U on board", comment: "Evening watch: why safe, insulin on board (1: units)"), units(iob)))
+        }
+        if let forecast = action.lowestForecast {
+            parts.append(String(format: NSLocalizedString("Loop forecasts no lower than %@", comment: "Evening watch: why safe, Loop's lowest forecast (1: glucose)"), glucose(forecast)))
+        }
+        if let lowest = action.lowestLastHour {
+            parts.append(String(format: NSLocalizedString("lowest %@ in the last hour", comment: "Evening watch: why safe, lowest reading in the last hour (1: glucose)"), glucose(lowest)))
+        }
+        if action.late == true {
+            parts.append(NSLocalizedString("smaller dose because it is late", comment: "Evening watch: why safe, the dose is smaller after 23:00"))
+        }
+        guard action.lowestLastHour != nil || action.lowestForecast != nil else {
+            // Saved by an older build: only insulin on board is known.
+            return action.iob.map { String(format: NSLocalizedString("%@ U on board.", comment: "Evening watch: insulin on board (1: units)"), units($0)) }
+        }
+        return String(format: NSLocalizedString("Safe: %@.", comment: "Evening watch: why the dose is safe (1: the reasons, comma separated)"), parts.joined(separator: ", "))
     }
 
     static func decision(_ decision: EveningWatchDecision) -> String {

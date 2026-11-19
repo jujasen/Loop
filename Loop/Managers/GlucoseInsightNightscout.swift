@@ -95,8 +95,10 @@ final class GlucoseInsightUploader {
     /// Told how each upload went.
     var onResult: (GlucoseInsightSharing) -> Void = { _ in }
 
-    func upload(_ status: GlucoseInsightStatus, aiEnabled: Bool, usage: AIDailyUsage, now: Date = Date()) {
-        guard status != lastUploaded, status.longTerm != nil || status.today != nil else { return }
+    /// Uploads when the status has changed since the last upload, or always with `force` (LoopFollow
+    /// asked for a fresh look and waits for a newer upload).
+    func upload(_ status: GlucoseInsightStatus, aiEnabled: Bool, usage: AIDailyUsage, now: Date = Date(), force: Bool = false) {
+        guard force || status != lastUploaded, status.longTerm != nil || status.today != nil else { return }
         let document = GlucoseInsightDocument(status: status, aiEnabled: aiEnabled, usage: usage, now: now)
         task?.cancel()
         task = Task {
@@ -143,5 +145,51 @@ final class GlucoseInsightUploader {
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw UploadError.http(http.statusCode)
         }
+    }
+}
+
+/// LoopFollow asks for a fresh insight with an «Insight Refresh» treatment. Loop looks for one
+/// after a loop (at most every two minutes), takes it away and does a fresh look; LoopFollow waits
+/// for a newer upload. Asking costs at most an AI call within the daily ceilings, so it is not signed.
+@MainActor
+final class GlucoseInsightRefreshRequests {
+    static let eventType = "Insight Refresh"
+    /// Older requests are left alone: LoopFollow gave up waiting long ago.
+    static let maximumAge: TimeInterval = .minutes(20)
+
+    private let log = OSLog(category: "GlucoseInsightRefreshRequests")
+    private var handled: Set<String> = []
+
+    /// The id of a request not yet handled, which is then removed from Nightscout.
+    func pending(now: Date) async -> String? {
+        guard let credentials = try? KeychainManager().getNightscoutCredentials(), !credentials.apiSecret.isEmpty else { return nil }
+        let secretHash = Insecure.SHA1.hash(data: Data(credentials.apiSecret.utf8)).map { String(format: "%02x", $0) }.joined()
+        var components = URLComponents(url: credentials.siteURL.appendingPathComponent("api/v1/treatments.json"), resolvingAgainstBaseURL: false)!
+        let since = ISO8601DateFormatter().string(from: now.addingTimeInterval(-Self.maximumAge))
+        components.queryItems = [
+            URLQueryItem(name: "find[eventType]", value: Self.eventType),
+            URLQueryItem(name: "find[created_at][$gte]", value: since),
+            URLQueryItem(name: "count", value: "5"),
+        ]
+        var request = URLRequest(url: components.url!)
+        request.timeoutInterval = 20
+        request.setValue(secretHash, forHTTPHeaderField: "api-secret")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) == true,
+              let treatments = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]]
+        else { return nil }
+
+        let ids = treatments.compactMap { $0["_id"] as? String }
+        for id in ids {
+            var delete = URLRequest(url: credentials.siteURL.appendingPathComponent("api/v1/treatments/\(id)"))
+            delete.httpMethod = "DELETE"
+            delete.timeoutInterval = 20
+            delete.setValue(secretHash, forHTTPHeaderField: "api-secret")
+            _ = try? await URLSession.shared.data(for: delete)
+        }
+        guard let fresh = ids.first(where: { !handled.contains($0) }) else { return nil }
+        handled.formUnion(ids)
+        return fresh
     }
 }

@@ -1,6 +1,198 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "E.g. fish gratin, or a product and its carbs" : {
+      "comment" : "Placeholder for the free-text meal description on the carb entry screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "F.eks. fiskegrateng, eller en vare og karboen"
+          }
+        }
+      }
+    },
+    "Already done: it is %@ now" : {
+      "comment" : "Glucose insight: a suggestion whose setting already has the proposed value (1: value with unit)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allerede gjort: nå %@"
+          }
+        }
+      }
+    },
+    "Last 14 days" : {
+      "comment" : "Glucose insight: time in range day by day",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste 14 dager"
+          }
+        }
+      }
+    },
+    "Last 4 weeks" : {
+      "comment" : "Glucose insight: time in range week by week",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste 4 uker"
+          }
+        }
+      }
+    },
+    "For More Time in Range" : {
+      "comment" : "Glucose insight: heading of the week's concrete measures",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For mer tid i målområdet"
+          }
+        }
+      }
+    },
+    "Do This" : {
+      "comment" : "Glucose insight: heading of what to do for more time in range",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gjør dette"
+          }
+        }
+      }
+    },
+    "Why" : {
+      "comment" : "Glucose insight: heading of the causes of how today is going",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvorfor"
+          }
+        }
+      }
+    },
+    "Safe: %@." : {
+      "comment" : "Evening watch: why the dose is safe (1: the reasons, comma separated)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trygt: %@."
+          }
+        }
+      }
+    },
+    "smaller dose because it is late" : {
+      "comment" : "Evening watch: why safe, the dose is smaller after 23:00",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mindre dose fordi det er sent"
+          }
+        }
+      }
+    },
+    "lowest %@ in the last hour" : {
+      "comment" : "Evening watch: why safe, lowest reading in the last hour (1: glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "laveste %@ siste time"
+          }
+        }
+      }
+    },
+    "Loop forecasts no lower than %@" : {
+      "comment" : "Evening watch: why safe, Loop's lowest forecast (1: glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop spår ikke lavere enn %@"
+          }
+        }
+      }
+    },
+    "only %@ U on board" : {
+      "comment" : "Evening watch: why safe, insulin on board (1: units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bare %@ E om bord"
+          }
+        }
+      }
+    },
+    "Nothing eaten or given since %@." : {
+      "comment" : "Evening watch: why, nothing eaten or bolused since (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingenting spist eller gitt siden kl. %@."
+          }
+        }
+      }
+    },
+    "Why: %@ and not falling for half an hour." : {
+      "comment" : "Evening watch: why, glucose high (1: glucose)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvorfor: %@ og har ikke falt på en halvtime."
+          }
+        }
+      }
+    },
+    "Why: %1$@ and up %2$@ in a quarter of an hour." : {
+      "comment" : "Evening watch: why, glucose rising fast (1: glucose)(2: rise over 15 minutes)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvorfor: %1$@ og steg %2$@ på et kvarter."
+          }
+        }
+      }
+    },
+    "Why: %1$@ and up %2$@ over the last half hour." : {
+      "comment" : "Evening watch: why, glucose rising (1: glucose)(2: rise over 30 minutes)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvorfor: %1$@ og steg %2$@ siste halvtime."
+          }
+        }
+      }
+    },
     "Time" : {
       "comment" : "Title of the row choosing when a meal was eaten",
       "extractionState" : "manual",

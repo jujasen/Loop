@@ -375,13 +375,17 @@ final class CarbEntryViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
-        // The week of entries on the phone goes into the longer log, then the order is worked out again.
+        // The week of entries on the phone, and the weeks of Nightscout history the insight keeps
+        // (also what was logged from LoopFollow), go into the longer log; then the order is worked out again.
         delegate?.carbEntries(since: Date().addingTimeInterval(-FavoriteFoodUsage.window)) { [weak self] entries in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 guard let self else { return }
+                let fromNightscout = await NightscoutHistoryStore.shared.history().treatments
+                    .filter { ($0.carbs ?? 0) > 0 }
+                    .map { FavoriteFoodUsage.LoggedEntry(foodType: $0.foodType, date: $0.date) }
                 let now = Date()
                 let log = FavoriteFoodUsage.recording(
-                    entries.map { FavoriteFoodUsage.LoggedEntry(foodType: $0.foodType, date: $0.startDate) },
+                    entries.map { FavoriteFoodUsage.LoggedEntry(foodType: $0.foodType, date: $0.startDate) } + fromNightscout,
                     favorites: self.favoriteFoods,
                     into: UserDefaults.standard.favoriteFoodUsage,
                     now: now
@@ -512,9 +516,15 @@ final class CarbEntryViewModel: ObservableObject {
     func estimateMeal() {
         guard canEstimateMeal else { return }
         let description = mealDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        var content = description.isEmpty ? "Estimate the meal in the photos." : description
+        // Carbs typed in before asking are known (from the label or the recipe): kept as they are,
+        // so the estimate is about the absorption time.
+        if let known = carbsQuantity, known > 0, selectedFavoriteFoodIndex == -1 {
+            content += "\n\n" + MealCarbEstimator.knownCarbsNote(known)
+        }
         requestMealEstimate(conversation: [MealCarbEstimator.Message(
             role: "user",
-            content: description.isEmpty ? "Estimate the meal in the photos." : description,
+            content: content,
             images: mealPhotos
         )])
     }

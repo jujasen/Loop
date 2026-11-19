@@ -359,6 +359,25 @@ final class EveningWatchTests: XCTestCase {
         }
         return action
     }
+
+    // MARK: - Explanation
+
+    func testTheSuggestionSaysWhyAndWhyItIsSafe() throws {
+        let action = try XCTUnwrap(decide(rising11, at: at(21, 30), carbs: [.init(date: at(18, 40), grams: 20)]).action)
+        XCTAssertEqual(action.lowestForecast, 6.5)
+        XCTAssertEqual(action.lowestLastHour, 9)
+        XCTAssertEqual(action.lastFoodOrBolus, at(18, 40))
+        let lines = EveningWatchText.reason(action).components(separatedBy: "\n")
+        XCTAssertEqual(lines.count, 2, "why, then why safe")
+        XCTAssertTrue(lines[0].contains(EveningWatchText.time(at(18, 40))))
+        XCTAssertTrue(lines[1].contains(EveningWatchText.glucose(6.5)))
+        XCTAssertTrue(lines[1].contains(EveningWatchText.units(0.3)))
+    }
+
+    func testAnOlderActionStillHasAnExplanation() {
+        let old = EveningWatchAction(kind: .suggestion, trigger: .high, date: at(21), glucose: 12.4, change15: 0, change30: 0, iob: 0.4, units: 0.5, scale: 1, state: .open)
+        XCTAssertFalse(EveningWatchText.reason(old).isEmpty)
+    }
 }
 
 private enum Oct30 {

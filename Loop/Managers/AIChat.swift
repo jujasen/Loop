@@ -200,6 +200,15 @@ struct AIChat {
         if !outputConfig.isEmpty {
             request["output_config"] = outputConfig
         }
+        if body["web_search"] as? Bool == true {
+            // Searched on Anthropic's side; a few searches are enough for a label.
+            request["tools"] = [[
+                "type": "web_search_20260209",
+                "name": "web_search",
+                "max_uses": 3,
+                "user_location": ["type": "approximate", "country": "NO"],
+            ] as [String: Any]]
+        }
         return request
     }
 
@@ -250,6 +259,9 @@ struct AIChat {
         if response.stop_reason == "refusal" {
             message["content"] = NSNull()
             message["refusal"] = response.stop_details?.explanation ?? "Claude declined to answer."
+        } else if response.stop_reason == "pause_turn" {
+            // A search that ran out of turns: no answer to read.
+            message["content"] = ""
         } else {
             message["content"] = response.content.filter { $0.type == "text" }.compactMap(\.text).joined()
         }

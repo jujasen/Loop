@@ -144,6 +144,39 @@ final class MealCarbEstimatorTests: XCTestCase {
         XCTAssertEqual(StubURLProtocol.lastRequest?.value(forHTTPHeaderField: "x-api-key"), "sk-ant-test")
         XCTAssertEqual(StubURLProtocol.lastRequest?.url?.host, "api.anthropic.com")
     }
+
+    // MARK: Web search and known carbs
+
+    func testAnAnswerAfterASearchIsReadFromTheTextAroundIt() throws {
+        let answer = "Jeg fant Tine Yoghurt Junior på tine.no.\n\n" + estimateJSON
+        let estimate = try MealCarbEstimator.parseResponse(completion(content: answer))
+        XCTAssertEqual(estimate.roundedCarbs, 28.6)
+    }
+
+    func testTheSearchRequestHasTheToolAndNoEnforcedSchema() throws {
+        let body = MealCarbEstimator.requestBody(conversation: [.init(role: "user", content: "Tine Yoghurt Junior klemmepose")], webSearch: true)
+        XCTAssertEqual(body["web_search"] as? Bool, true)
+        XCTAssertNil(body["response_format"])
+        let claude = AIChat.claudeRequest(from: body)
+        let tool = try XCTUnwrap((claude["tools"] as? [[String: Any]])?.first)
+        XCTAssertEqual(tool["type"] as? String, "web_search_20260209")
+        XCTAssertNil((claude["output_config"] as? [String: Any])?["format"])
+        // Without search the schema is enforced, and asks for the absorption reason.
+        let plain = AIChat.claudeRequest(from: MealCarbEstimator.requestBody(conversation: [.init(role: "user", content: "eple")]))
+        XCTAssertNil(plain["tools"])
+        let format = try XCTUnwrap((plain["output_config"] as? [String: Any])?["format"] as? [String: Any])
+        XCTAssertTrue(((format["schema"] as? [String: Any])?["required"] as? [String])?.contains("absorption_reason") == true)
+    }
+
+    func testAPausedSearchIsNoAnswer() throws {
+        let paused = #"{"content":[{"type":"server_tool_use"},{"type":"text","text":"Søker …"}],"stop_reason":"pause_turn"}"#
+        let completion = try AIChat.completion(fromClaude: Data(paused.utf8))
+        XCTAssertThrowsError(try MealCarbEstimator.parseResponse(completion))
+    }
+
+    func testKnownCarbsAreHandedOnAsTheNumberToUse() {
+        XCTAssertTrue(MealCarbEstimator.knownCarbsNote(11).contains("11 g"))
+    }
 }
 
 private final class StubURLProtocol: URLProtocol {

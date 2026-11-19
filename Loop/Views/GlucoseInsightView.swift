@@ -39,7 +39,9 @@ struct GlucoseInsightView: View {
                 nowSection
                 todaySection
                 weekSection
-                if let suggestions = status.longTermText?.suggestions, !suggestions.isEmpty {
+                // Checked against the settings now: what has been done already is not suggested again.
+                let suggestions = manager.suggestionsNow().filter { $0.state != .changed || manager.activation(for: $0) != nil }
+                if !suggestions.isEmpty {
                     suggestionsSection(suggestions)
                 }
                 detailsSection
@@ -56,7 +58,7 @@ struct GlucoseInsightView: View {
                 }
             }
             .refreshable {
-                manager.updateIfDue(force: true)
+                await manager.refresh()
             }
             .onAppear {
                 if refreshOnAppear {
@@ -110,6 +112,8 @@ struct GlucoseInsightView: View {
                 Text(text.summary)
                     .font(.subheadline)
                     .fixedSize(horizontal: false, vertical: true)
+                InsightList(title: String(localized: "Why", comment: "Glucose insight: heading of the causes of how today is going"), lines: text.causes ?? [], symbol: "magnifyingglass", color: .orange)
+                InsightList(title: String(localized: "Do This", comment: "Glucose insight: heading of what to do for more time in range"), lines: text.fixes ?? [], symbol: "target", color: .green)
             }
             if let today, let period = today.period {
                 PeriodRow(period: period, hoursAboveTen: today.hoursAboveTen)
@@ -132,6 +136,14 @@ struct GlucoseInsightView: View {
                 Text(text.summary)
                     .font(.subheadline)
                     .fixedSize(horizontal: false, vertical: true)
+                if let trend = text.trend, !trend.isEmpty {
+                    Label {
+                        Text(trend).font(.footnote).fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "chart.line.uptrend.xyaxis").foregroundColor(.purple)
+                    }
+                }
+                InsightList(title: String(localized: "For More Time in Range", comment: "Glucose insight: heading of the week's concrete measures"), lines: text.fixes ?? [], symbol: "target", color: .green)
             } else if aiEnabled {
                 Text("The AI looks at the week each night after 04:00.", comment: "Shown before the AI has written about the week")
                     .font(.footnote)
@@ -139,6 +151,15 @@ struct GlucoseInsightView: View {
             }
             if let week = status.longTerm?.last7Days {
                 LabeledValue(label: String(localized: "Last 7 days", comment: "Glucose insight: last seven days"), value: periodSummary(week))
+            }
+            if let days = status.longTerm?.recentDays, days.count >= 3 {
+                RecentDaysRow(days: days)
+            }
+            if let weeks = status.longTerm?.weeks, weeks.count >= 2 {
+                LabeledValue(
+                    label: String(localized: "Last 4 weeks", comment: "Glucose insight: time in range week by week"),
+                    value: weeks.map { "\($0.period.timeInRangePercent)" }.joined(separator: " → ") + " %"
+                )
             }
         } header: {
             Text("This Week", comment: "Header of the week section in the glucose insight")
@@ -152,6 +173,7 @@ struct GlucoseInsightView: View {
             ForEach(suggestions, id: \.self) { suggestion in
                 SuggestionRow(
                     suggestion: suggestion,
+                    isDone: suggestion.state == .done,
                     activation: manager.activation(for: suggestion),
                     canActivate: manager.preview(suggestion) != nil,
                     isWorking: working == suggestion,
@@ -277,7 +299,7 @@ struct GlucoseInsightView: View {
     private var updateSection: some View {
         Section {
             Button {
-                manager.updateIfDue(force: true)
+                manager.updateIfDue(force: true, manual: true)
             } label: {
                 HStack {
                     Text("Update Now", comment: "Button updating the glucose insight")
@@ -341,6 +363,8 @@ private func clock(_ seconds: TimeInterval) -> String {
 
 private struct SuggestionRow: View {
     let suggestion: GlucoseInsightSuggestion
+    /// The setting already has the proposed value (changed by hand, or from LoopFollow).
+    var isDone = false
     let activation: GlucoseInsightActivation?
     let canActivate: Bool
     let isWorking: Bool
@@ -396,6 +420,14 @@ private struct SuggestionRow: View {
                 .font(.footnote.weight(.semibold))
                 .buttonStyle(.borderless)
             }
+        } else if isDone {
+            Label {
+                Text(String(format: NSLocalizedString("Already done: it is %@ now", comment: "Glucose insight: a suggestion whose setting already has the proposed value (1: value with unit)"),
+                            "\(Self.value(suggestion.proposed, suggestion.setting)) \(Self.unit(suggestion.setting))"))
+            } icon: {
+                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+            }
+            .font(.footnote)
         } else if canActivate {
             Button(action: activate) {
                 Label {
@@ -582,5 +614,68 @@ private struct AdviceRow: View {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red).font(.footnote)
             }
         }
+    }
+}
+
+/// A short headed list: the causes of today, or what to do.
+private struct InsightList: View {
+    let title: String
+    let lines: [String]
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        if !lines.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                ForEach(lines, id: \.self) { line in
+                    Label {
+                        Text(line).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: symbol).foregroundColor(color)
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+}
+
+/// Time in range day by day, the last two weeks: one bar a day, newest on the right.
+private struct RecentDaysRow: View {
+    let days: [GlucoseInsightDay]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Last 14 days", comment: "Glucose insight: time in range day by day")
+                Spacer()
+                if let first = days.first, let last = days.last {
+                    Text(verbatim: "\(first.timeInRangePercent) → \(last.timeInRangePercent) %")
+                        .foregroundColor(.secondary)
+                }
+            }
+            .font(.subheadline)
+            HStack(alignment: .bottom, spacing: 3) {
+                ForEach(days, id: \.date) { day in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Self.color(day))
+                        .frame(height: max(4, CGFloat(day.timeInRangePercent) * 0.4))
+                        .frame(maxWidth: .infinity)
+                        .accessibilityLabel(Text(verbatim: "\(day.date.formatted(.dateTime.weekday(.abbreviated).day())): \(day.timeInRangePercent) %"))
+                }
+            }
+            .frame(height: 40, alignment: .bottom)
+        }
+    }
+
+    static func color(_ day: GlucoseInsightDay) -> Color {
+        if day.lowEpisodes > 0 && day.timeInRangePercent < 70 { return .red.opacity(0.7) }
+        if day.timeInRangePercent >= 70 { return .green.opacity(0.7) }
+        if day.timeInRangePercent >= 50 { return .orange.opacity(0.7) }
+        return .red.opacity(0.7)
     }
 }

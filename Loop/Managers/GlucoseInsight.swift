@@ -50,6 +50,9 @@ struct GlucoseInsightMeal: Codable, Equatable {
     var after3hMmol: Double?
     var lowestWithin4hMmol: Double?
     var flags: [Flag]
+    /// Minutes from the first carbs to the first meal bolus: negative when the bolus came first.
+    /// Nil without a bolus.
+    var bolusMinutesAfterStart: Int? = nil
 
     var isClean: Bool { flags.isEmpty }
 }
@@ -100,7 +103,45 @@ struct GlucoseInsightLongTerm: Codable, Equatable {
     /// How many of the last two weeks' days showed each pattern, per part of the day; what a
     /// suggested settings change must rest on (see `GlucoseInsight.validSuggestions`).
     var patterns: [GlucoseInsightPattern]?
+    /// The last two weeks day by day, newest last, so a bad day is seen against the ones before.
+    var recentDays: [GlucoseInsightDay]? = nil
+    /// The last four weeks week by week, newest last: which way things are going over the month.
+    var weeks: [GlucoseInsightWeek]? = nil
     var computedAt: Date
+}
+
+/// One whole day.
+struct GlucoseInsightDay: Codable, Equatable {
+    var date: Date
+    var timeInRangePercent: Int
+    var meanMmol: Double
+    var lowEpisodes: Int
+    var hoursAboveTen: Double
+    var carbsGrams: Double
+    var bolusUnits: Double
+    var automaticUnits: Double
+}
+
+/// Seven days ending at `end`.
+struct GlucoseInsightWeek: Codable, Equatable {
+    var end: Date
+    var period: GlucoseInsightPeriod
+    var carbsGramsPerDay: Double
+    var bolusUnitsPerDay: Double
+}
+
+/// A part of the day today, against the same hours over the week before.
+struct GlucoseInsightTodayPart: Codable, Equatable {
+    var daypart: String
+    var today: GlucoseInsightPeriod
+    var usual: GlucoseInsightPeriod?
+}
+
+/// Carbs and insulin from midnight to now.
+struct GlucoseInsightSoFar: Codable, Equatable {
+    var carbsGrams: Double
+    var bolusUnits: Double
+    var automaticUnits: Double
 }
 
 /// Days in the last two weeks on which a part of the day went the same way.
@@ -139,6 +180,18 @@ struct GlucoseInsightSuggestion: Codable, Hashable {
     var reason: String
     /// The days the pattern behind it was seen on, in the last two weeks.
     var evidenceDays: Int
+    /// How the setting is now, worked out when the insight is shown or shared (see
+    /// `GlucoseInsight.state(of:therapy:)`); nil in what the model wrote.
+    var state: State? = nil
+
+    enum State: String, Codable {
+        /// The setting is still what the suggestion was made from.
+        case open
+        /// The setting already has the proposed value.
+        case done
+        /// The setting has been changed to something else since.
+        case changed
+    }
 
     /// More insulin than now: a lower carb ratio or sensitivity, or a higher basal rate.
     var givesMoreInsulin: Bool {
@@ -157,6 +210,13 @@ struct GlucoseInsightToday: Codable, Equatable {
     /// Today's minus the usual: positive when Loop is missing low by more than usual today, so
     /// more insulin is needed than it thinks.
     var forecastDeviationMmol: Double?
+    /// Each part of the day so far, against the same hours over the week before.
+    var dayparts: [GlucoseInsightTodayPart]? = nil
+    /// Eaten and given since midnight, and the average by this time of day over the two weeks before.
+    var soFar: GlucoseInsightSoFar? = nil
+    var usualSoFar: GlucoseInsightSoFar? = nil
+    /// Since the last pod change; an old pod or site can need more insulin.
+    var hoursSinceSiteChange: Double? = nil
     var computedAt: Date
 }
 
@@ -173,9 +233,16 @@ struct GlucoseInsightText: Codable, Equatable {
     var action: String?
     /// The nightly text only: settings changes backed by a pattern of at least three days.
     var suggestions: [GlucoseInsightSuggestion]?
+    /// The nightly text only: the last days, weeks and month against each other, in one sentence.
+    var trend: String? = nil
+    /// Today's text only: why the day is going as it is, when it is off.
+    var causes: [String]? = nil
+    /// What to do to get more time in range: for the rest of today in today's text, from now on in
+    /// the nightly one. Concrete: what, when, how much.
+    var fixes: [String]? = nil
 
     enum CodingKeys: String, CodingKey {
-        case summary, points, now, action, suggestions
+        case summary, points, now, action, suggestions, trend, causes, fixes
         case doseHints = "dose_hints"
         case createdAt = "created_at"
     }
@@ -353,7 +420,8 @@ enum GlucoseInsight {
                 after2hMmol: reading(near: start.addingTimeInterval(.hours(2)), in: glucose).map(mmol),
                 after3hMmol: reading(near: start.addingTimeInterval(.hours(3)), in: glucose).map(mmol),
                 lowestWithin4hMmol: after.map(\.mgdl).min().map(mmol),
-                flags: flags
+                flags: flags,
+                bolusMinutesAfterStart: mealBoluses.first.map { Int(($0.date.timeIntervalSince(start) / 60).rounded()) }
             )
         }
     }
@@ -431,6 +499,30 @@ enum GlucoseInsight {
             calendar: calendar
         )
 
+        // Whole days, the last two weeks, and seven-day blocks back from now.
+        let today = calendar.startOfDay(for: now)
+        let recentDays: [GlucoseInsightDay] = (1...14).reversed().compactMap { back in
+            guard let dayStart = calendar.date(byAdding: .day, value: -back, to: today),
+                  let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart),
+                  dayStart >= start
+            else { return nil }
+            return day(from: dayStart, to: dayEnd, glucose: glucose, treatments: treatments)
+        }
+        let weeks: [GlucoseInsightWeek] = (0..<min(4, days / 7)).reversed().compactMap { back in
+            let end = now.addingTimeInterval(-.hours(24 * 7 * Double(back)))
+            let from = end.addingTimeInterval(-.hours(24 * 7))
+            let inWeek = glucose.filter { $0.date >= from && $0.date < end }
+            // At least half the week's readings.
+            guard inWeek.count >= 7 * 144, let period = period(inWeek) else { return nil }
+            let weekTreatments = treatments.filter { $0.date >= from && $0.date < end }
+            return GlucoseInsightWeek(
+                end: end,
+                period: period,
+                carbsGramsPerDay: (weekTreatments.compactMap(\.carbs).reduce(0, +) / 7).rounded(),
+                bolusUnitsPerDay: round1(weekTreatments.filter { !$0.isAutomatic }.compactMap(\.insulin).reduce(0, +) / 7)
+            )
+        }
+
         return GlucoseInsightLongTerm(
             days: days,
             last7Days: period(glucose.filter { $0.date >= weekStart }),
@@ -443,7 +535,43 @@ enum GlucoseInsight {
             meals: Array(meals.suffix(maximumMeals)),
             advice: adviceOutcomes,
             patterns: patterns,
+            recentDays: recentDays,
+            weeks: weeks,
             computedAt: now
+        )
+    }
+
+    /// Hours over 10, counting each reading until the next (at most ten minutes).
+    static func hoursAboveTen(_ readings: [NightscoutGlucoseReading]) -> Double {
+        var minutes = 0.0
+        for (reading, next) in zip(readings, readings.dropFirst()) where reading.mgdl > rangeMgdl.upperBound {
+            minutes += min(next.date.timeIntervalSince(reading.date), .minutes(10)) / 60
+        }
+        return round1(minutes / 60)
+    }
+
+    static func soFar(_ treatments: [NightscoutTreatment]) -> GlucoseInsightSoFar {
+        GlucoseInsightSoFar(
+            carbsGrams: treatments.compactMap(\.carbs).reduce(0, +).rounded(),
+            bolusUnits: round1(treatments.filter { !$0.isAutomatic }.compactMap(\.insulin).reduce(0, +)),
+            automaticUnits: round1(treatments.filter(\.isAutomatic).compactMap(\.insulin).reduce(0, +))
+        )
+    }
+
+    /// A whole day, or nil with less than half of its readings.
+    static func day(from dayStart: Date, to dayEnd: Date, glucose: [NightscoutGlucoseReading], treatments: [NightscoutTreatment]) -> GlucoseInsightDay? {
+        let readings = glucose.filter { $0.date >= dayStart && $0.date < dayEnd }.sorted { $0.date < $1.date }
+        guard readings.count >= 144, let period = period(readings) else { return nil }
+        let totals = soFar(treatments.filter { $0.date >= dayStart && $0.date < dayEnd })
+        return GlucoseInsightDay(
+            date: dayStart,
+            timeInRangePercent: period.timeInRangePercent,
+            meanMmol: period.meanMmol,
+            lowEpisodes: period.lowEpisodes,
+            hoursAboveTen: hoursAboveTen(readings),
+            carbsGrams: totals.carbsGrams,
+            bolusUnits: totals.bolusUnits,
+            automaticUnits: totals.automaticUnits
         )
     }
 
@@ -555,6 +683,47 @@ enum GlucoseInsight {
         }
     }
 
+    /// A day going clearly worse than usual: worth the stronger model for today's text.
+    static func isOffDay(_ today: GlucoseInsightToday, longTerm: GlucoseInsightLongTerm?) -> Bool {
+        // At least three hours of readings.
+        guard let period = today.period, period.readings >= 36 else { return false }
+        if today.hoursAboveTen >= 3 || today.lowEpisodeStarts.count >= 2 { return true }
+        if let usual = longTerm?.last7Days, period.timeInRangePercent <= usual.timeInRangePercent - 15 { return true }
+        return false
+    }
+
+    /// How the setting stands against the suggestion now. Values are held to the steps the
+    /// insight shows them in, as `therapy` is.
+    static func state(of suggestion: GlucoseInsightSuggestion, therapy: [GlucoseInsightTherapy]) -> GlucoseInsightSuggestion.State? {
+        guard let settings = therapy.first(where: { $0.daypart == suggestion.daypart }) else { return nil }
+        let now: Double?
+        let step: Double
+        switch suggestion.setting {
+        case .carbRatio:
+            now = settings.carbRatioGramsPerUnit
+            step = 0.25
+        case .insulinSensitivity:
+            now = settings.insulinSensitivityMmolPerUnit
+            step = 0.05
+        case .basalRate:
+            now = settings.basalRateUnitsPerHour
+            step = 0.025
+        }
+        guard let now else { return nil }
+        if abs(now - suggestion.current) <= step { return .open }
+        if abs(now - suggestion.proposed) <= step { return .done }
+        return .changed
+    }
+
+    /// The suggestions with `state` set from the settings as they are now.
+    static func withStates(_ suggestions: [GlucoseInsightSuggestion], therapy: [GlucoseInsightTherapy]) -> [GlucoseInsightSuggestion] {
+        suggestions.map { suggestion in
+            var suggestion = suggestion
+            suggestion.state = state(of: suggestion, therapy: therapy)
+            return suggestion
+        }
+    }
+
     static func today(history: NightscoutHistory, now: Date, calendar: Calendar = .current) -> GlucoseInsightToday {
         let startOfDay = calendar.startOfDay(for: now)
         let glucose = history.glucose.filter { $0.date >= startOfDay && $0.date <= now }.sorted { $0.date < $1.date }
@@ -563,10 +732,27 @@ enum GlucoseInsight {
         let glucoseForMeals = history.glucose.filter { $0.date >= startOfDay.addingTimeInterval(-.hours(4)) && $0.date <= now }
         let meals = Self.meals(glucose: glucoseForMeals, treatments: treatments, now: now, calendar: calendar).filter { $0.date >= startOfDay }
 
-        var minutesAboveTen = 0.0
-        for (reading, next) in zip(glucose, glucose.dropFirst()) where reading.mgdl > rangeMgdl.upperBound {
-            minutesAboveTen += min(next.date.timeIntervalSince(reading.date), .minutes(10)) / 60
+        // Each part of the day so far, against the same hours the seven days before.
+        let weekBefore = history.glucose.filter { $0.date >= startOfDay.addingTimeInterval(-.hours(24 * 7)) && $0.date < startOfDay }
+        let parts: [GlucoseInsightTodayPart] = dayparts.compactMap { part in
+            let inPart = { (reading: NightscoutGlucoseReading) in part.hours.contains(calendar.component(.hour, from: reading.date)) }
+            guard let todayPeriod = period(glucose.filter(inPart)), todayPeriod.readings >= 6 else { return nil }
+            return GlucoseInsightTodayPart(daypart: part.name, today: todayPeriod, usual: period(weekBefore.filter(inPart)))
         }
+
+        // What had been eaten and given by this time of day, on average, the two weeks before.
+        let secondsIntoDay = now.timeIntervalSince(startOfDay)
+        let earlierDays: [GlucoseInsightSoFar] = (1...14).compactMap { back in
+            guard let dayStart = calendar.date(byAdding: .day, value: -back, to: startOfDay),
+                  history.glucose.contains(where: { $0.date >= dayStart && $0.date < dayStart.addingTimeInterval(secondsIntoDay) })
+            else { return nil }
+            return soFar(history.treatments.filter { $0.date >= dayStart && $0.date < dayStart.addingTimeInterval(secondsIntoDay) })
+        }
+        let usualSoFar = earlierDays.isEmpty ? nil : GlucoseInsightSoFar(
+            carbsGrams: (earlierDays.map(\.carbsGrams).reduce(0, +) / Double(earlierDays.count)).rounded(),
+            bolusUnits: round1(earlierDays.map(\.bolusUnits).reduce(0, +) / Double(earlierDays.count)),
+            automaticUnits: round1(earlierDays.map(\.automaticUnits).reduce(0, +) / Double(earlierDays.count))
+        )
 
         // Today's forecast misses, against the usual for the same hours over the last two weeks.
         let allErrors = forecastErrors(history.forecasts, glucose: history.glucose, hours: 1)
@@ -579,11 +765,15 @@ enum GlucoseInsight {
         return GlucoseInsightToday(
             period: period(glucose),
             lowEpisodeStarts: lowEpisodeStarts(glucose),
-            hoursAboveTen: round1(minutesAboveTen / 60),
+            hoursAboveTen: hoursAboveTen(glucose),
             meals: meals,
             loopForecastError1hMmol: todayError.map(round1),
             usualForecastError1hMmol: usualError.map(round1),
             forecastDeviationMmol: todayError.flatMap { today in usualError.map { round1(today - $0) } },
+            dayparts: parts,
+            soFar: soFar(history.treatments.filter { $0.date >= startOfDay && $0.date <= now }),
+            usualSoFar: usualSoFar,
+            hoursSinceSiteChange: history.lastSiteChange.flatMap { $0 <= now ? round1(now.timeIntervalSince($0) / 3600) : nil },
             computedAt: now
         )
     }

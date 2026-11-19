@@ -156,6 +156,13 @@ struct EveningWatchAction: Codable, Equatable, Identifiable {
     var closedAt: Date?
     var givenUnits: Double?
     var outcome: Outcome?
+    /// What made it safe, for the explanation: Loop's lowest forecast within three hours, the
+    /// lowest reading in the last hour, and when anything was last eaten or given by hand.
+    var lowestForecast: Double? = nil
+    var lowestLastHour: Double? = nil
+    var lastFoodOrBolus: Date? = nil
+    /// The dose was made smaller because it is late.
+    var late: Bool? = nil
 
     /// Whether it takes one of the evening's doses: a lapsed or failed one does not.
     var counts: Bool { state != .lapsed && state != .failed }
@@ -420,7 +427,12 @@ enum EveningWatch {
             iob: iob,
             units: units,
             scale: scale,
-            state: automatic ? .delivering : .open
+            state: automatic ? .delivering : .open,
+            lowestForecast: input.lowestForecast,
+            lowestLastHour: input.glucose.filter { latest.date.timeIntervalSince($0.date) <= 60 * 60 }.map(\.mmol).min(),
+            lastFoodOrBolus: (input.carbs.filter { $0.grams >= Rule.minimumCarbs && $0.date <= now }.map(\.date)
+                + input.manualBoluses.filter { $0.units >= Rule.minimumBolus && $0.date <= now }.map(\.date)).max(),
+            late: late
         )
         return (EveningWatchDecision(date: latest.date, glucose: glucose, kind: automatic ? .dosed : .suggested, value: units), action)
     }

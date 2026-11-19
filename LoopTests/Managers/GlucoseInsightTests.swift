@@ -455,4 +455,74 @@ final class GlucoseInsightTests: XCTestCase {
         XCTAssertNil(change.basalRateItems)
         XCTAssertEqual(try GlucoseInsightManager.change(for: .basalRate, items: items([(0, 0.2)])).basalRateItems?.first?.value, 0.2)
     }
+
+    // MARK: Longer view, today's causes, suggestions against the settings now
+
+    func testDaysAndWeeksAreWorkedOutForTheLongerView() {
+        let now = monday(12)
+        let start = now.addingTimeInterval(-.hours(24 * 29))
+        // In range every day except the day before yesterday, which is high all day.
+        let glucose = readings(from: start, hours: 24 * 29) { minute in
+            let date = start.addingTimeInterval(.minutes(Double(minute)))
+            return self.calendar.isDate(date, inSameDayAs: now.addingTimeInterval(-.hours(48))) ? 13 : 7
+        }
+        let history = NightscoutHistory(glucose: glucose, treatments: [carbs(20, at: now.addingTimeInterval(-.hours(30)))], forecasts: [])
+        let longTerm = GlucoseInsight.longTerm(history: history, advice: [], days: 30, now: now, calendar: calendar)
+        let days = longTerm.recentDays ?? []
+        XCTAssertEqual(days.count, 14)
+        XCTAssertEqual(days.last?.date, calendar.startOfDay(for: now.addingTimeInterval(-.hours(24))))
+        XCTAssertEqual(days[days.count - 2].timeInRangePercent, 0)
+        XCTAssertEqual(days[days.count - 2].hoursAboveTen, 24, accuracy: 0.2)
+        XCTAssertEqual(days.last?.carbsGrams, 20)
+        XCTAssertEqual(longTerm.weeks?.count, 4)
+        XCTAssertLessThan(longTerm.weeks?.last?.period.timeInRangePercent ?? 100, longTerm.weeks?.first?.period.timeInRangePercent ?? 0)
+    }
+
+    func testTodayIsSetAgainstTheUsualByThisTime() {
+        let now = monday(15)
+        let start = calendar.startOfDay(for: now).addingTimeInterval(-.hours(24 * 7))
+        let glucose = readings(from: start, hours: 24 * 7 + 15) { minute in
+            start.addingTimeInterval(.minutes(Double(minute))) >= self.calendar.startOfDay(for: now) ? 12 : 7
+        }
+        var treatments: [NightscoutTreatment] = []
+        for back in 1...7 {
+            treatments.append(carbs(30, at: calendar.date(byAdding: .day, value: -back, to: monday(8))!))
+            treatments.append(bolus(1.5, at: calendar.date(byAdding: .day, value: -back, to: monday(8))!))
+        }
+        treatments.append(carbs(30, at: monday(8)))
+        let history = NightscoutHistory(glucose: glucose, treatments: treatments, forecasts: [], lastSiteChange: now.addingTimeInterval(-.hours(60)))
+        let today = GlucoseInsight.today(history: history, now: now, calendar: calendar)
+        XCTAssertEqual(today.soFar?.carbsGrams, 30)
+        XCTAssertEqual(today.soFar?.bolusUnits, 0, "no bolus today")
+        XCTAssertEqual(today.usualSoFar?.bolusUnits, 1.5)
+        XCTAssertEqual(today.hoursSinceSiteChange, 60)
+        let day = today.dayparts?.first { $0.daypart == "dag 09-15" }
+        XCTAssertEqual(day?.today.timeInRangePercent, 0)
+        XCTAssertEqual(day?.usual?.timeInRangePercent, 100)
+        XCTAssertTrue(GlucoseInsight.isOffDay(today, longTerm: nil))
+    }
+
+    func testASuggestionAlreadyCarriedOutIsDone() {
+        let suggestion = GlucoseInsightSuggestion(setting: .insulinSensitivity, daypart: "ettermiddag 15-19", startHour: 15, endHour: 19, current: 18, proposed: 16, reason: "", evidenceDays: 3)
+        func therapy(_ isf: Double) -> [GlucoseInsightTherapy] {
+            [GlucoseInsightTherapy(daypart: "ettermiddag 15-19", carbRatioGramsPerUnit: 20, insulinSensitivityMmolPerUnit: isf, basalRateUnitsPerHour: 0.2)]
+        }
+        XCTAssertEqual(GlucoseInsight.state(of: suggestion, therapy: therapy(18)), .open)
+        XCTAssertEqual(GlucoseInsight.state(of: suggestion, therapy: therapy(16)), .done)
+        XCTAssertEqual(GlucoseInsight.state(of: suggestion, therapy: therapy(14)), .changed)
+        XCTAssertEqual(GlucoseInsight.withStates([suggestion], therapy: therapy(16)).first?.state, .done)
+    }
+
+    func testCausesFixesAndTrendAreRead() throws {
+        let answer = #"{"now":"12 og flatt.","action":"","today":"Høy dag.","causes":["Lunsj uten bolus."," "],"fixes":["Gi lunsjbolus før maten."],"dose_hints":[]}"#
+        let today = try GlucoseInsightWriter.parseToday(JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": answer]]]]), now: monday(12))
+        XCTAssertEqual(today.causes, ["Lunsj uten bolus."])
+        XCTAssertEqual(today.fixes, ["Gi lunsjbolus før maten."])
+        let week = #"{"week":"Bra uke.","trend":"Opp fra 60 til 68 %.","points":[],"fixes":["Middagsbolus 15 min før."],"dose_hints":[],"suggestions":[]}"#
+        let long = try GlucoseInsightWriter.parseLongTerm(JSONSerialization.data(withJSONObject: ["choices": [["message": ["content": week]]]]), now: monday(4))
+        XCTAssertEqual(long.trend, "Opp fra 60 til 68 %.")
+        XCTAssertEqual(long.fixes, ["Middagsbolus 15 min før."])
+        let schema = try XCTUnwrap(GlucoseInsightWriter.todaySchema["required"] as? [String])
+        XCTAssertTrue(schema.contains("causes") && schema.contains("fixes"))
+    }
 }

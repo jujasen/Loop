@@ -37,6 +37,8 @@ struct NightscoutHistory: Codable, Equatable {
     var glucose: [NightscoutGlucoseReading] = []
     var treatments: [NightscoutTreatment] = []
     var forecasts: [LoopForecastCheck] = []
+    /// The newest pod change («Site Change») in Nightscout.
+    var lastSiteChange: Date?
     /// How far each kind has been read from Nightscout.
     var glucoseReadThrough: Date?
     var treatmentsReadThrough: Date?
@@ -202,6 +204,10 @@ actor NightscoutHistoryStore {
         history.glucoseReadThrough = now
         history.treatments = NightscoutHistory.merged(history.treatments, with: try await treatments, since: treatmentsSince, date: \.date)
         history.treatmentsReadThrough = now
+        // Not worth failing the refresh for.
+        if let siteChange = try? await client.lastSiteChange() {
+            history.lastSiteChange = max(siteChange, history.lastSiteChange ?? siteChange)
+        }
 
         // Forecasts a day at a time: a day of devicestatus is about half a megabyte.
         let forecastStart = now.addingTimeInterval(-.hours(24 * Double(NightscoutHistory.forecastDays)))
@@ -273,6 +279,21 @@ actor NightscoutHistoryStore {
             async let carbs = query("carbs")
             async let insulin = query("insulin")
             return NightscoutHistory.deduplicated(try await carbs + insulin)
+        }
+
+        /// The newest «Site Change» or «Pump Site Change».
+        func lastSiteChange() async throws -> Date? {
+            func newest(_ eventType: String) async throws -> Date? {
+                let data = try await get("api/v1/treatments.json", [
+                    URLQueryItem(name: "find[eventType]", value: eventType),
+                    URLQueryItem(name: "count", value: "1"),
+                ])
+                let array = (try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]) ?? []
+                return array.compactMap { NightscoutHistory.parseDate($0["created_at"] as? String) }.max()
+            }
+            async let site = newest("Site Change")
+            async let pump = newest("Pump Site Change")
+            return [try await site, try await pump].compactMap { $0 }.max()
         }
 
         func forecasts(since: Date, until: Date) async throws -> [LoopForecastCheck] {

@@ -57,7 +57,7 @@ struct MealEstimateCard: View {
                     photoStrip
 
                     promptField(
-                        String(localized: "E.g. fish gratin", comment: "Placeholder for the free-text meal description on the carb entry screen"),
+                        String(localized: "E.g. fish gratin, or a product and its carbs", comment: "Placeholder for the free-text meal description on the carb entry screen"),
                         text: $viewModel.mealDescription,
                         isEnabled: viewModel.canEstimateMeal,
                         accessibilityLabel: String(localized: "Estimate carbs", comment: "Button label asking AI to estimate the carbs of the described meal"),
@@ -235,6 +235,14 @@ struct MealEstimateCard: View {
                 totals(for: estimate)
                     .font(.subheadline.monospacedDigit())
                     .foregroundColor(.secondary)
+
+                if let reason = estimate.absorptionReason, !reason.isEmpty {
+                    // Why this absorption time: often the one thing the caregiver doesn't know.
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 HStack(spacing: 10) {
                     confidenceLabel(estimate.confidence)
