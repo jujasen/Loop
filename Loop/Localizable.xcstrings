@@ -46710,6 +46710,30 @@
         }
       }
     },
+    "Pump change" : {
+      "comment" : "Chart label on the line that marks a pump (pod) change",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pumpebytte"
+          }
+        }
+      }
+    },
+    "Sensor change" : {
+      "comment" : "Chart label on the line that marks a new CGM sensor",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sensorbytte"
+          }
+        }
+      }
+    },
     "🌙 Evening watch: %@ U?" : {
       "comment" : "Evening watch suggestion title (1: units)",
       "extractionState" : "manual",

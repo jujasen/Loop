@@ -456,6 +456,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
     private var cachedChartGlucoseSamples: [StoredGlucoseSample] = []
     private var cachedChartDoseEntries: [DoseEntry] = []
     private var cachedChartCarbEntries: [StoredCarbEntry] = []
+    /// When the pump (pod) and the sensor were changed, for the lines the chart draws there.
+    private var cachedChartPumpChanges: [Date] = []
+    private var cachedChartSensorChanges: [Date] = []
 
     private static var isCompactHeight: Bool {
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
@@ -589,6 +592,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         var predictedGlucoseValues: [GlucoseValue]?
         var iobValues: [InsulinValue]?
         var doseEntries: [DoseEntry]?
+        var pumpChanges: [Date]?
+        var sensorChanges: [Date]?
         var totalDelivery: Double?
         var cobValues: [CarbValue]?
         var carbsOnBoard: HKQuantity?
@@ -713,6 +718,28 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 reloadGroup.leave()
             }
 
+            if interactiveChartAvailable {
+                // Pump and sensor changes, for the lines the chart draws at them.
+                reloadGroup.enter()
+                deviceManager.doseStore.getPumpEventValues(since: dataStartDate) { (result) -> Void in
+                    if case .success(let events) = result {
+                        pumpChanges = events.compactMap { event -> Date? in
+                            if case .replaceComponent = event.type { return event.date }
+                            return nil
+                        }
+                    }
+                    reloadGroup.leave()
+                }
+
+                reloadGroup.enter()
+                deviceManager.cgmEventStore.executeCgmEventQuery(fromQueryAnchor: nil) { (result) -> Void in
+                    if case .success(_, let events) = result {
+                        sensorChanges = events.filter { $0.type == .sensorStart && $0.date >= dataStartDate }.map(\.date)
+                    }
+                    reloadGroup.leave()
+                }
+            }
+
             reloadGroup.enter()
             deviceManager.doseStore.getTotalUnitsDelivered(since: Calendar.current.startOfDay(for: Date())) { (result) in
                 switch result {
@@ -817,6 +844,12 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 }
                 if let carbEntries = carbEntries {
                     self.cachedChartCarbEntries = carbEntries
+                }
+                if let pumpChanges = pumpChanges {
+                    self.cachedChartPumpChanges = pumpChanges
+                }
+                if let sensorChanges = sensorChanges {
+                    self.cachedChartSensorChanges = sensorChanges
                 }
                 self.updateInteractiveChart(
                     predictedGlucoseValues: predictedGlucoseValues ?? [],
@@ -1203,6 +1236,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         data.targetRangeSchedule = loopSettings.glucoseTargetRangeSchedule
         data.overrides = recentOverrides(relativeTo: now)
         data.predictionEnd = predictedGlucoseValues.last?.startDate
+        data.pumpChanges = cachedChartPumpChanges
+        data.sensorChanges = cachedChartSensorChanges
 
         if BGChartSettings.shared.showYesterdayLine {
             let dayAgo = now.addingTimeInterval(-.hours(24))

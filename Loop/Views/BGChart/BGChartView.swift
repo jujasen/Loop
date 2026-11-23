@@ -93,6 +93,34 @@ private func lanedValue(_ point: BGChartModel.TreatmentPoint, maxBG: Double) -> 
     return min(max(laned, margin), yMax - margin)
 }
 
+/// Where on the y-axis a pump or sensor change has its name.
+private func deviceChangeLabelValue(_ change: BGChartModel.DeviceChange, maxBG: Double) -> Double {
+    chartYDomainUpperBound(maxBG) * change.labelFraction
+}
+
+private func deviceChangeColor(_ kind: BGChartModel.DeviceChange.Kind) -> Color {
+    switch kind {
+    case .pump: return .teal
+    case .sensor: return .indigo
+    }
+}
+
+/// The name on a pump or sensor change's line.
+private struct DeviceChangeLabel: View {
+    let change: BGChartModel.DeviceChange
+
+    var body: some View {
+        Text(change.title)
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(.white)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(deviceChangeColor(change.kind)))
+    }
+}
+
 @available(iOS 17.0, *)
 struct BGChartView: View {
     enum Config {
@@ -682,6 +710,9 @@ private struct MainBGChart: View {
                 body(t.drawnDate, lanedValue(t, maxBG: model.maxBG), t.pillText, t.carbEntryID)
             }
         }
+        for change in model.deviceChanges {
+            body(change.date, deviceChangeLabelValue(change, maxBG: model.maxBG), "\(change.title)\n\(model.pillTimeString(for: change.date))", nil)
+        }
     }
 
     /// Pill entry for a BG reading. Shared by the scrub lookup and the tap hit test.
@@ -1099,6 +1130,7 @@ private struct BGChartCanvas: View, Equatable {
             if showTreatments {
                 treatmentMarks
             }
+            deviceChangeMarks
             if !isSmall {
                 ruleMarks
             } else if model.showMidnight {
@@ -1516,6 +1548,25 @@ private struct BGChartCanvas: View, Equatable {
         }
         if model.showMidnight {
             midnightRuleMarks
+        }
+    }
+
+    /// A pump or sensor change: a line through the chart, and on the large chart its name.
+    @ChartContentBuilder
+    private var deviceChangeMarks: some ChartContent {
+        ForEach(windowed(model.deviceChanges) { $0.date }) { change in
+            RuleMark(x: .value("time", change.date))
+                .lineStyle(StrokeStyle(lineWidth: isSmall ? 1 : 1.5))
+                .foregroundStyle(deviceChangeColor(change.kind).opacity(0.85))
+            if !isSmall {
+                PointMark(
+                    x: .value("time", change.date),
+                    y: .value("sgv", deviceChangeLabelValue(change, maxBG: model.maxBG))
+                )
+                .symbol {
+                    DeviceChangeLabel(change: change)
+                }
+            }
         }
     }
 

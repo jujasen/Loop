@@ -110,6 +110,54 @@ final class BGChartModel: ObservableObject {
         }
     }
 
+    /// A pump or sensor change: a line through the whole chart with its name on it.
+    ///
+    /// Without it a pod change showed only as two small squares where insulin stopped and
+    /// started again, and a new sensor only as a gap in the curve.
+    struct DeviceChange: Identifiable, Equatable {
+        enum Kind: String {
+            case pump
+            case sensor
+        }
+
+        let date: Date
+        let kind: Kind
+        var id: String { "\(kind.rawValue)-\(date.timeIntervalSince1970)" }
+
+        var title: String {
+            switch kind {
+            case .pump:
+                return NSLocalizedString("Pump change", comment: "Chart label on the line that marks a pump (pod) change")
+            case .sensor:
+                return NSLocalizedString("Sensor change", comment: "Chart label on the line that marks a new CGM sensor")
+            }
+        }
+
+        /// How far up the chart the name sits, as a fraction of the y-axis. The two kinds sit at
+        /// different heights, so both can be read when pump and sensor are changed together.
+        var labelFraction: Double {
+            switch kind {
+            case .pump: return 0.93
+            case .sensor: return 0.83
+            }
+        }
+
+        /// The changes since `start`, oldest first. A pump can report one change more than once
+        /// (pairing, then priming), so changes of a kind within `sameChange` count as one.
+        static func list(pump: [Date], sensor: [Date], since start: Date, sameChange: TimeInterval = 10 * 60) -> [DeviceChange] {
+            var result: [DeviceChange] = []
+            for (kind, dates) in [(Kind.pump, pump), (Kind.sensor, sensor)] {
+                var last: Date?
+                for date in dates.sorted() where date >= start {
+                    if let last, date.timeIntervalSince(last) < sameChange { continue }
+                    result.append(DeviceChange(date: date, kind: kind))
+                    last = date
+                }
+            }
+            return result.sorted { $0.date < $1.date }
+        }
+    }
+
     struct BasalStep: Identifiable {
         let start: Date
         let end: Date
@@ -181,6 +229,7 @@ final class BGChartModel: ObservableObject {
     @Published var resumes: [TreatmentPoint] = []
     @Published var sensorStarts: [TreatmentPoint] = []
     @Published var notes: [TreatmentPoint] = []
+    @Published var deviceChanges: [DeviceChange] = []
 
     @Published var overrides: [BandRect] = []
     @Published var tempTargets: [BandRect] = []

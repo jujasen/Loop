@@ -31,6 +31,10 @@ struct BGChartData {
     var overrides: [TemporaryScheduleOverride] = []
     /// How far the prediction reaches; the domain ends here.
     var predictionEnd: Date?
+    /// When a pump (pod) was changed, from the pump's own events.
+    var pumpChanges: [Date] = []
+    /// When a new sensor was started, from the CGM's events.
+    var sensorChanges: [Date] = []
 }
 
 extension BGChartModel {
@@ -98,9 +102,10 @@ extension BGChartModel {
         cobPrediction = []
         uamPrediction = []
         cone = []
-        // Nightscout notes and sensor-start records have no local equivalent.
+        // Nightscout notes have no local equivalent, and a new sensor is drawn as a device change.
         notes = []
         sensorStarts = []
+        deviceChanges = DeviceChange.list(pump: data.pumpChanges, sensor: data.sensorChanges, since: domainStart)
 
         // Treatments hang off the glucose curve, so they need a y value; the
         // reading either side of the treatment gives it. The lane each kind is
