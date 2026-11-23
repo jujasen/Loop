@@ -48,6 +48,35 @@ final class EveningWatchTests: XCTestCase {
         EveningWatch.decide(state, input: input(readings(values, until: now), boluses: boluses, carbs: carbs, iob: iob, forecast: forecast, canDose: canDose, reducedInsulin: reducedInsulin), settings: settings ?? self.settings(), now: now, calendar: calendar)
     }
 
+    // MARK: - A dose answers the suggestion
+
+    private func openSuggestion(at date: Date) -> EveningWatchAction {
+        EveningWatchAction(kind: .suggestion, trigger: .rising, date: date, glucose: 11.2, units: 0.45, scale: 0.8, state: .open)
+    }
+
+    func testADoseFromThePhoneOrFromLoopFollowAnswersTheOpenSuggestion() {
+        let suggestion = openSuggestion(at: at(21))
+        for source in [ManualDose.Source.phone, .remote] {
+            let dose = ManualDose(date: at(21, 3), units: 0.45, source: source, delivered: true)
+            XCTAssertEqual(EveningWatch.dose(answering: suggestion, in: [dose]), dose, "\(source)")
+        }
+    }
+
+    func testADoseBeforeTheSuggestionOrNotTakenByThePumpDoesNotAnswerIt() {
+        let suggestion = openSuggestion(at: at(21))
+        let earlier = ManualDose(date: at(20, 40), units: 0.45, source: .phone, delivered: true)
+        let beingSent = ManualDose(date: at(21, 3), units: 0.45, source: .phone, delivered: false)
+        let byTheWatch = ManualDose(date: at(21, 3), units: 0.45, source: .eveningWatch, delivered: true)
+        XCTAssertNil(EveningWatch.dose(answering: suggestion, in: [earlier, beingSent, byTheWatch]))
+    }
+
+    func testOnlyAnOpenSuggestionIsAnswered() {
+        var suggestion = openSuggestion(at: at(21))
+        suggestion.state = .declined
+        let dose = ManualDose(date: at(21, 3), units: 0.45, source: .phone, delivered: true)
+        XCTAssertNil(EveningWatch.dose(answering: suggestion, in: [dose]))
+    }
+
     // MARK: - Window
 
     func testWindowRunsPastMidnightAndLateStartsAt23() {

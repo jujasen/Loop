@@ -44,6 +44,7 @@ final class EveningWatchManager: ObservableObject {
     private let defaults: UserDefaults
     private var environment: Environment?
     private var observer: NSObjectProtocol?
+    private var doseObserver: NSObjectProtocol?
     private var isChecking = false
     private var lastLogUpload: Date?
     /// The card as the home screen last read it, and a timer for when the window closes.
@@ -63,7 +64,27 @@ final class EveningWatchManager: ObservableObject {
         observer = NotificationCenter.default.addObserver(forName: .LoopCompleted, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.check() }
         }
+        doseObserver = NotificationCenter.default.addObserver(forName: ManualDoseLog.changed, object: ManualDoseLog.shared, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.closeAnswered(by: ManualDoseLog.shared.doses) }
+        }
         refreshCard()
+    }
+
+    /// A dose given on this phone or sent from LoopFollow answers the open suggestion. It is
+    /// closed at once: the card and the notification go here, and the suggestion goes from
+    /// Nightscout, so LoopFollow stops showing it too. Without this it stayed on both phones
+    /// until the next loop found the bolus, up to five minutes after it was given.
+    func closeAnswered(by doses: [ManualDose], now: Date = Date()) async {
+        guard let open = state.open, let dose = EveningWatch.dose(answering: open, in: doses) else { return }
+        log.default("Evening watch suggestion %{public}@ answered by %{public}@ U from %{public}@", open.id, String(dose.units), dose.source.rawValue)
+        change(open.id) {
+            $0.state = .given
+            $0.givenUnits = dose.units
+            $0.closedAt = dose.date
+        }
+        removeNotification(open.id)
+        refreshCard()
+        await syncNightscout(now: now)
     }
 
     /// The card depends on the time as well as on the state: when the window closes with nothing

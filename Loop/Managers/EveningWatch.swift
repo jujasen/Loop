@@ -500,6 +500,17 @@ enum EveningWatch {
         }
     }
 
+    /// The dose by hand that answers an open suggestion: the first one given on this phone or
+    /// sent from LoopFollow since the suggestion was made, by the same rule as `settle`. The
+    /// manager uses it to close the suggestion the moment the pump has taken the dose, instead
+    /// of leaving it on both phones until the next loop.
+    static func dose(answering action: EveningWatchAction, in doses: [ManualDose]) -> ManualDose? {
+        guard action.state == .open else { return nil }
+        return doses
+            .filter { $0.delivered && $0.source != .eveningWatch && $0.units >= 0.05 && $0.date >= action.date.addingTimeInterval(-60) }
+            .min { $0.date < $1.date }
+    }
+
     private static func learn(_ state: inout EveningWatchState, input: Input, settings: EveningWatchSettings, now: Date) {
         for index in state.actions.indices {
             let action = state.actions[index]
