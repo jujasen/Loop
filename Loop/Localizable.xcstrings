@@ -46554,6 +46554,162 @@
         }
       }
     },
+    "Nothing was given: %1$@ U was given on this phone at %2$@, and the sender had not seen it." : {
+      "comment" : "Why a remote bolus was stopped, when a bolus was given on the phone with Loop (1: units, 2: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingenting ble gitt: %1$@ E ble gitt på denne telefonen kl. %2$@, og det hadde ikke avsenderen sett."
+          }
+        }
+      }
+    },
+    "Nothing was given: another remote bolus of %1$@ U was given at %2$@, and the sender had not seen it." : {
+      "comment" : "Why a remote bolus was stopped, when another remote bolus was given (1: units, 2: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingenting ble gitt: en annen fjernbolus på %1$@ E ble gitt kl. %2$@, og den hadde ikke avsenderen sett."
+          }
+        }
+      }
+    },
+    "Nothing was given: the evening watch gave %1$@ U at %2$@, and the sender had not seen it." : {
+      "comment" : "Why a remote bolus was stopped, when the evening watch gave a dose (1: units, 2: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingenting ble gitt: kveldsvakten ga %1$@ E kl. %2$@, og det hadde ikke avsenderen sett."
+          }
+        }
+      }
+    },
+    "just now" : {
+      "comment" : "How long ago a dose from somewhere else was given, when under a minute",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "akkurat nå"
+          }
+        }
+      }
+    },
+    "%d min ago" : {
+      "comment" : "How long ago a dose from somewhere else was given (1: minutes)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "for %d min siden"
+          }
+        }
+      }
+    },
+    "The evening watch gave %1$@ U %2$@" : {
+      "comment" : "Bolus screen warning title after a dose by the evening watch (1: units, 2: how long ago)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kveldsvakten ga %1$@ E %2$@"
+          }
+        }
+      }
+    },
+    "Remote bolus of %1$@ U %2$@" : {
+      "comment" : "Bolus screen warning title after a remote bolus (1: units, 2: how long ago)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fjernbolus på %1$@ E %2$@"
+          }
+        }
+      }
+    },
+    "It was given at %@. Check the insulin on board before you give more." : {
+      "comment" : "Bolus screen warning caption after a dose by the evening watch (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den ble gitt kl. %@. Sjekk insulin om bord før du gir mer."
+          }
+        }
+      }
+    },
+    "It was sent from LoopFollow at %@. Someone else may be correcting the same glucose: check before you give more." : {
+      "comment" : "Bolus screen warning caption after a remote bolus (1: time)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den ble sendt fra LoopFollow kl. %@. Noen andre kan være i gang med å korrigere det samme blodsukkeret. Sjekk før du gir mer."
+          }
+        }
+      }
+    },
+    "%1$@.\n\nIf you give %2$@ U now, it comes on top of that dose." : {
+      "comment" : "Message of the alert before a bolus on top of a dose from somewhere else (1: the warning title, 2: the new units)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@.\n\nGir du %2$@ E nå, kommer det i tillegg til den dosen."
+          }
+        }
+      }
+    },
+    "A dose was just given from somewhere else" : {
+      "comment" : "Title of the alert before a bolus on top of a remote bolus or a dose by the evening watch",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det er nettopp gitt en dose fra et annet sted"
+          }
+        }
+      }
+    },
+    "Give Anyway" : {
+      "comment" : "Button that delivers the bolus on top of a dose from somewhere else",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gi likevel"
+          }
+        }
+      }
+    },
+    "Don't Give" : {
+      "comment" : "Button that cancels the bolus when a dose was just given from somewhere else",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ikke gi"
+          }
+        }
+      }
+    },
     "🌙 Evening watch: %@ U?" : {
       "comment" : "Evening watch suggestion title (1: units)",
       "extractionState" : "manual",

@@ -477,12 +477,13 @@ final class DeviceDataManager {
             )
         }
         LoopNow.provider = { [weak self] in await self?.loopNow() }
+        ManualDoseLogNightscout.start()
         Task { @MainActor in
             EveningWatchManager.shared.start(.init(
                 input: { [weak self] now in await self?.eveningWatchInput(now: now) },
                 deliver: { [weak self] units in
                     guard let self else { throw CancellationError() }
-                    try await self.enactBolus(units: units, activationType: .manualNoRecommendation)
+                    try await self.enactBolus(units: units, activationType: .manualNoRecommendation, source: .eveningWatch, knownDosesUntil: nil)
                 }
             ))
         }
@@ -1114,17 +1115,37 @@ final class ManualBolusRecovery: ObservableObject {
 // MARK: - Client API
 extension DeviceDataManager {
     func enactBolus(units: Double, activationType: BolusActivationType, completion: @escaping (_ error: Error?) -> Void = { _ in }) {
+        enactBolus(units: units, activationType: activationType, source: .phone, knownDosesUntil: nil, completion: completion)
+    }
+
+    /// - Parameters:
+    ///   - source: Who gives it, for the log of doses given by hand (`ManualDoseLog`).
+    ///   - knownDosesUntil: For a remote bolus: its sender had seen every dose given by hand up to
+    ///     this time. With a later dose in the log nothing is sent to the pump and the completion
+    ///     gets `RemoteBolusStopped`.
+    func enactBolus(units: Double, activationType: BolusActivationType, source: ManualDose.Source, knownDosesUntil: Date?, completion: @escaping (_ error: Error?) -> Void = { _ in }) {
         guard let pumpManager = pumpManager else {
             completion(LoopError.configurationError(.pumpManager))
             return
         }
 
+        var loggedDose: String?
         if !activationType.isAutomatic {
+            do {
+                loggedDose = try ManualDoseLog.shared.began(units: units, source: source, knownDosesUntil: knownDosesUntil)
+            } catch {
+                log.default("Bolus of %{public}@ U from %{public}@ stopped: %{public}@", String(units), source.rawValue, error.localizedDescription)
+                completion(error)
+                return
+            }
             manualBolusRecovery.began(units: units, activationType: activationType)
         }
 
         self.loopManager.addRequestedBolus(DoseEntry(type: .bolus, startDate: Date(), value: units, unit: .units, isMutable: true)) {
             pumpManager.enactBolus(units: units, activationType: activationType) { (error) in
+                if let loggedDose {
+                    ManualDoseLog.shared.finished(loggedDose, error: error)
+                }
                 if let error = error {
                     self.log.error("%{public}@", String(describing: error))
                     if !activationType.isAutomatic {
@@ -1167,8 +1188,12 @@ extension DeviceDataManager {
     }
 
     func enactBolus(units: Double, activationType: BolusActivationType) async throws {
+        try await enactBolus(units: units, activationType: activationType, source: .phone, knownDosesUntil: nil)
+    }
+
+    func enactBolus(units: Double, activationType: BolusActivationType, source: ManualDose.Source, knownDosesUntil: Date?) async throws {
         return try await withCheckedThrowingContinuation { continuation in
-            enactBolus(units: units, activationType: activationType) { error in
+            enactBolus(units: units, activationType: activationType, source: source, knownDosesUntil: knownDosesUntil) { error in
                 if let error = error {
                     continuation.resume(throwing: error)
                     return
@@ -1772,20 +1797,22 @@ extension Notification.Name {
 
 extension DeviceDataManager: ServicesManagerDosingDelegate {
     
-    func deliverBolus(amountInUnits: Double) async throws {
+    func deliverBolus(amountInUnits: Double, knownDosesUntil: Date?) async throws {
         // A remote command is fetched right after a Loop run, which is when Loop's own automatic
         // bolus is being delivered. The pump refuses a second bolus meanwhile ("Bolus in progress"),
         // so wait for Loop's own dose to finish instead of rejecting the remote one.
         await waitForAutomaticBolusToFinish()
         do {
-            try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation)
+            // Checked against the log of doses given by hand at the moment it is sent to the pump,
+            // so a dose given on the phone during the wait stops it too.
+            try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation, source: .remote, knownDosesUntil: knownDosesUntil)
         } catch PumpManagerError.deviceState(let deviceError) {
             // Loop started an automatic bolus between the wait and the remote one: try once more.
             guard await automaticBolusIsRunning() else {
                 throw PumpManagerError.deviceState(deviceError)
             }
             await waitForAutomaticBolusToFinish()
-            try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation)
+            try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation, source: .remote, knownDosesUntil: knownDosesUntil)
         }
     }
 

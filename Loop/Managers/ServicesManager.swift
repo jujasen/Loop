@@ -191,6 +191,14 @@ class ServicesManager {
         }
     }
     
+    /// Fetches the remote commands waiting in Nightscout now, without waiting for the next Loop
+    /// run. The bolus screen asks for this when it opens: a remote bolus on its way is then given
+    /// first, and the screen warns about it before the person holding the phone gives more.
+    func checkForRemoteCommandsNow() {
+        // The same nudge a push carries: an id that names no command only makes the service look.
+        handleRemoteNotification(["command-id": "bolus-screen" as AnyObject])
+    }
+
     func handleRemoteNotification(_ notification: [String: AnyObject]) {
         Task {
             log.default("Remote Notification: Handling notification %{public}@", notification)
@@ -233,7 +241,8 @@ class ServicesManager {
 }
 
 public protocol ServicesManagerDosingDelegate: AnyObject {
-    func deliverBolus(amountInUnits: Double) async throws
+    /// A remote bolus. See `RemoteActionDelegate.deliverRemoteBolus` for `knownDosesUntil`.
+    func deliverBolus(amountInUnits: Double, knownDosesUntil: Date?) async throws
     /// What the current pump can deliver, or nil without a pump.
     func remoteTherapySettingsPumpIncrements() -> RemoteTherapySettingsPumpIncrements?
     /// Through the same preflight (cancelling a temp basal above a lowered maximum) and pump sync as Loop's delivery limits editor.
@@ -363,7 +372,7 @@ extension ServicesManager: ServiceDelegate {
         }
     }
 
-    func deliverRemoteBolus(amountInUnits: Double) async throws {
+    func deliverRemoteBolus(amountInUnits: Double, knownDosesUntil: Date?) async throws {
         do {
             
             guard amountInUnits > 0 else {
@@ -378,7 +387,7 @@ extension ServicesManager: ServiceDelegate {
                 throw BolusActionError.exceedsMaxBolus
             }
             
-            try await servicesManagerDosingDelegate?.deliverBolus(amountInUnits: amountInUnits)
+            try await servicesManagerDosingDelegate?.deliverBolus(amountInUnits: amountInUnits, knownDosesUntil: knownDosesUntil)
             await NotificationManager.sendRemoteBolusNotification(amount: amountInUnits)
             await remoteDataServicesManager.triggerUpload(for: .dose)
             analyticsServicesManager.didBolus(source: "Remote")

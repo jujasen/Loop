@@ -46,6 +46,10 @@ extension DeviceDataManager: BolusEntryViewModelDelegate, ManualDoseViewModelDel
         loopManager.getLoopState { block($1) }
     }
 
+    func checkForRemoteCommandsNow() {
+        servicesManager.checkForRemoteCommandsNow()
+    }
+
     func saveGlucose(sample: NewGlucoseSample) async -> StoredGlucoseSample? {
         return await withCheckedContinuation { continuation in
             loopManager.addGlucoseSamples([sample]) { result in

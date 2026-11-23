@@ -57,9 +57,15 @@ protocol BolusEntryViewModelDelegate: AnyObject {
 
     /// Glucose, carbs and doses the phone holds since `start`, for the AI dose advice.
     func aiDoseLocalHistory(start: Date) async -> AIDoseLocalHistory
+
+    /// Fetches remote commands waiting in Nightscout now, so a remote bolus on its way is given
+    /// (and warned about on this screen) before the person holding the phone gives more.
+    func checkForRemoteCommandsNow()
 }
 
 extension BolusEntryViewModelDelegate {
+    func checkForRemoteCommandsNow() {}
+
     func aiDoseLocalHistory(start: Date) async -> AIDoseLocalHistory {
         AIDoseLocalHistory()
     }
@@ -85,6 +91,8 @@ final class BolusEntryViewModel: ObservableObject {
         case manualGlucoseEntryPersistenceFailure
         case glucoseNoLongerStale
         case forecastInfo
+        /// A remote bolus or a dose by the evening watch came in the last half hour.
+        case doseFromElsewhere
     }
 
     enum Notice: Equatable {
@@ -172,6 +180,13 @@ final class BolusEntryViewModel: ObservableObject {
     @Published var activeAlert: Alert?
     @Published var activeNotice: Notice?
 
+    /// A dose that did not come from this screen (a remote bolus from LoopFollow, the evening
+    /// watch) in the last half hour. Shown as a warning, and asked about before a bolus on top of it.
+    /// Always nil when the bolus follows a meal: see `currentDoseFromElsewhere()`.
+    @Published private(set) var doseFromElsewhere: ManualDose?
+    /// The dose the person has been asked about and chose to bolus on top of.
+    private var confirmedDoseFromElsewhere: String?
+
     private let log = OSLog(category: "BolusEntryViewModel")
     private var cancellables: Set<AnyCancellable> = []
 
@@ -193,6 +208,7 @@ final class BolusEntryViewModel: ObservableObject {
 
     // MARK: - Seams
     private(set) weak var delegate: BolusEntryViewModelDelegate?
+    private let manualDoseLog: ManualDoseLog
     private let now: () -> Date
     private let screenWidth: CGFloat
     private let debounceIntervalMilliseconds: Int
@@ -213,9 +229,11 @@ final class BolusEntryViewModel: ObservableObject {
         originalCarbEntry: StoredCarbEntry? = nil,
         potentialCarbEntry: NewCarbEntry? = nil,
         selectedCarbAbsorptionTimeEmoji: String? = nil,
-        isManualGlucoseEntryEnabled: Bool = false
+        isManualGlucoseEntryEnabled: Bool = false,
+        manualDoseLog: ManualDoseLog = .shared
     ) {
         self.delegate = delegate
+        self.manualDoseLog = manualDoseLog
         self.now = now
         self.screenWidth = screenWidth
         self.debounceIntervalMilliseconds = debounceIntervalMilliseconds
@@ -238,9 +256,23 @@ final class BolusEntryViewModel: ObservableObject {
         self.dosingDecision.originalCarbEntry = originalCarbEntry
 
         self.updateSettings()
+        self.doseFromElsewhere = currentDoseFromElsewhere()
+    }
+
+    /// The dose from somewhere else to warn about, for a bolus on its own.
+    ///
+    /// A bolus that follows a meal (the screen after the carb entry) is for the food, and is
+    /// right to give even when someone has just corrected: there is no warning and no question
+    /// then. Two people correcting the same high is what this guards against.
+    private func currentDoseFromElsewhere() -> ManualDose? {
+        guard potentialCarbEntry == nil else { return nil }
+        return manualDoseLog.fromElsewhere(now: now())
     }
 
     public func generateRecommendationAndStartObserving() async {
+        self.observeDosesFromElsewhere()
+        delegate?.checkForRemoteCommandsNow()
+
         await update()
 
         // Only start observing after first update is complete
@@ -315,6 +347,28 @@ final class BolusEntryViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
+
+    /// Follows the log of doses given by hand: a remote bolus that arrives while the screen is
+    /// open shows at once, and the warning goes when the dose is half an hour old.
+    private func observeDosesFromElsewhere() {
+        NotificationCenter.default
+            .publisher(for: ManualDoseLog.changed, object: manualDoseLog)
+            .merge(with: Timer.publish(every: 20, on: .main, in: .default).autoconnect().map { _ in Notification(name: ManualDoseLog.changed) })
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                let dose = self.currentDoseFromElsewhere()
+                if dose != self.doseFromElsewhere {
+                    self.doseFromElsewhere = dose
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    /// The person saw the warning and chose to bolus on top of the dose from somewhere else.
+    func confirmDoseFromElsewhere() {
+        confirmedDoseFromElsewhere = doseFromElsewhere?.id
+    }
 
     private func observeElapsedTime() {
         // If glucose data is stale, loop status updates cannot be expected to keep presented data fresh.
@@ -409,6 +463,15 @@ final class BolusEntryViewModel: ObservableObject {
                 presentAlert(.manualGlucoseEntryOutOfAcceptableRange)
                 return false
             }
+        }
+
+        // Someone else may be correcting the same glucose: ask before giving more on top of a
+        // remote bolus (or a dose by the evening watch) of the last half hour. A newer one asks again.
+        // Not for a bolus that follows a meal.
+        if amountToDeliver > 0, let dose = currentDoseFromElsewhere(), dose.id != confirmedDoseFromElsewhere {
+            doseFromElsewhere = dose
+            presentAlert(.doseFromElsewhere)
+            return false
         }
 
         // Authenticate the bolus before saving anything

@@ -336,6 +336,18 @@ struct BolusEntryView: View {
 
     private var actionArea: some View {
         VStack(spacing: 0) {
+            if let dose = viewModel.doseFromElsewhere {
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    WarningView(
+                        title: Text(ManualDoseText.warningTitle(dose, now: context.date)),
+                        caption: Text(ManualDoseText.warningCaption(dose)),
+                        severity: .critical
+                    )
+                }
+                .padding([.top, .horizontal])
+                .transition(AnyTransition.opacity.combined(with: .move(edge: .bottom)))
+            }
+
             if viewModel.isNoticeVisible {
                 warning(for: viewModel.activeNotice!)
                     .padding([.top, .horizontal])
@@ -483,6 +495,22 @@ struct BolusEntryView: View {
             return SwiftUI.Alert(
                 title: Text("Glucose Data Now Available", comment: "Alert title when glucose data returns while on bolus screen"),
                 message: Text("An updated bolus recommendation is available.", comment: "Alert message when glucose data returns while on bolus screen")
+            )
+        case .doseFromElsewhere:
+            let units = viewModel.enteredBolusAmountString
+            let message = viewModel.doseFromElsewhere.map { ManualDoseText.confirmMessage($0, units: units, now: Date()) } ?? ""
+            return SwiftUI.Alert(
+                title: Text("A dose was just given from somewhere else", comment: "Title of the alert before a bolus on top of a remote bolus or a dose by the evening watch"),
+                message: Text(message),
+                primaryButton: .destructive(Text("Give Anyway", comment: "Button that delivers the bolus on top of a dose from somewhere else")) {
+                    viewModel.confirmDoseFromElsewhere()
+                    Task {
+                        if await viewModel.didPressActionButton() {
+                            dismiss()
+                        }
+                    }
+                },
+                secondaryButton: .cancel(Text("Don't Give", comment: "Button that cancels the bolus when a dose was just given from somewhere else"))
             )
         case .forecastInfo:
             return SwiftUI.Alert(

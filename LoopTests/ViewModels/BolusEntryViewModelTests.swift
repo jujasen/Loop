@@ -86,9 +86,14 @@ class BolusEntryViewModelTests: XCTestCase {
     let mockUUID = BolusEntryViewModelTests.mockUUID.uuidString
     let queue = DispatchQueue(label: "BolusEntryViewModelTests")
     var saveAndDeliverSuccess = false
+    /// The doses given by hand the bolus screen sees; empty unless a test fills it.
+    var manualDoseLog: ManualDoseLog!
+    private static let manualDoseLogSuite = "BolusEntryViewModelTests.manualDoseLog"
 
     override func setUp(completion: @escaping (Error?) -> Void) {
         now = Self.now
+        UserDefaults().removePersistentDomain(forName: Self.manualDoseLogSuite)
+        manualDoseLog = ManualDoseLog(defaults: UserDefaults(suiteName: Self.manualDoseLogSuite)!)
         delegate = MockBolusEntryViewModelDelegate()
         delegate.mostRecentGlucoseDataDate = now
         delegate.mostRecentPumpDataDate = now
@@ -108,7 +113,8 @@ class BolusEntryViewModelTests: XCTestCase {
                                                   timeZone: TimeZone(abbreviation: "GMT")!,
                                                   originalCarbEntry: originalCarbEntry,
                                                   potentialCarbEntry: potentialCarbEntry,
-                                                  selectedCarbAbsorptionTimeEmoji: selectedCarbAbsorptionTimeEmoji)
+                                                  selectedCarbAbsorptionTimeEmoji: selectedCarbAbsorptionTimeEmoji,
+                                                  manualDoseLog: manualDoseLog)
         bolusEntryViewModel.authenticationHandler = { _ in return true }
         
         bolusEntryViewModel.maximumBolus = HKQuantity(unit: .internationalUnit(), doubleValue: 10)
@@ -497,6 +503,89 @@ class BolusEntryViewModelTests: XCTestCase {
         XCTAssertTrue(delegate.bolusDosingDecisionsAdded.isEmpty)
     }
     
+    // MARK: A dose from somewhere else
+
+    func testDeliverAsksBeforeABolusOnTopOfARemoteBolus() async throws {
+        // LoopFollow sent 0.5 U two minutes ago.
+        manualDoseLog.finished(try manualDoseLog.began(units: 0.5, source: .remote, at: now.addingTimeInterval(-120)), error: nil)
+        await setUpViewModel()
+        XCTAssertEqual(bolusEntryViewModel.doseFromElsewhere?.units, 0.5)
+
+        bolusEntryViewModel.enteredBolus = Self.exampleBolusQuantity
+        let first = await bolusEntryViewModel.saveAndDeliver()
+
+        XCTAssertFalse(first)
+        XCTAssertEqual(bolusEntryViewModel.activeAlert, .doseFromElsewhere)
+        XCTAssertNil(delegate.enactedBolusUnits)
+        XCTAssertTrue(delegate.bolusDosingDecisionsAdded.isEmpty)
+
+        // «Give anyway»
+        bolusEntryViewModel.activeAlert = nil
+        bolusEntryViewModel.confirmDoseFromElsewhere()
+        let second = await bolusEntryViewModel.saveAndDeliver()
+
+        XCTAssertTrue(second)
+        XCTAssertEqual(1.0, delegate.enactedBolusUnits)
+    }
+
+    func testANewerRemoteBolusAsksAgain() async throws {
+        manualDoseLog.finished(try manualDoseLog.began(units: 0.5, source: .remote, at: now.addingTimeInterval(-600)), error: nil)
+        await setUpViewModel()
+        bolusEntryViewModel.enteredBolus = Self.exampleBolusQuantity
+        _ = await bolusEntryViewModel.saveAndDeliver()
+        bolusEntryViewModel.activeAlert = nil
+        bolusEntryViewModel.confirmDoseFromElsewhere()
+
+        // Another one arrives while the screen is open.
+        manualDoseLog.finished(try manualDoseLog.began(units: 0.3, source: .remote, at: now.addingTimeInterval(-5)), error: nil)
+        let success = await bolusEntryViewModel.saveAndDeliver()
+
+        XCTAssertFalse(success)
+        XCTAssertEqual(bolusEntryViewModel.activeAlert, .doseFromElsewhere)
+        XCTAssertEqual(bolusEntryViewModel.doseFromElsewhere?.units, 0.3)
+        XCTAssertNil(delegate.enactedBolusUnits)
+    }
+
+    func testDeliverDoesNotAskAfterABolusFromThisPhoneOrAnOldRemoteOne() async throws {
+        manualDoseLog.finished(try manualDoseLog.began(units: 0.5, source: .phone, at: now.addingTimeInterval(-120)), error: nil)
+        manualDoseLog.finished(try manualDoseLog.began(units: 0.5, source: .remote, at: now.addingTimeInterval(-31 * 60)), error: nil)
+        await setUpViewModel()
+        XCTAssertNil(bolusEntryViewModel.doseFromElsewhere)
+
+        bolusEntryViewModel.enteredBolus = Self.exampleBolusQuantity
+        let success = await bolusEntryViewModel.saveAndDeliver()
+
+        XCTAssertTrue(success)
+        XCTAssertEqual(1.0, delegate.enactedBolusUnits)
+    }
+
+    func testABolusForAMealDoesNotWarnOrAskAfterARemoteBolus() async throws {
+        // LoopFollow sent 0.5 U two minutes ago, and now a meal is entered on the phone.
+        manualDoseLog.finished(try manualDoseLog.began(units: 0.5, source: .remote, at: now.addingTimeInterval(-120)), error: nil)
+        await setUpViewModel(potentialCarbEntry: mockPotentialCarbEntry)
+        delegate.addCarbEntryResult = .success(mockFinalCarbEntry)
+        XCTAssertNil(bolusEntryViewModel.doseFromElsewhere)
+
+        bolusEntryViewModel.enteredBolus = Self.exampleBolusQuantity
+        let success = await bolusEntryViewModel.saveAndDeliver()
+
+        XCTAssertTrue(success)
+        XCTAssertNil(bolusEntryViewModel.activeAlert)
+        XCTAssertEqual(1.0, delegate.enactedBolusUnits)
+        XCTAssertEqual(delegate.carbEntriesAdded.count, 1)
+    }
+
+    func testSavingWithoutABolusDoesNotAsk() async throws {
+        manualDoseLog.finished(try manualDoseLog.began(units: 0.5, source: .remote, at: now.addingTimeInterval(-120)), error: nil)
+        await setUpViewModel()
+        bolusEntryViewModel.enteredBolus = Self.noBolus
+
+        let success = await bolusEntryViewModel.saveAndDeliver()
+
+        XCTAssertTrue(success)
+        XCTAssertNil(bolusEntryViewModel.activeAlert)
+    }
+
     private func saveAndDeliver(_ bolus: HKQuantity, file: StaticString = #file, line: UInt = #line) async throws {
         bolusEntryViewModel.enteredBolus = bolus
 
