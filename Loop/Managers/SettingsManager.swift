@@ -353,6 +353,7 @@ enum LoopAppSettings {
         let state = defaults.eveningWatchState
         var object: [String: Any] = [
             "mode": settings.mode.rawValue,
+            "allDay": settings.allDay,
             "start": settings.start,
             "end": settings.end,
             "lateFrom": settings.lateFrom,

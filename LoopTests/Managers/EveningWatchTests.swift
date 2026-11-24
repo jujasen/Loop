@@ -2,7 +2,7 @@
 //  EveningWatchTests.swift
 //  LoopTests
 //
-//  When the evening watch suggests or gives a dose, how large, and what stops it.
+//  When the high watch (the evening watch) suggests or gives a dose, how large, and what stops it.
 //
 
 import Combine
@@ -89,6 +89,113 @@ final class EveningWatchTests: XCTestCase {
         XCTAssertTrue(EveningWatch.isLate(at(23, 0), settings: settings, calendar: calendar))
         XCTAssertTrue(EveningWatch.isLate(at(0, 30), settings: settings, calendar: calendar))
         XCTAssertEqual(EveningWatch.windowStart(before: at(0, 30), settings: settings, calendar: calendar), at(19, 0))
+    }
+
+    // MARK: - Around the clock
+
+    private func aroundTheClock(_ mode: EveningWatchSettings.Mode = .automatic) -> EveningWatchSettings {
+        var settings = settings(mode)
+        settings.allDay = true
+        return settings
+    }
+
+    func testAroundTheClockAlwaysWatchesButOnlyGivesItselfInTheEvening() {
+        let settings = aroundTheClock()
+        for hour in [3, 8, 13, 18, 21] {
+            XCTAssertTrue(EveningWatch.isInWindow(at(hour), settings: settings, calendar: calendar), "\(hour)")
+        }
+        XCTAssertFalse(EveningWatch.givesItself(at(13), settings: settings, calendar: calendar))
+        XCTAssertFalse(EveningWatch.givesItself(at(3), settings: settings, calendar: calendar))
+        XCTAssertTrue(EveningWatch.givesItself(at(21), settings: settings, calendar: calendar))
+        XCTAssertFalse(EveningWatch.givesItself(at(21), settings: aroundTheClock(.suggest), calendar: calendar))
+        XCTAssertTrue(EveningWatch.givesItself(at(21), settings: self.settings(), calendar: calendar))
+    }
+
+    func testByDayItSuggestsThoughAutomaticIsOn() {
+        let byDay = decide(rising11, at: at(13), settings: aroundTheClock())
+        XCTAssertEqual(byDay.decision.kind, .suggested)
+        XCTAssertEqual(byDay.action?.kind, .suggestion)
+        XCTAssertEqual(byDay.action?.state, .open)
+        // A suggestion does not need the pump.
+        XCTAssertEqual(decide(rising11, at: at(13), settings: aroundTheClock(), canDose: false).decision.kind, .suggested)
+
+        let inTheEvening = decide(rising11, at: at(21), settings: aroundTheClock())
+        XCTAssertEqual(inTheEvening.decision.kind, .dosed)
+        XCTAssertEqual(inTheEvening.action?.kind, .automatic)
+    }
+
+    func testWithoutAroundTheClockNothingHappensByDay() {
+        let now = at(13)
+        let result = EveningWatch.tick(EveningWatchState(), input: input(readings(rising11, until: now)), settings: settings(.suggest), now: now, calendar: calendar)
+        XCTAssertEqual(result.effect, .none)
+        XCTAssertTrue(result.state.actions.isEmpty)
+
+        let aroundTheClock = EveningWatch.tick(EveningWatchState(), input: input(readings(rising11, until: now)), settings: aroundTheClock(.suggest), now: now, calendar: calendar)
+        guard case .suggest = aroundTheClock.effect else { return XCTFail("no suggestion") }
+    }
+
+    func testAroundTheClockTheMostPerEveningIsTheMostInSixHours() {
+        var state = EveningWatchState()
+        state.actions = [action(at: at(7, 0), units: 0.25, state: .given), action(at: at(8, 15), units: 0.25, state: .given), action(at: at(9, 30), units: 0.25, state: .given), action(at: at(10, 45), units: 0.25, state: .given)]
+        XCTAssertEqual(decide(high, at: at(12, 30), state: state, settings: aroundTheClock(.suggest)).decision.kind, .enoughTonight)
+        // The one at 07:00 is more than six hours back.
+        XCTAssertEqual(decide(high, at: at(13, 5), state: state, settings: aroundTheClock(.suggest)).decision.kind, .suggested)
+
+        // The afternoon's doses count in the evening too; with a window only the evening's do.
+        state.actions = [action(at: at(15, 0), units: 0.25, state: .given), action(at: at(16, 0), units: 0.25, state: .given), action(at: at(17, 0), units: 0.25, state: .given), action(at: at(18, 0), units: 0.25, state: .given)]
+        XCTAssertEqual(decide(high, at: at(19, 30), state: state, settings: aroundTheClock()).decision.kind, .enoughTonight)
+        XCTAssertEqual(decide(high, at: at(19, 30), state: state, settings: settings()).decision.kind, .dosed)
+
+        var units = aroundTheClock(.suggest)
+        units.maximumPerEvening = 0.5
+        state.actions = [action(at: at(9, 0), units: 0.25, state: .given), action(at: at(11, 0), units: 0.25, state: .given)]
+        XCTAssertEqual(decide(high, at: at(13), state: state, settings: units).decision.kind, .enoughTonight)
+        XCTAssertEqual(decide(high, at: at(15, 5), state: state, settings: units).action?.units, 0.25)
+    }
+
+    func testASuggestionWaitsByDayAndLapsesWhenTheEveningGivesItself() {
+        var state = EveningWatchState()
+        state.actions = [action(at: at(13, 0), units: 0.25, state: .open, kind: .suggestion)]
+        var now = at(13, 10)
+        var result = EveningWatch.tick(state, input: input(readings(rising11, until: now)), settings: aroundTheClock(), now: now, calendar: calendar)
+        XCTAssertEqual(result.effect, .none)
+        XCTAssertEqual(result.state.open?.id, state.actions[0].id)
+
+        state.actions = [action(at: at(18, 50), units: 0.25, state: .open, kind: .suggestion)]
+        now = at(19, 5)
+        result = EveningWatch.tick(state, input: input(readings(rising11, until: now)), settings: aroundTheClock(), now: now, calendar: calendar)
+        XCTAssertEqual(result.state.actions.first?.state, .lapsed)
+        // Not twice in a quarter of an hour: it waits the time between two.
+        XCTAssertEqual(result.effect, .none)
+    }
+
+    func testAroundTheClockTheCardOnlyShowsWhileThereIsSomethingToShow() {
+        var state = EveningWatchState()
+        XCTAssertNil(EveningWatchCardContent(settings: aroundTheClock(.suggest), state: state, now: at(13), calendar: calendar))
+
+        var given = action(at: at(11, 0), units: 0.25, state: .given, kind: .suggestion)
+        given.closedAt = at(11, 5)
+        state.actions = [given]
+        let byDay = EveningWatchCardContent(settings: aroundTheClock(.suggest), state: state, now: at(13), calendar: calendar)
+        XCTAssertEqual(byDay?.allDay, true)
+        XCTAssertEqual(byDay?.tonight.count, 1)
+        XCTAssertEqual(byDay?.windowEnd, at(17, 0))
+        XCTAssertNil(EveningWatchCardContent(settings: aroundTheClock(.suggest), state: state, now: at(17, 1), calendar: calendar))
+
+        // In the evening it is the evening's line, with the time automatic stops.
+        let evening = EveningWatchCardContent(settings: aroundTheClock(), state: EveningWatchState(), now: at(21), calendar: calendar)
+        XCTAssertEqual(evening?.allDay, false)
+        XCTAssertEqual(evening?.givesItself, true)
+        XCTAssertEqual(evening?.windowEnd, at(1, 0))
+
+        state.actions = [action(at: at(13, 0), units: 0.25, state: .open, kind: .suggestion)]
+        XCTAssertEqual(EveningWatchCardContent(settings: aroundTheClock(), state: state, now: at(13, 10), calendar: calendar)?.isSuggestion, true)
+    }
+
+    func testAroundTheClockTheLogStartsAtSix() {
+        XCTAssertEqual(EveningWatch.logStart(before: at(13), settings: aroundTheClock(), calendar: calendar), at(6, 0))
+        XCTAssertEqual(EveningWatch.logStart(before: at(3), settings: aroundTheClock(), calendar: calendar), at(6, 0))
+        XCTAssertEqual(EveningWatch.logStart(before: at(0, 30), settings: settings(), calendar: calendar), at(19, 0))
     }
 
     // MARK: - Dose
@@ -326,6 +433,9 @@ final class EveningWatchTests: XCTestCase {
         XCTAssertEqual(decoded.mode, .suggest)
         XCTAssertEqual(decoded.highFrom, 11)
         XCTAssertEqual(decoded.clamped.risingFrom, 8)
+        XCTAssertFalse(decoded.allDay, "a build before around the clock keeps its evening window")
+        let stored = try JSONDecoder().decode(EveningWatchSettings.self, from: JSONEncoder().encode(aroundTheClock(.suggest)))
+        XCTAssertTrue(stored.allDay)
     }
 
     // MARK: - 30 October

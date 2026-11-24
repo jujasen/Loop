@@ -2,7 +2,7 @@
 //  EveningWatchManager.swift
 //  Loop
 //
-//  Runs the evening watch after every loop: gives the dose in automatic mode, or puts the
+//  Runs the high watch (the evening watch, in the code) after every loop: gives the dose in automatic mode, or puts the
 //  suggestion on the home screen, in a notification and in Nightscout for LoopFollow, where it
 //  stays until it is given, declined here or in LoopFollow, or no longer needed.
 //
@@ -106,7 +106,7 @@ final class EveningWatchManager: ObservableObject {
     }
 
     /// The card on the home screen: an open suggestion, or what the watch has done tonight while
-    /// it is on.
+    /// it is on. Around the clock it only shows while there is something to show.
     var card: EveningWatchCardContent? {
         EveningWatchCardContent(settings: settings, state: state, now: Date())
     }
@@ -292,7 +292,7 @@ final class EveningWatchManager: ObservableObject {
             }
             uploads.notes.formIntersection(state.actions.map(\.id))
 
-            let start = EveningWatch.windowStart(before: now, settings: settings, calendar: .current)
+            let start = EveningWatch.logStart(before: now, settings: settings, calendar: .current)
             let document = EveningWatchTreatment.log(state: state, settings: settings, since: start)
             let changed = uploads.logHash != document.hash
             let actionChanged = uploads.logActions != document.actions
@@ -332,22 +332,38 @@ final class EveningWatchManager: ObservableObject {
 /// What the home screen card shows.
 struct EveningWatchCardContent: Equatable {
     var open: EveningWatchAction?
-    /// Tonight's suggestions given and automatic doses, oldest first.
+    /// Tonight's suggestions given and automatic doses, oldest first; around the clock, those of
+    /// the last `EveningWatch.Rule.capSpan`.
     var tonight: [EveningWatchAction]
     var mode: EveningWatchSettings.Mode
+    /// When the line goes or changes: the end of the evening window, or around the clock outside
+    /// it, when the oldest dose listed is no longer counted.
     var windowEnd: Date
     var stop: EveningWatchState.Stop?
+    /// Watching around the clock and outside the evening window: there is no time it stops.
+    var allDay = false
+    /// A dose is given without asking now.
+    var givesItself = false
 
     /// Nil when there is nothing to show: no open suggestion, and outside the window or off.
+    /// Around the clock the watch is always on, so outside the evening window the line only
+    /// shows while it has given something lately or has turned automatic off.
     init?(settings: EveningWatchSettings, state: EveningWatchState, now: Date, calendar: Calendar = .current) {
         open = state.open
         let inWindow = settings.mode != .off && EveningWatch.isInWindow(now, settings: settings, calendar: calendar)
         guard open != nil || inWindow else { return nil }
-        let start = EveningWatch.windowStart(before: now, settings: settings, calendar: calendar)
+        let start = EveningWatch.capStart(before: now, settings: settings, calendar: calendar)
         tonight = state.actions.filter { $0.date >= start && ($0.state == .given || $0.state == .delivering || $0.state == .failed) }
         mode = settings.mode
-        windowEnd = EveningWatch.windowEnd(after: now, settings: settings, calendar: calendar)
         stop = settings.mode == .automatic ? nil : state.stop.flatMap { $0.date >= start ? $0 : nil }
+        givesItself = EveningWatch.givesItself(now, settings: settings, calendar: calendar)
+        if settings.allDay, !EveningWatch.isEvening(now, settings: settings, calendar: calendar) {
+            allDay = true
+            guard open != nil || !tonight.isEmpty || stop != nil else { return nil }
+            windowEnd = (tonight.first?.date ?? stop?.date ?? now).addingTimeInterval(EveningWatch.Rule.capSpan)
+        } else {
+            windowEnd = EveningWatch.windowEnd(after: now, settings: settings, calendar: calendar)
+        }
     }
 
     var isSuggestion: Bool { open != nil }
@@ -359,12 +375,12 @@ struct EveningWatchCardContent: Equatable {
 /// (`Remote/AISuggestion/AIBolusSuggestion.swift`, `Alarm/EveningWatch`); change both apps together.
 ///
 /// - An open suggestion is an "AI Bolus Suggestion", with
-///   `source: "eveningWatch"`, `trigger` ("rising"/"high") and `mealName` "🌙 …". Deleting it in
+///   `source: "eveningWatch"`, `trigger` ("rising"/"high") and `mealName` "📈 …". Deleting it in
 ///   Nightscout declines it here.
 /// - An automatic dose is a "Note" with `source: "eveningWatch"`, `actionID`, `units`, `glucose`
 ///   and `state` ("given"/"failed"). The bolus itself is uploaded like any other.
-/// - Tonight's log is one "Evening Watch Log" treatment dated at the window's start, replaced as
-///   it grows: `mode`, `learnedUnits`, `actions` and `entries`.
+/// - Tonight's log is one "Evening Watch Log" treatment dated at the window's start (around the
+///   clock, at the last 06:00), replaced as it grows: `mode`, `learnedUnits`, `actions` and `entries`.
 ///
 /// None has an `insulin` or `carbs` field, so none counts as either.
 enum EveningWatchTreatment {
@@ -383,7 +399,7 @@ enum EveningWatchTreatment {
             "units": action.units,
             "reason": EveningWatchText.reason(action),
             "glucose": action.glucose,
-            "mealName": "🌙 " + EveningWatchText.name,
+            "mealName": EveningWatchText.symbol + " " + EveningWatchText.name,
             "enteredBy": "Loop",
             "notes": EveningWatchText.suggestionTitle(action) + " " + EveningWatchText.reason(action),
         ]
@@ -466,9 +482,13 @@ enum EveningWatchTreatment {
 // MARK: - Words
 
 enum EveningWatchText {
+    /// "Høyvakt". It was the evening watch, «Kveldsvakt», until it could watch around the clock.
     static var name: String {
-        NSLocalizedString("Evening Watch", comment: "Name of the evening watch")
+        NSLocalizedString("High Watch", comment: "Name of the high watch, which suggests or gives a correction when glucose runs high")
     }
+
+    /// In front of the name in titles, here and in LoopFollow.
+    static let symbol = "📈"
 
     static func units(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(0...2)))
@@ -482,22 +502,22 @@ enum EveningWatchText {
         date.formatted(date: .omitted, time: .shortened)
     }
 
-    /// "🌙 Kveldsvakt: 0,35 E?"
+    /// "📈 Høyvakt: 0,35 E?"
     static func suggestionTitle(_ action: EveningWatchAction) -> String {
-        String(format: NSLocalizedString("🌙 Evening watch: %@ U?", comment: "Evening watch suggestion title (1: units)"), units(action.units))
+        String(format: NSLocalizedString("📈 High watch: %@ U?", comment: "High watch suggestion title (1: units)"), units(action.units))
     }
 
-    /// "🌙 Kveldsvakten ga 0,35 E"
+    /// "📈 Høyvakten ga 0,35 E"
     static func doseTitle(_ action: EveningWatchAction) -> String {
-        String(format: NSLocalizedString("🌙 Evening watch gave %@ U", comment: "Evening watch automatic dose title (1: units)"), units(action.givenUnits ?? action.units))
+        String(format: NSLocalizedString("📈 High watch gave %@ U", comment: "High watch automatic dose title (1: units)"), units(action.givenUnits ?? action.units))
     }
 
     static func failedTitle(_ action: EveningWatchAction) -> String {
-        String(format: NSLocalizedString("🌙 Evening watch could not give %@ U", comment: "Evening watch automatic dose that the pump did not take (1: units)"), units(action.units))
+        String(format: NSLocalizedString("📈 High watch could not give %@ U", comment: "High watch automatic dose that the pump did not take (1: units)"), units(action.units))
     }
 
     static var stoppedTitle: String {
-        NSLocalizedString("🌙 Evening watch stopped dosing", comment: "Notification title when the evening watch turns automatic mode off after a low")
+        NSLocalizedString("📈 High watch stopped dosing", comment: "Notification title when the high watch turns automatic mode off after a low")
     }
 
     static func stopped(_ stop: EveningWatchState.Stop, actions: [EveningWatchAction]) -> String {
@@ -571,7 +591,7 @@ enum EveningWatchText {
         case .falling:
             return NSLocalizedString("Falling", comment: "Evening watch log")
         case .recentLow:
-            return String(format: NSLocalizedString("Was under %@ in the last 90 min", comment: "Evening watch log (1: glucose)"), glucose(EveningWatch.Rule.lowFloor))
+            return String(format: NSLocalizedString("Was under %@ in the last hour", comment: "High watch log (1: glucose)"), glucose(EveningWatch.Rule.lowFloor))
         case .recentCarbs:
             return String(format: NSLocalizedString("Meal, waits until %@", comment: "Evening watch log (1: time)"), until)
         case .recentBolus:
@@ -579,7 +599,7 @@ enum EveningWatchText {
         case .recentAction:
             return String(format: NSLocalizedString("Waits until %@ after the last one", comment: "Evening watch log (1: time)"), until)
         case .enoughTonight:
-            return NSLocalizedString("Enough for tonight", comment: "Evening watch log")
+            return NSLocalizedString("Has given what it may for now", comment: "High watch log: the most doses or units per evening, or per six hours around the clock, is reached")
         case .noInsulinOnBoard:
             return NSLocalizedString("Insulin on board unknown", comment: "Evening watch log")
         case .highIOB:

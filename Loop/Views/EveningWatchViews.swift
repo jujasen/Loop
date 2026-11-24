@@ -2,7 +2,7 @@
 //  EveningWatchViews.swift
 //  Loop
 //
-//  The evening watch's card on the home screen, its settings and its log.
+//  The high watch's card on the home screen, its settings and its log.
 //
 
 import LoopKitUI
@@ -45,7 +45,7 @@ struct EveningWatchCard: View {
                     .foregroundColor(.secondary)
             } else {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(verbatim: "🌙")
+                    Text(verbatim: EveningWatchText.symbol)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(watching)
                             .font(.subheadline)
@@ -67,13 +67,14 @@ struct EveningWatchCard: View {
     }
 
     private var watching: String {
-        let until = EveningWatchText.time(card.windowEnd)
-        switch card.mode {
-        case .automatic:
-            return String(format: NSLocalizedString("Evening watch doses until %@", comment: "Evening watch card in automatic mode (1: time)"), until)
-        case .suggest, .off:
-            return String(format: NSLocalizedString("Evening watch suggests until %@", comment: "Evening watch card in suggestion mode (1: time)"), until)
+        if card.allDay {
+            return NSLocalizedString("High watch suggests around the clock", comment: "High watch card outside the evening window when it watches around the clock")
         }
+        let until = EveningWatchText.time(card.windowEnd)
+        if card.givesItself {
+            return String(format: NSLocalizedString("High watch doses until %@", comment: "High watch card in automatic mode (1: time)"), until)
+        }
+        return String(format: NSLocalizedString("High watch suggests until %@", comment: "High watch card in suggestion mode (1: time)"), until)
     }
 }
 
@@ -105,13 +106,23 @@ struct EveningWatchSettingsView: View {
                 }
 
                 Section {
-                    timeRow(String(localized: "From", comment: "Evening watch: start of the window"), minutes: $settings.start)
-                    timeRow(String(localized: "To", comment: "Evening watch: end of the window"), minutes: $settings.end)
+                    Toggle(isOn: $settings.allDay) {
+                        Text("Around the Clock", comment: "High watch: watch all day and night, not only in the evening")
+                    }
+                    if !settings.allDay || settings.mode == .automatic {
+                        timeRow(settings.allDay ? String(localized: "Gives Itself From", comment: "High watch around the clock: start of the hours when automatic mode gives the dose") : String(localized: "From", comment: "Evening watch: start of the window"), minutes: $settings.start)
+                        timeRow(String(localized: "To", comment: "Evening watch: end of the window"), minutes: $settings.end)
+                    }
                     timeRow(String(localized: "Late From", comment: "Evening watch: when the late limits start"), minutes: $settings.lateFrom)
                 } header: {
                     Text("When", comment: "Evening watch settings header")
                 } footer: {
-                    Text("From the late time until 06:00 both limits are 1 mmol/L higher and the dose is 60 %: glucose falls by itself more often after 23:00.", comment: "Evening watch settings footer under the times")
+                    VStack(alignment: .leading, spacing: 8) {
+                        if settings.allDay {
+                            Text("By day and at night it only suggests, also when Automatic is on. Food and doses come close together by day: over six weeks in autumn 2026, one in seven suggestions by day or at night was followed by glucose under 4.5 within three hours, against one in fifty in the evening. Look at what has been eaten and given before you give it.", comment: "High watch settings footer when it watches around the clock")
+                        }
+                        Text("From the late time until 06:00 both limits are 1 mmol/L higher and the dose is 60 %: glucose falls by itself more often after 23:00.", comment: "Evening watch settings footer under the times")
+                    }
                 }
 
                 Section {
@@ -144,10 +155,10 @@ struct EveningWatchSettingsView: View {
                         valueRow(String(localized: "Insulin on Board Under", comment: "Evening watch: maximum insulin on board"), units(settings.maximumIOB))
                     }
                     Stepper(value: $settings.maximumPerEvening, in: EveningWatchSettings.maximumPerEveningRange, step: 0.05) {
-                        valueRow(String(localized: "At Most per Evening", comment: "Evening watch: units per evening"), units(settings.maximumPerEvening))
+                        valueRow(settings.allDay ? String(localized: "At Most per 6 Hours", comment: "High watch around the clock: units in any six hours") : String(localized: "At Most per Evening", comment: "Evening watch: units per evening"), units(settings.maximumPerEvening))
                     }
                     Stepper(value: $settings.dosesPerEvening, in: EveningWatchSettings.dosesPerEveningRange) {
-                        valueRow(String(localized: "Doses per Evening", comment: "Evening watch: doses per evening"), "\(settings.dosesPerEvening)")
+                        valueRow(settings.allDay ? String(localized: "Doses per 6 Hours", comment: "High watch around the clock: doses in any six hours") : String(localized: "Doses per Evening", comment: "Evening watch: doses per evening"), "\(settings.dosesPerEvening)")
                     }
                     Stepper(value: $settings.minutesBetween, in: EveningWatchSettings.minutesBetweenRange, step: 15) {
                         valueRow(String(localized: "At Least Between", comment: "Evening watch: minutes between doses"), String(format: NSLocalizedString("%d min", comment: "Minutes (1: number)"), settings.minutesBetween))
@@ -155,7 +166,7 @@ struct EveningWatchSettingsView: View {
                 } header: {
                     Text("Dose", comment: "Evening watch settings header")
                 } footer: {
-                    Text("Under 10 mmol/L half the dose, under 12 70 %, never over 0.8 U or the maximum bolus. After each dose given it learns from the next three hours: smaller after a low, larger when glucose was still over 12 two hours on.", comment: "Evening watch settings footer under the dose")
+                    Text("Under 10 mmol/L 65 % of the dose, under 12 80 %, never over 0.8 U or the maximum bolus. After each dose given it learns from the next three hours: smaller after a low, larger when glucose was still over 12 two hours on.", comment: "High watch settings footer under the dose")
                 }
 
                 Section {
@@ -174,7 +185,7 @@ struct EveningWatchSettingsView: View {
                 }
             }
             .insetGroupedListStyle()
-            .navigationTitle(Text(verbatim: "🌙 " + EveningWatchText.name))
+            .navigationTitle(Text(verbatim: EveningWatchText.symbol + " " + EveningWatchText.name))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -190,7 +201,7 @@ struct EveningWatchSettingsView: View {
                 }
                 Button(String(localized: "Cancel", comment: "Cancel button"), role: .cancel) {}
             } message: {
-                Text(String(format: NSLocalizedString("In the evening window the evening watch then gives up to %1$@ U a night by itself, %2$@ at a time, without asking. Keep the low alerts on.", comment: "Evening watch: what automatic mode means (1: units per evening)(2: largest dose)"), units(settings.maximumPerEvening), units(EveningWatch.Rule.maximumUnits)))
+                Text(String(format: NSLocalizedString("From %3$@ to %4$@ the high watch then gives up to %1$@ by itself, %2$@ at a time, without asking. Outside those hours it never gives anything itself. Keep the low alerts on.", comment: "High watch: what automatic mode means (1: units per evening)(2: largest dose)(3: start of the window)(4: end of the window)"), units(settings.maximumPerEvening), units(EveningWatch.Rule.maximumUnits), clock(settings.start), clock(settings.end)))
             }
         }
     }
@@ -211,11 +222,13 @@ struct EveningWatchSettingsView: View {
     private var modeFooter: String {
         switch settings.mode {
         case .off:
-            return NSLocalizedString("In the evening, when glucose keeps rising or stays high and nothing has been given or eaten for a while, the evening watch suggests a correction or gives it. It goes by glucose itself, not by Loop's forecast.", comment: "Evening watch settings: explanation when off")
+            return NSLocalizedString("When glucose keeps rising or stays high and nothing has been given or eaten for a while, the high watch suggests a correction or gives it. It goes by glucose itself, not by Loop's forecast.", comment: "High watch settings: explanation when off")
         case .suggest:
             return NSLocalizedString("Suggests a correction here and in LoopFollow. The suggestion stays until it is given or declined, or until glucose comes down.", comment: "Evening watch settings: explanation of suggestion mode")
         case .automatic:
-            return NSLocalizedString("Gives the correction itself and keeps watching until the window ends. Every dose shows here, in LoopFollow and in Nightscout.", comment: "Evening watch settings: explanation of automatic mode")
+            return settings.allDay
+                ? NSLocalizedString("Gives the correction itself in the hours below, and suggests it the rest of the day. Every dose shows here, in LoopFollow and in Nightscout.", comment: "High watch settings: explanation of automatic mode around the clock")
+                : NSLocalizedString("Gives the correction itself and keeps watching until the window ends. Every dose shows here, in LoopFollow and in Nightscout.", comment: "Evening watch settings: explanation of automatic mode")
         }
     }
 
@@ -224,6 +237,11 @@ struct EveningWatchSettingsView: View {
             get: { Calendar.current.date(bySettingHour: minutes.wrappedValue / 60, minute: minutes.wrappedValue % 60, second: 0, of: Date()) ?? Date() },
             set: { minutes.wrappedValue = EveningWatch.minutes($0) }
         ), displayedComponents: .hourAndMinute)
+    }
+
+    /// Minutes after midnight as a time of day.
+    private func clock(_ minutes: Int) -> String {
+        EveningWatchText.time(Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: Date()) ?? Date())
     }
 
     private func valueRow(_ title: String, _ value: String) -> some View {

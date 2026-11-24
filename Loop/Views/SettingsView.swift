@@ -388,9 +388,9 @@ extension SettingsView {
                         descriptiveText: String(localized: "Extra insulin for the late rise", comment: "Descriptive text for the fat and protein boost settings row"))
             LargeButton(action: { sheet = .eveningWatch },
                         includeArrow: true,
-                        imageView: Image(systemName: "moon.stars").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(.insulinTintColor),
+                        imageView: Image(systemName: "chart.line.uptrend.xyaxis").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(.insulinTintColor),
                         label: EveningWatchText.name,
-                        descriptiveText: String(localized: "A correction when the evening runs high", comment: "Descriptive text for the evening watch settings row"))
+                        descriptiveText: String(localized: "A correction when glucose runs high", comment: "Descriptive text for the high watch settings row"))
             LargeButton(action: { sheet = .pumpDeliveryAlert },
                         includeArrow: true,
                         imageView: Image(systemName: "drop.triangle").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(.orange),

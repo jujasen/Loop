@@ -64,7 +64,7 @@ struct RemoteBolusStopped: LocalizedError, RemoteActionRejection, Equatable {
         case .remote:
             return String(format: NSLocalizedString("Nothing was given: another remote bolus of %1$@ U was given at %2$@, and the sender had not seen it.", comment: "Why a remote bolus was stopped, when another remote bolus was given (1: units, 2: time)"), amount, time)
         case .eveningWatch:
-            return String(format: NSLocalizedString("Nothing was given: the evening watch gave %1$@ U at %2$@, and the sender had not seen it.", comment: "Why a remote bolus was stopped, when the evening watch gave a dose (1: units, 2: time)"), amount, time)
+            return String(format: NSLocalizedString("Nothing was given: the high watch gave %1$@ U at %2$@, and the sender had not seen it.", comment: "Why a remote bolus was stopped, when the high watch gave a dose (1: units, 2: time)"), amount, time)
         }
     }
 
@@ -222,7 +222,7 @@ enum ManualDoseText {
         let ago = minutesAgo(dose.date, now: now)
         switch dose.source {
         case .eveningWatch:
-            return String(format: NSLocalizedString("The evening watch gave %1$@ U %2$@", comment: "Bolus screen warning title after a dose by the evening watch (1: units, 2: how long ago)"), units(dose.units), ago)
+            return String(format: NSLocalizedString("The high watch gave %1$@ U %2$@", comment: "Bolus screen warning title after a dose by the high watch (1: units, 2: how long ago)"), units(dose.units), ago)
         case .remote, .phone:
             return String(format: NSLocalizedString("Remote bolus of %1$@ U %2$@", comment: "Bolus screen warning title after a remote bolus (1: units, 2: how long ago)"), units(dose.units), ago)
         }

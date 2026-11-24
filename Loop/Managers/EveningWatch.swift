@@ -2,9 +2,10 @@
 //  EveningWatch.swift
 //  Loop
 //
-//  The evening watch («Kveldsvakt»). In the evening, when glucose keeps rising or stays high and
-//  nothing has been given or eaten for a while, it suggests a correction — or, in automatic mode,
-//  gives it — and then keeps watching for the rest of the window.
+//  The high watch («Høyvakt», at first the evening watch, «Kveldsvakt», and still called that in
+//  the code and in Nightscout). When glucose keeps rising or stays high and nothing has been given
+//  or eaten for a while, it suggests a correction — or, in automatic mode, gives it — and then
+//  keeps watching for the rest of the window.
 //
 //  It looks at glucose itself and not at Loop's forecast for the dose. On Walter's evenings Loop
 //  expects the insulin on board to bring glucose down much further than it does, gives nothing
@@ -22,6 +23,14 @@
 //  of an automatic dose turns automatic mode off (it goes back to suggesting) until it is turned
 //  on again by hand.
 //
+//  Around the clock (`allDay`) it only ever gives a dose itself in the evening window, and
+//  suggests for the rest of the day. Run over 42 days (14 October–24 November 2026), one in
+//  fifty evening suggestions was followed by a reading under 4.5 within three hours; by day and
+//  at night it was one in seven, and limits 1 or 2 mmol/L higher did not change that. By day
+//  food and its doses come close together: something was eaten or given by hand within three
+//  hours of seven in ten suggestions. Julia's own corrections by day had the same share of lows
+//  (8 of 59), so a person looks at each one.
+//
 //  Glucose is in mmol/L throughout.
 //
 
@@ -37,6 +46,9 @@ struct EveningWatchSettings: Codable, Equatable {
     }
 
     var mode: Mode = .off
+    /// Watches around the clock. The window is then only when automatic mode gives a dose
+    /// itself; outside it the watch suggests whatever the mode.
+    var allDay = false
     /// Minutes after midnight. The window may run past midnight.
     var start = 19 * 60
     var end = 60
@@ -50,7 +62,7 @@ struct EveningWatchSettings: Codable, Equatable {
     var startUnits = 0.5
     /// Nothing with this much insulin on board or more.
     var maximumIOB = 1.6
-    /// All doses in one evening together.
+    /// All doses in one evening together; around the clock, in any `Rule.capSpan`.
     var maximumPerEvening = 1.5
     var dosesPerEvening = 4
     /// Between two suggestions or doses. Julia's own corrections came 40–75 minutes apart.
@@ -88,13 +100,14 @@ struct EveningWatchSettings: Codable, Equatable {
 
     // Missing keys keep their defaults, so settings stored by an older build still load.
     private enum CodingKeys: String, CodingKey {
-        case mode, start, end, risingFrom, highFrom, lateFrom, startUnits, maximumIOB, maximumPerEvening, dosesPerEvening, minutesBetween
+        case mode, allDay, start, end, risingFrom, highFrom, lateFrom, startUnits, maximumIOB, maximumPerEvening, dosesPerEvening, minutesBetween
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = EveningWatchSettings()
         mode = (try? container.decodeIfPresent(Mode.self, forKey: .mode)) ?? defaults.mode
+        allDay = try container.decodeIfPresent(Bool.self, forKey: .allDay) ?? defaults.allDay
         start = try container.decodeIfPresent(Int.self, forKey: .start) ?? defaults.start
         end = try container.decodeIfPresent(Int.self, forKey: .end) ?? defaults.end
         risingFrom = try container.decodeIfPresent(Double.self, forKey: .risingFrom) ?? defaults.risingFrom
@@ -295,6 +308,11 @@ enum EveningWatch {
         /// A reading under this within `stopWithin` of an automatic dose turns automatic mode off.
         static let stopBelow = 4.0
         static let stopWithin: TimeInterval = 4 * 3600
+        /// Around the clock there is no evening to count the doses in: the most per evening is
+        /// then the most in any span this long, about the length of the evening window.
+        static let capSpan: TimeInterval = 6 * 3600
+        /// Around the clock the day's log starts here, when the late limits end.
+        static let dayStart = 6 * 60
         /// A dose still marked as delivering after this is settled from the pump's record.
         static let deliveringFor: TimeInterval = 10 * 60
     }
@@ -333,7 +351,9 @@ enum EveningWatch {
         }
 
         if let index = state.actions.lastIndex(where: { $0.state == .open }) {
-            if settings.mode != .suggest || shouldLapse(state.actions[index], input: input, settings: settings, now: now, calendar: calendar) {
+            // A suggestion only waits while the watch is suggesting.
+            let suggests = settings.mode == .suggest || (settings.allDay && !isEvening(now, settings: settings, calendar: calendar))
+            if !suggests || shouldLapse(state.actions[index], input: input, settings: settings, now: now, calendar: calendar) {
                 state.actions[index].state = .lapsed
                 state.actions[index].closedAt = now
                 record(&state, EveningWatchDecision(date: latest.date, glucose: latest.mmol, kind: .lapsed))
@@ -398,7 +418,7 @@ enum EveningWatch {
         if let last = state.actions.last, now.timeIntervalSince(last.date) < gap {
             return no(.recentAction, until: last.date.addingTimeInterval(gap))
         }
-        let tonight = state.actions.filter { $0.counts && $0.date >= windowStart(before: now, settings: settings, calendar: calendar) }
+        let tonight = state.actions.filter { $0.counts && $0.date >= capStart(before: now, settings: settings, calendar: calendar) }
         let unitsTonight = tonight.reduce(0) { $0 + ($1.givenUnits ?? ($1.state == .declined ? 0 : $1.units)) }
         if tonight.count >= settings.dosesPerEvening || unitsTonight >= settings.maximumPerEvening - 0.049 {
             return no(.enoughTonight)
@@ -407,7 +427,7 @@ enum EveningWatch {
         if iob >= settings.maximumIOB { return no(.highIOB, value: iob) }
         if let forecast = input.lowestForecast, forecast < Rule.forecastFloor { return no(.forecastLow, value: forecast) }
         if input.reducedInsulin { return no(.reducedInsulin) }
-        let automatic = settings.mode == .automatic
+        let automatic = givesItself(now, settings: settings, calendar: calendar)
         if automatic, !input.canDose { return no(.cannotDose) }
 
         let scale = self.scale(glucose: glucose, late: late)
@@ -607,8 +627,33 @@ enum EveningWatch {
         return minute >= start || minute < end
     }
 
+    /// Whether the watch is looking: always around the clock, otherwise in the evening window.
     static func isInWindow(_ date: Date, settings: EveningWatchSettings, calendar: Calendar = .current) -> Bool {
+        settings.allDay || isEvening(date, settings: settings, calendar: calendar)
+    }
+
+    static func isEvening(_ date: Date, settings: EveningWatchSettings, calendar: Calendar = .current) -> Bool {
         contains(minutes(date, calendar: calendar), from: settings.start, to: settings.end)
+    }
+
+    /// Whether a dose is given without asking now: in automatic mode, and around the clock only in
+    /// the evening window. The rest of the day it suggests.
+    static func givesItself(_ date: Date, settings: EveningWatchSettings, calendar: Calendar = .current) -> Bool {
+        settings.mode == .automatic && isEvening(date, settings: settings, calendar: calendar)
+    }
+
+    /// Doses from here on count towards the most per evening: the start of the window, or around
+    /// the clock the last `Rule.capSpan`.
+    static func capStart(before date: Date, settings: EveningWatchSettings, calendar: Calendar = .current) -> Date {
+        settings.allDay ? date.addingTimeInterval(-Rule.capSpan) : windowStart(before: date, settings: settings, calendar: calendar)
+    }
+
+    /// Where the log in Nightscout starts: the window's start, or around the clock the last 06:00.
+    static func logStart(before date: Date, settings: EveningWatchSettings, calendar: Calendar = .current) -> Date {
+        guard settings.allDay else { return windowStart(before: date, settings: settings, calendar: calendar) }
+        let today = calendar.date(bySettingHour: Rule.dayStart / 60, minute: Rule.dayStart % 60, second: 0, of: date) ?? date
+        if today <= date { return today }
+        return calendar.date(byAdding: .day, value: -1, to: today) ?? today
     }
 
     static func isLate(_ date: Date, settings: EveningWatchSettings, calendar: Calendar = .current) -> Bool {

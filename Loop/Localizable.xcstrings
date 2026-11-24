@@ -46748,14 +46748,98 @@
         }
       }
     },
-    "Evening Watch" : {
+    "High watch suggests around the clock" : {
+      "comment" : "High watch card outside the evening window when it watches around the clock",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Høyvakten foreslår hele døgnet"
+          }
+        }
+      }
+    },
+    "Around the Clock" : {
+      "comment" : "High watch: watch all day and night, not only in the evening",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hele døgnet"
+          }
+        }
+      }
+    },
+    "Gives Itself From" : {
+      "comment" : "High watch around the clock: start of the hours when automatic mode gives the dose",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gir selv fra"
+          }
+        }
+      }
+    },
+    "By day and at night it only suggests, also when Automatic is on. Food and doses come close together by day: over six weeks in autumn 2026, one in seven suggestions by day or at night was followed by glucose under 4.5 within three hours, against one in fifty in the evening. Look at what has been eaten and given before you give it." : {
+      "comment" : "High watch settings footer when it watches around the clock",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "På dagtid og om natten foreslår den bare, også når Automatisk er på. På dagtid kommer mat og doser tett: over seks uker høsten 2026 ble ett av sju forslag på dagtid eller om natten fulgt av BS under 4,5 innen tre timer, mot ett av femti om kvelden. Se hva som er spist og gitt før du gir."
+          }
+        }
+      }
+    },
+    "At Most per 6 Hours" : {
+      "comment" : "High watch around the clock: units in any six hours",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maks per 6 timer"
+          }
+        }
+      }
+    },
+    "Doses per 6 Hours" : {
+      "comment" : "High watch around the clock: doses in any six hours",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doser per 6 timer"
+          }
+        }
+      }
+    },
+    "Gives the correction itself in the hours below, and suggests it the rest of the day. Every dose shows here, in LoopFollow and in Nightscout." : {
+      "comment" : "High watch settings: explanation of automatic mode around the clock",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gir korreksjonen selv i timene under, og foreslår den resten av døgnet. Hver dose vises her, i LoopFollow og i Nightscout."
+          }
+        }
+      }
+    },
+    "High Watch" : {
       "comment" : "Name of the evening watch",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kveldsvakt"
+            "value" : "Høyvakt"
           }
         }
       }
@@ -46784,14 +46868,14 @@
         }
       }
     },
-    "Nothing was given: the evening watch gave %1$@ U at %2$@, and the sender had not seen it." : {
+    "Nothing was given: the high watch gave %1$@ U at %2$@, and the sender had not seen it." : {
       "comment" : "Why a remote bolus was stopped, when the evening watch gave a dose (1: units, 2: time)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ingenting ble gitt: kveldsvakten ga %1$@ E kl. %2$@, og det hadde ikke avsenderen sett."
+            "value" : "Ingenting ble gitt: høyvakten ga %1$@ E kl. %2$@, og det hadde ikke avsenderen sett."
           }
         }
       }
@@ -46820,14 +46904,14 @@
         }
       }
     },
-    "The evening watch gave %1$@ U %2$@" : {
+    "The high watch gave %1$@ U %2$@" : {
       "comment" : "Bolus screen warning title after a dose by the evening watch (1: units, 2: how long ago)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kveldsvakten ga %1$@ E %2$@"
+            "value" : "Høyvakten ga %1$@ E %2$@"
           }
         }
       }
@@ -46940,50 +47024,50 @@
         }
       }
     },
-    "🌙 Evening watch: %@ U?" : {
+    "📈 High watch: %@ U?" : {
       "comment" : "Evening watch suggestion title (1: units)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🌙 Kveldsvakt: %@ E?"
+            "value" : "📈 Høyvakt: %@ E?"
           }
         }
       }
     },
-    "🌙 Evening watch gave %@ U" : {
+    "📈 High watch gave %@ U" : {
       "comment" : "Evening watch automatic dose title (1: units)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🌙 Kveldsvakten ga %@ E"
+            "value" : "📈 Høyvakten ga %@ E"
           }
         }
       }
     },
-    "🌙 Evening watch could not give %@ U" : {
+    "📈 High watch could not give %@ U" : {
       "comment" : "Evening watch automatic dose that the pump did not take (1: units)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🌙 Kveldsvakten fikk ikke gitt %@ E"
+            "value" : "📈 Høyvakten fikk ikke gitt %@ E"
           }
         }
       }
     },
-    "🌙 Evening watch stopped dosing" : {
+    "📈 High watch stopped dosing" : {
       "comment" : "Notification title when the evening watch turns automatic mode off after a low",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🌙 Kveldsvakten sluttet å gi selv"
+            "value" : "📈 Høyvakten sluttet å gi selv"
           }
         }
       }
@@ -47108,14 +47192,14 @@
         }
       }
     },
-    "Was under %@ in the last 90 min" : {
+    "Was under %@ in the last hour" : {
       "comment" : "Evening watch log (1: glucose)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Var under %@ siste 90 min"
+            "value" : "Var under %@ siste time"
           }
         }
       }
@@ -47156,14 +47240,14 @@
         }
       }
     },
-    "Enough for tonight" : {
+    "Has given what it may for now" : {
       "comment" : "Evening watch log",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nok for i kveld"
+            "value" : "Har gitt det den får lov til nå"
           }
         }
       }
@@ -47223,7 +47307,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lukket loop av eller pumpa opptatt"
+            "value" : "Lukket loop av eller pumpen opptatt"
           }
         }
       }
@@ -47372,26 +47456,26 @@
         }
       }
     },
-    "Evening watch doses until %@" : {
+    "High watch doses until %@" : {
       "comment" : "Evening watch card in automatic mode (1: time)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kveldsvakten gir selv til %@"
+            "value" : "Høyvakten gir selv til %@"
           }
         }
       }
     },
-    "Evening watch suggests until %@" : {
+    "High watch suggests until %@" : {
       "comment" : "Evening watch card in suggestion mode (1: time)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kveldsvakten foreslår til %@"
+            "value" : "Høyvakten foreslår til %@"
           }
         }
       }
@@ -47600,14 +47684,14 @@
         }
       }
     },
-    "Under 10 mmol/L half the dose, under 12 70 %, never over 0.8 U or the maximum bolus. After each dose given it learns from the next three hours: smaller after a low, larger when glucose was still over 12 two hours on." : {
+    "Under 10 mmol/L 65 % of the dose, under 12 80 %, never over 0.8 U or the maximum bolus. After each dose given it learns from the next three hours: smaller after a low, larger when glucose was still over 12 two hours on." : {
       "comment" : "Evening watch settings footer under the dose",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Under 10 mmol/L halv dose, under 12 70 %, aldri over 0,8 E eller maks bolus. Etter hver dose som er gitt, lærer den av de neste tre timene: mindre etter en føling, større når BS fortsatt var over 12 to timer etter."
+            "value" : "Under 10 mmol/L 65 % av dosen, under 12 80 %, aldri over 0,8 E eller maks bolus. Etter hver dose som er gitt, lærer den av de neste tre timene: mindre etter en føling, større når BS fortsatt var over 12 to timer etter."
           }
         }
       }
@@ -47672,26 +47756,26 @@
         }
       }
     },
-    "In the evening window the evening watch then gives up to %1$@ U a night by itself, %2$@ at a time, without asking. Keep the low alerts on." : {
+    "From %3$@ to %4$@ the high watch then gives up to %1$@ by itself, %2$@ at a time, without asking. Outside those hours it never gives anything itself. Keep the low alerts on." : {
       "comment" : "Evening watch: what automatic mode means (1: units per evening)(2: largest dose)",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "I kveldsvinduet gir kveldsvakten da opptil %1$@ E per natt selv, høyst %2$@ om gangen, uten å spørre. Ha lav-varslene på."
+            "value" : "Fra kl. %3$@ til %4$@ gir høyvakten da opptil %1$@ selv, høyst %2$@ om gangen, uten å spørre. Utenom de timene gir den aldri noe selv. Ha lav-varslene på."
           }
         }
       }
     },
-    "In the evening, when glucose keeps rising or stays high and nothing has been given or eaten for a while, the evening watch suggests a correction or gives it. It goes by glucose itself, not by Loop's forecast." : {
+    "When glucose keeps rising or stays high and nothing has been given or eaten for a while, the high watch suggests a correction or gives it. It goes by glucose itself, not by Loop's forecast." : {
       "comment" : "Evening watch settings: explanation when off",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Når BS fortsetter å stige eller blir liggende høyt om kvelden, og ingenting er gitt eller spist på en stund, foreslår eller gir kveldsvakten en korreksjon. Den går etter selve BS, ikke Loops prognose."
+            "value" : "Når BS fortsetter å stige eller blir liggende høyt, og ingenting er gitt eller spist på en stund, foreslår eller gir høyvakten en korreksjon. Den går etter selve BS, ikke Loops prognose."
           }
         }
       }
@@ -47768,14 +47852,14 @@
         }
       }
     },
-    "A correction when the evening runs high" : {
+    "A correction when glucose runs high" : {
       "comment" : "Descriptive text for the evening watch settings row",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Korreksjon når kvelden blir høy"
+            "value" : "Korreksjon når BS blir liggende høyt"
           }
         }
       }

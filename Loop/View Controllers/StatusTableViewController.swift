@@ -1617,7 +1617,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 .margins(.vertical, 4)
             } else {
                 var content = defaultContentConfiguration()
-                content.text = card.open.map { EveningWatchText.suggestionTitle($0) + " " + EveningWatchText.reason($0) } ?? "🌙 " + EveningWatchText.name
+                content.text = card.open.map { EveningWatchText.suggestionTitle($0) + " " + EveningWatchText.reason($0) } ?? EveningWatchText.symbol + " " + EveningWatchText.name
                 contentConfiguration = content
             }
         }
@@ -1632,7 +1632,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         presentBolusEntryView(bolusSuggestion: BolusSuggestion(
             id: action.id,
             units: action.units,
-            reason: "🌙 " + EveningWatchText.reason(action)
+            reason: EveningWatchText.symbol + " " + EveningWatchText.reason(action)
         ))
     }
 
