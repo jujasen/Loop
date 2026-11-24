@@ -339,6 +339,7 @@ enum LoopAppSettings {
                 }
             ] as [String: Any],
             "eveningWatch": eveningWatch(defaults),
+            "lowWatch": ["isOn": defaults.lowWatchSettings.isOn, "soundAtNight": defaults.lowWatchSettings.soundAtNight],
             // This Loop fetches remote commands from Nightscout ("Remote Command" treatments) on
             // every run and writes their outcome back, so LoopFollow may send them that way.
             "remoteCommandInbox": 1

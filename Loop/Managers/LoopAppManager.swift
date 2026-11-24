@@ -589,7 +589,7 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
              LoopNotificationCategory.remoteTherapySettingsFailure.rawValue,
              LoopNotificationCategory.missedMeal.rawValue:
             completionHandler([.badge, .sound, .list, .banner])
-        case let identifier where identifier.hasPrefix(EveningWatchManager.notificationPrefix):
+        case let identifier where identifier.hasPrefix(EveningWatchManager.notificationPrefix) || identifier.hasPrefix(LowWatchManager.notificationPrefix):
             completionHandler([.badge, .sound, .list, .banner])
         default:
             // For all others, banners are not to be displayed while in the foreground
@@ -621,6 +621,14 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
                let managerIdentifier = userInfo[LoopNotificationUserInfoKey.managerIDForAlert.rawValue] as? String {
                 alertManager?.acknowledgeAlert(identifier: Alert.Identifier(managerIdentifier: managerIdentifier, alertIdentifier: alertIdentifier))
             }
+        case LowWatchManager.declineAction:
+            if let id = response.notification.request.content.userInfo[LowWatchManager.actionIDUserInfoKey] as? String {
+                Task { @MainActor in LowWatchManager.shared.decline(id) }
+            }
+        case LowWatchManager.enterAction:
+            if let id = response.notification.request.content.userInfo[LowWatchManager.actionIDUserInfoKey] as? String {
+                LowWatchManager.requestEntry(id)
+            }
         case EveningWatchManager.declineAction:
             if let id = response.notification.request.content.userInfo[EveningWatchManager.actionIDUserInfoKey] as? String {
                 Task { @MainActor in EveningWatchManager.shared.decline(id) }
@@ -633,6 +641,11 @@ extension LoopAppManager: UNUserNotificationCenterDelegate {
             // An evening watch suggestion opens the bolus screen with it filled in.
             if let id = response.notification.request.content.userInfo[EveningWatchManager.actionIDUserInfoKey] as? String {
                 EveningWatchManager.requestReview(id)
+                break
+            }
+            // A low watch suggestion opens the carb screen with its grams.
+            if let id = response.notification.request.content.userInfo[LowWatchManager.actionIDUserInfoKey] as? String {
+                LowWatchManager.requestEntry(id)
                 break
             }
 

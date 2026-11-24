@@ -54,6 +54,7 @@ public struct SettingsView: View {
             case pumpDeliveryAlert
             case aiDoseAdvice
             case eveningWatch
+            case lowWatch
         }
     }
     
@@ -133,6 +134,8 @@ public struct SettingsView: View {
                     AIDoseAdviceSettingsView()
                 case .eveningWatch:
                     EveningWatchSettingsView()
+                case .lowWatch:
+                    LowWatchSettingsView()
                 }
             }
         }
@@ -391,6 +394,11 @@ extension SettingsView {
                         imageView: Image(systemName: "chart.line.uptrend.xyaxis").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(.insulinTintColor),
                         label: EveningWatchText.name,
                         descriptiveText: String(localized: "A correction when glucose runs high", comment: "Descriptive text for the high watch settings row"))
+            LargeButton(action: { sheet = .lowWatch },
+                        includeArrow: true,
+                        imageView: Image(systemName: "chart.line.downtrend.xyaxis").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(carbTintColor),
+                        label: LowWatchText.name,
+                        descriptiveText: String(localized: "Fast carbs before a low", comment: "Descriptive text for the low watch settings row"))
             LargeButton(action: { sheet = .pumpDeliveryAlert },
                         includeArrow: true,
                         imageView: Image(systemName: "drop.triangle").resizable().scaledToFit().frame(width: 30, height: 30).foregroundColor(.orange),

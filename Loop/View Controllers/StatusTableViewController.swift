@@ -56,6 +56,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         tableView.register(MuteAlertsWarningCell.self, forCellReuseIdentifier: MuteAlertsWarningCell.className)
         tableView.register(BolusRecoveryBannerCell.self, forCellReuseIdentifier: BolusRecoveryBannerCell.className)
         tableView.register(EveningWatchCell.self, forCellReuseIdentifier: EveningWatchCell.className)
+        tableView.register(LowWatchCell.self, forCellReuseIdentifier: LowWatchCell.className)
         tableView.register(ChartDetailsHeaderCell.self, forCellReuseIdentifier: ChartDetailsHeaderCell.className)
         tableView.register(ChartDetailsNavigationCell.self, forCellReuseIdentifier: ChartDetailsNavigationCell.className)
 
@@ -175,6 +176,31 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
                     self.updateScrollEnabled()
                 }
+            }
+            .store(in: &cancellables)
+        // The low watch's suggestion, in its own section above the evening watch.
+        lowWatchSuggestion = LowWatchManager.shared.open
+        LowWatchManager.shared.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    let open = LowWatchManager.shared.open
+                    guard open != self.lowWatchSuggestion else { return }
+                    self.lowWatchSuggestion = open
+                    guard self.isViewLoaded else { return }
+                    self.tableView.reloadSections(IndexSet(integer: Section.lowWatch.rawValue), with: .automatic)
+                    self.tableView.reloadSections(IndexSet(integer: Section.charts.rawValue), with: .none)
+                    self.updateScrollEnabled()
+                }
+            }
+            .store(in: &cancellables)
+        LowWatchManager.shared.$pendingEntryID
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] id in
+                LowWatchManager.shared.pendingEntryID = nil
+                self?.enterLowWatchCarbs(id)
             }
             .store(in: &cancellables)
         EveningWatchManager.shared.$pendingReviewID
@@ -905,6 +931,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case alertWarning
         case hud
         case status
+        /// The low watch: fast carbs to enter or decline.
+        case lowWatch
         /// The evening watch: a suggestion to review or decline, or what it has done tonight.
         case eveningWatch
         case charts
@@ -973,6 +1001,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
     private static let bannerRowEstimatedHeight: CGFloat = 74
     private static let eveningWatchSuggestionRowEstimatedHeight: CGFloat = 170
     private static let eveningWatchRowEstimatedHeight: CGFloat = 52
+    private static let lowWatchRowEstimatedHeight: CGFloat = 190
 
     /// Rows whose content is text grow with the text size chosen in iOS Settings, so a
     /// larger setting makes the row taller instead of clipping what is in it. The main
@@ -1142,6 +1171,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
 
     /// While there is something to show. A snapshot for the same reason as `bolusRecoveryAttempt`.
     private var eveningWatchCard: EveningWatchCardContent?
+
+    /// The low watch's open suggestion, a snapshot for the same reason.
+    private var lowWatchSuggestion: LowWatchAction?
 
     private var shouldShowBannerWarning: Bool {
         alertPermissionsChecker.showWarning || alertMuter.configuration.shouldMute
@@ -1354,6 +1386,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
             return bolusRecoveryAttempt != nil ? 1 : 0
         case .eveningWatch:
             return eveningWatchCard != nil ? 1 : 0
+        case .lowWatch:
+            return lowWatchSuggestion != nil ? 1 : 0
         case .alertWarning:
             return shouldShowBannerWarning ? 1 : 0
         case .hud:
@@ -1623,6 +1657,37 @@ final class StatusTableViewController: LoopChartsTableViewController {
         }
     }
 
+    /// The low watch: an open suggestion of fast carbs with its buttons.
+    private class LowWatchCell: UITableViewCell {
+        func configure(action: LowWatchAction, onEnter: @escaping (LowWatchAction) -> Void, onDecline: @escaping (LowWatchAction) -> Void) {
+            selectionStyle = .none
+            backgroundColor = .clear
+            if #available(iOS 16.0, *) {
+                contentConfiguration = UIHostingConfiguration {
+                    LowWatchCard(action: action, onEnter: onEnter, onDecline: onDecline)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal)
+                        .background(CardBackground())
+                }
+                .margins(.horizontal, 10)
+                .margins(.vertical, 4)
+            } else {
+                var content = defaultContentConfiguration()
+                content.text = LowWatchText.title(action) + " " + LowWatchText.reason(action)
+                contentConfiguration = content
+            }
+        }
+    }
+
+    /// The carb screen with the low watch's grams, eaten now, to change or save.
+    private func enterLowWatchCarbs(_ actionID: String) {
+        guard let action = LowWatchManager.shared.action(withID: actionID), action.state == .open else { return }
+        if presentedViewController != nil {
+            dismiss(animated: false)
+        }
+        presentCarbEntryScreen(.forLowWatch(action))
+    }
+
     /// The bolus screen with the evening watch's dose in the field, to change or deliver.
     private func reviewEveningWatchSuggestion(_ actionID: String) {
         guard let action = EveningWatchManager.shared.action(withID: actionID), action.state == .open else { return }
@@ -1679,6 +1744,16 @@ final class StatusTableViewController: LoopChartsTableViewController {
             let cell = tableView.dequeueReusableCell(withIdentifier: BolusRecoveryBannerCell.className, for: indexPath) as! BolusRecoveryBannerCell
             cell.attempt = bolusRecoveryAttempt
             cell.setNeedsUpdateConfiguration()
+            return cell
+        case .lowWatch:
+            let cell = tableView.dequeueReusableCell(withIdentifier: LowWatchCell.className, for: indexPath) as! LowWatchCell
+            if let action = lowWatchSuggestion {
+                cell.configure(
+                    action: action,
+                    onEnter: { [weak self] action in self?.enterLowWatchCarbs(action.id) },
+                    onDecline: { action in LowWatchManager.shared.decline(action.id) }
+                )
+            }
             return cell
         case .eveningWatch:
             let cell = tableView.dequeueReusableCell(withIdentifier: EveningWatchCell.className, for: indexPath) as! EveningWatchCell
@@ -1933,7 +2008,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     cell.setSubtitleLabel(label: nil)
                 }
             }
-        case .hud, .status, .alertWarning, .bolusRecovery, .eveningWatch:
+        case .hud, .status, .alertWarning, .bolusRecovery, .eveningWatch, .lowWatch:
             break
         }
     }
@@ -1976,6 +2051,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 if let card = eveningWatchCard {
                     remaining -= UIFontMetrics(forTextStyle: .body).scaledValue(for: card.isSuggestion ? Self.eveningWatchSuggestionRowEstimatedHeight : Self.eveningWatchRowEstimatedHeight)
                 }
+                if lowWatchSuggestion != nil {
+                    remaining -= UIFontMetrics(forTextStyle: .body).scaledValue(for: Self.lowWatchRowEstimatedHeight)
+                }
                 for row in visibleChartRows where row != .glucose {
                     remaining -= fixedChartRowHeight(row)
                 }
@@ -1985,7 +2063,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             case .iob, .dose, .cob:
                 return max(106, 0.21 * availableSize)
             }
-        case .hud, .status, .alertWarning, .bolusRecovery, .eveningWatch:
+        case .hud, .status, .alertWarning, .bolusRecovery, .eveningWatch, .lowWatch:
             return UITableView.automaticDimension
         }
     }
@@ -1995,7 +2073,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case .bolusRecovery:
             tableView.deselectRow(at: indexPath, animated: true)
             bolusRecoveryBannerTapped()
-        case .eveningWatch:
+        case .eveningWatch, .lowWatch:
             tableView.deselectRow(at: indexPath, animated: true)
         case .alertWarning:
             if alertPermissionsChecker.showWarning {

@@ -46832,6 +46832,174 @@
         }
       }
     },
+    "Enter Carbs" : {
+      "comment" : "Low watch notification action opening the carb screen with the suggested grams",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg inn karbo"
+          }
+        }
+      }
+    },
+    "Low Watch" : {
+      "comment" : "Name of the low watch, which suggests fast carbs when a low is coming",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lavvakt"
+          }
+        }
+      }
+    },
+    "🍭 Low watch: %@ g fast carbs?" : {
+      "comment" : "Low watch suggestion title (1: grams)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "🍭 Lavvakt: %@ g rask karbo?"
+          }
+        }
+      }
+    },
+    "Why: %1$@ and Loop forecasts %2$@ within 20 minutes." : {
+      "comment" : "Low watch: why, Loop's forecast (1: glucose)(2: lowest forecast)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvorfor: %1$@, og Loop spår %2$@ innen 20 min."
+          }
+        }
+      }
+    },
+    "Why: %1$@ and down %2$@ over the last quarter of an hour." : {
+      "comment" : "Low watch: why, glucose low and falling (1: glucose)(2: fall over 15 minutes)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hvorfor: %1$@, og falt %2$@ siste kvarter."
+          }
+        }
+      }
+    },
+    "Enter %@ g" : {
+      "comment" : "Low watch button opening the carb screen with the grams (1: grams)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg inn %@ g"
+          }
+        }
+      }
+    },
+    "%@ g entered" : {
+      "comment" : "State of a low watch suggestion answered with carbs (1: grams)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ g lagt inn"
+          }
+        }
+      }
+    },
+    "Give the carbs first, then enter them. Stays until carbs are entered, here or in LoopFollow, or glucose comes back up." : {
+      "comment" : "Low watch card: what to do and how long it stays",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gi karboen først, legg den inn etterpå. Står til karbo er lagt inn, her eller i LoopFollow, eller til BS kommer opp igjen."
+          }
+        }
+      }
+    },
+    "Suggest Fast Carbs" : {
+      "comment" : "Low watch: turn it on",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foreslå rask karbo"
+          }
+        }
+      }
+    },
+    "Sound at Night" : {
+      "comment" : "Low watch: the notification on this phone makes a sound between 21 and 07 too",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lyd om natten"
+          }
+        }
+      }
+    },
+    "When Loop forecasts glucose under 3.9 within 20 minutes, or it is under 4.4 and falling, it suggests 2–6 g of fast carbs, around the clock, here and in LoopFollow. It never enters anything itself. By day the notification here makes a sound; from 21 to 07 only with Sound at Night." : {
+      "comment" : "Low watch settings: what it does",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Når Loop spår BS under 3,9 innen 20 min, eller BS er under 4,4 og faller, foreslår den 2–6 g rask karbo, hele døgnet, her og i LoopFollow. Den legger aldri inn noe selv. På dagtid har varselet her lyd; fra kl. 21 til 07 bare med «Lyd om natten»."
+          }
+        }
+      }
+    },
+    "Nothing within 20 minutes of carbs being entered, or of the last suggestion. The grams lift Loop's lowest forecast within an hour to 5.5, at 0.7 mmol/L a gram. Over six weeks in autumn 2026 it would have warned before 23 of 26 lows, a median of 15 minutes ahead, 2.5 times a day; about once a day no low followed." : {
+      "comment" : "Low watch settings: the fixed rules and how they were chosen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingenting innen 20 min etter at karbo er lagt inn, eller etter forrige forslag. Grammene løfter Loops laveste prognose den neste timen til 5,5, med 0,7 mmol/L per gram. Over seks uker høsten 2026 ville den ha varslet før 23 av 26 følinger, typisk 15 min før, 2,5 ganger om dagen; omtrent én gang om dagen kom det ingen føling etterpå."
+          }
+        }
+      }
+    },
+    "Last Seven Days" : {
+      "comment" : "Low watch settings: header above its suggestions",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste sju dager"
+          }
+        }
+      }
+    },
+    "Fast carbs before a low" : {
+      "comment" : "Descriptive text for the low watch settings row",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rask karbo før det blir lavt"
+          }
+        }
+      }
+    },
     "High Watch" : {
       "comment" : "Name of the evening watch",
       "extractionState" : "manual",

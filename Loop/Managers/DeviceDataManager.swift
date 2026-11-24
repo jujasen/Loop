@@ -486,6 +486,7 @@ final class DeviceDataManager {
                     try await self.enactBolus(units: units, activationType: .manualNoRecommendation, source: .eveningWatch, knownDosesUntil: nil)
                 }
             ))
+            LowWatchManager.shared.start(input: { [weak self] now in await self?.lowWatchInput(now: now) })
         }
 
         watchManager = WatchDataManager(deviceManager: self, healthStore: healthStore)
@@ -680,6 +681,41 @@ final class DeviceDataManager {
                 ))
             }
         }
+    }
+
+    /// What the low watch looks at: the last hour of glucose, the carbs entered in the last two
+    /// hours, and Loop's insulin on board and lowest forecast within 20 minutes and an hour.
+    func lowWatchInput(now: Date) async -> LowWatch.Input? {
+        let glucose: [StoredGlucoseSample] = await withCheckedContinuation { continuation in
+            glucoseStore.getGlucoseSamples(start: now.addingTimeInterval(-3600), end: nil) { result in
+                continuation.resume(returning: (try? result.get()) ?? [])
+            }
+        }
+        let carbs = (try? await carbStore.getCarbEntries(start: now.addingTimeInterval(-3 * 3600), end: now.addingTimeInterval(2 * 3600))) ?? []
+        let loop: (iob: Double?, lowest20: Double?, lowest60: Double?) = await withCheckedContinuation { continuation in
+            loopManager.getLoopState { _, state in
+                let forecast = (state.predictedGlucoseIncludingPendingInsulin ?? state.predictedGlucose ?? [])
+                    .filter { $0.startDate > now }
+                func lowest(within minutes: Double) -> Double? {
+                    forecast.filter { $0.startDate <= now.addingTimeInterval(minutes * 60) }
+                        .map { $0.quantity.doubleValue(for: .millimolesPerLiter) }
+                        .min()
+                }
+                continuation.resume(returning: (state.insulinOnBoard?.value, lowest(within: 20), lowest(within: 60)))
+            }
+        }
+        return LowWatch.Input(
+            glucose: glucose
+                .filter { !$0.wasUserEntered && !$0.isDisplayOnly }
+                .sorted { $0.startDate < $1.startDate }
+                .map { EveningWatch.Reading(date: $0.startDate, mmol: $0.quantity.doubleValue(for: .millimolesPerLiter)) },
+            carbs: carbs
+                .map { LowWatch.Carbs(date: $0.startDate, grams: $0.quantity.doubleValue(for: .gram()), entered: $0.userCreatedDate ?? $0.startDate) }
+                .sorted { $0.entered < $1.entered },
+            iob: loop.iob,
+            lowest20: loop.lowest20,
+            lowest60: loop.lowest60
+        )
     }
 
     /// What the evening watch looks at: glucose, boluses and carbs from the stores, and from the

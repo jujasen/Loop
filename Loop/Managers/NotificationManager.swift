@@ -50,6 +50,7 @@ extension NotificationManager {
         ))
 
         categories.append(EveningWatchManager.notificationCategoryDefinition)
+        categories.append(LowWatchManager.notificationCategoryDefinition)
 
         return Set(categories)
     }
