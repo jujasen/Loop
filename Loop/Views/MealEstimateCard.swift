@@ -3,7 +3,7 @@
 //  Loop
 //
 //  The "ask about carbs" card on the carb entry screen: a question, a description and/or photos
-//  of the meal in, carbs, absorption time and an emoji filled into the entry above. The breakdown
+//  of the meal in, carbs, absorption time and an emoji filled into the entry below. The breakdown
 //  and the guesses behind the numbers can be opened to check them, and a follow-up (typed, or one
 //  of the quick ones) re-evaluates the whole meal.
 //
@@ -21,8 +21,6 @@ struct MealEstimateCard: View {
     @Environment(\.carbTintColor) private var carbTintColor
 
     @ObservedObject var viewModel: CarbEntryViewModel
-    /// Set from outside (the hint by the amount field) to put the cursor in the field.
-    @Binding var focusRequest: Bool
     /// Opens the favorite food editor with the answer filled in; nil where favorites can't be saved.
     var onSaveFavorite: (() -> Void)? = nil
 
@@ -70,11 +68,6 @@ struct MealEstimateCard: View {
                     )
                 }
                 else {
-                    Text("Type what he is eating, ask a question or take a photo. The answer fills in the carbs above.", comment: "Explanation at the top of the empty meal estimate card on the carb entry screen")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
                     photoStrip
 
                     promptField(
@@ -103,17 +96,17 @@ struct MealEstimateCard: View {
             .animation(.easeInOut(duration: 0.2), value: viewModel.mealEstimate)
             .animation(.easeInOut(duration: 0.2), value: viewModel.mealPhotos)
 
-            if viewModel.mealEstimate != nil {
-                Text("AI estimate — check the numbers before you continue.", comment: "Reminder under the meal estimate that the numbers must be reviewed")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 26)
+            Group {
+                if viewModel.mealEstimate != nil {
+                    Text("AI estimate — check the numbers before you continue.", comment: "Reminder under the meal estimate that the numbers must be reviewed")
+                } else {
+                    Text("Type what he is eating, ask a question or take a photo. The answer fills in the carbs below.", comment: "Explanation under the empty meal estimate card, which is above the carb entry")
+                }
             }
-        }
-        .onChange(of: focusRequest) { requested in
-            guard requested else { return }
-            isInputFocused = true
-            focusRequest = false
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 26)
         }
         .fullScreenCover(item: $photoSource) { source in
             switch source {

@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Type what he is eating, ask a question or take a photo. The answer fills in the carbs below." : {
+      "comment" : "Explanation under the empty meal estimate card, which is above the carb entry",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv hva han spiser, still et spørsmål eller ta bilde. Svaret fylles inn i feltene under."
+          }
+        }
+      }
+    },
     "Saved as favorite food" : {
       "comment" : "Shown on a meal estimate once it has been saved as a favorite food",
       "extractionState" : "manual",
@@ -97,18 +109,6 @@
         }
       }
     },
-    "Type what he is eating, ask a question or take a photo. The answer fills in the carbs above." : {
-      "comment" : "Explanation at the top of the empty meal estimate card on the carb entry screen",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Skriv hva han spiser, still et spørsmål eller ta bilde. Svaret fylles inn i karbofeltet over."
-          }
-        }
-      }
-    },
     "Ask more or correct something…" : {
       "comment" : "Placeholder for adding more information to a meal estimate",
       "extractionState" : "manual",
@@ -177,18 +177,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ per 100 g"
-          }
-        }
-      }
-    },
-    "Don't know the carbs? Ask here" : {
-      "comment" : "Link under the carb amount field that jumps to the AI meal estimate",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vet du ikke karboen? Spør her"
           }
         }
       }

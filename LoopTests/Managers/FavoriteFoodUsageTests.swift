@@ -54,7 +54,7 @@ final class FavoriteFoodUsageTests: XCTestCase {
         XCTAssertNil(aged["a"])
     }
 
-    func testTheTenEatenMostComeFirst() {
+    func testTheSixEatenMostComeFirst() {
         let favorites = (0..<14).map { food("\($0)", "Food \($0)") }
         var log: FavoriteFoodUsage.Log = [:]
         log["12"] = [now, now.addingTimeInterval(-.days(1)), now.addingTimeInterval(-.days(2))]
@@ -63,9 +63,9 @@ final class FavoriteFoodUsageTests: XCTestCase {
         log["13"] = [now.addingTimeInterval(-.days(100))] // too old to count
 
         let shown = FavoriteFoodUsage.mostUsed(favorites, log: log, now: now)
-        XCTAssertEqual(shown.count, 10)
+        XCTAssertEqual(shown.count, 6)
         // Most servings, then the latest, then the stored order.
-        XCTAssertEqual(shown.map(\.id), ["12", "9", "5", "0", "1", "2", "3", "4", "6", "7"])
+        XCTAssertEqual(shown.map(\.id), ["12", "9", "5", "0", "1", "2"])
     }
 
     func testFewerThanTenFavoritesAreAllShown() {

@@ -17,7 +17,7 @@ import LoopKit
 /// ("Melk (resten)") never counts as another serving.
 enum FavoriteFoodUsage {
     /// The carb entry screen shows this many foods; the rest are a tap away.
-    static let quickPickCount = 10
+    static let quickPickCount = 6
     /// Servings older than this no longer count, so what is eaten now rises to the top.
     static let window: TimeInterval = .days(90)
     /// Two entries this close are one serving (logged twice, or seen twice on the way in).

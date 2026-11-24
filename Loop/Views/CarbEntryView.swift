@@ -24,10 +24,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     @State private var showAddFavoriteFood = false
     @State private var showFavoriteFoodPicker = false
     @State private var showFatProteinEditor = false
-    @State private var focusMealPrompt = false
     @State private var isKeyboardShown = false
-
-    private static let mealEstimateCardID = "mealEstimateCard"
     
     private let isNewEntry: Bool
 
@@ -71,48 +68,46 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
             Color(.systemGroupedBackground)
                 .edgesIgnoringSafeArea(.all)
             
-            ScrollViewReader { scrollProxy in
-                ScrollView {
-                    warningsCard
+            ScrollView {
+                warningsCard
 
-                    mainCard(scrollProxy: scrollProxy)
-                        .padding(.top, 8)
-
-                    if viewModel.mealEstimator != nil {
-                        MealEstimateCard(
-                            viewModel: viewModel,
-                            focusRequest: $focusMealPrompt,
-                            onSaveFavorite: canSaveFavoriteFoods ? saveAsFavoriteFood : nil
-                        )
-                        .padding(.top, 16)
-                        .id(Self.mealEstimateCardID)
-                    }
-
-                    // Favorites before the way on, so a chosen one is followed by "Continue"
-                    // rather than a scroll back up.
-                    if canSaveFavoriteFoods {
-                        favoriteFoodsCard
-                            .padding(.top, 16)
-                    }
-
-                    if isKeyboardShown {
-                        // Out of the keyboard's way; the bar below comes back when it closes.
-                        continueActionButton
-                    }
-                
-                    let isBolusViewActive = Binding(get: { viewModel.bolusViewModel != nil }, set: { _, _ in viewModel.bolusViewModel = nil })
-                    NavigationLink(destination: bolusView, isActive: isBolusViewActive) {
-                        EmptyView()
-                    }
-                    .frame(width: 0, height: 0)
-                    .opacity(0)
-                    .accessibility(hidden: true)
+                // Asking comes first: the answer fills in the entry right under it, which is
+                // read top to bottom like a form: find the carbs, check them, continue.
+                if viewModel.mealEstimator != nil {
+                    MealEstimateCard(
+                        viewModel: viewModel,
+                        onSaveFavorite: canSaveFavoriteFoods ? saveAsFavoriteFood : nil
+                    )
+                    .padding(.top, 8)
                 }
-                .safeAreaInset(edge: .bottom) {
-                    if !isKeyboardShown {
-                        continueActionButton
-                            .background(.bar)
-                    }
+
+                mainCard
+                    .padding(.top, viewModel.mealEstimator != nil ? 16 : 8)
+
+                // Favorites before the way on, so a chosen one is followed by "Continue"
+                // rather than a scroll back up.
+                if canSaveFavoriteFoods {
+                    favoriteFoodsCard
+                        .padding(.top, 16)
+                }
+
+                if isKeyboardShown {
+                    // Out of the keyboard's way; the bar below comes back when it closes.
+                    continueActionButton
+                }
+                
+                let isBolusViewActive = Binding(get: { viewModel.bolusViewModel != nil }, set: { _, _ in viewModel.bolusViewModel = nil })
+                NavigationLink(destination: bolusView, isActive: isBolusViewActive) {
+                    EmptyView()
+                }
+                .frame(width: 0, height: 0)
+                .opacity(0)
+                .accessibility(hidden: true)
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !isKeyboardShown {
+                    continueActionButton
+                        .background(.bar)
                 }
             }
         }
@@ -153,7 +148,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         }
     }
     
-    private func mainCard(scrollProxy: ScrollViewProxy) -> some View {
+    private var mainCard: some View {
         VStack(spacing: 10) {
             let amountConsumedFocused: Binding<Bool> = Binding(get: { expandedRow == .amountConsumed }, set: { expandedRow = $0 ? .amountConsumed : nil })
             let timeFocused: Binding<Bool> = Binding(get: { expandedRow == .time }, set: { expandedRow = $0 ? .time : nil })
@@ -161,10 +156,6 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
             let absorptionTimeFocused: Binding<Bool> = Binding(get: { expandedRow == .absorptionTime }, set: { expandedRow = $0 ? .absorptionTime : nil })
             
             CarbQuantityRow(quantity: $viewModel.carbsQuantity, isFocused: amountConsumedFocused, title: NSLocalizedString("Amount Consumed", comment: "Label for carb quantity entry row on carb entry screen"), preferredCarbUnit: viewModel.preferredCarbUnit)
-
-            if showsAskAboutCarbsHint {
-                askAboutCarbsHint(scrollProxy: scrollProxy)
-            }
 
             CardSectionDivider()
             
@@ -197,43 +188,6 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     
     private var canSaveFavoriteFoods: Bool {
         isNewEntry && FeatureFlags.allowExperimentalFeatures
-    }
-
-    /// Shown where the number is missing, for whoever doesn't know it: the card that can answer
-    /// is further down, out of the way of those who do.
-    private var showsAskAboutCarbsHint: Bool {
-        viewModel.mealEstimator != nil
-            && viewModel.mealEstimate == nil
-            && !viewModel.isEstimatingMeal
-            && (viewModel.carbsQuantity ?? 0) == 0
-            && viewModel.selectedFavoriteFood == nil
-    }
-
-    private func askAboutCarbsHint(scrollProxy: ScrollViewProxy) -> some View {
-        Button(action: {
-            expandedRow = nil
-            withAnimation {
-                scrollProxy.scrollTo(Self.mealEstimateCardID, anchor: .top)
-            }
-            focusMealPrompt = true
-        }) {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                Text("Don't know the carbs? Ask here", comment: "Link under the carb amount field that jumps to the AI meal estimate")
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.semibold))
-            }
-            .font(.subheadline.weight(.medium))
-            .foregroundColor(carbTintColor)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(carbTintColor.opacity(0.12))
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
