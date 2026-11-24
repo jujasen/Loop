@@ -74,7 +74,8 @@ struct MealEstimateCard: View {
                     photoStrip
 
                     promptField(
-                        String(localized: "How many carbs in …?", comment: "Placeholder for the free-text meal description on the carb entry screen"),
+                        String(localized: "Type the food", comment: "Accessibility label of the empty meal estimate field, whose placeholder cycles through examples"),
+                        examples: Self.examples,
                         text: $viewModel.mealDescription,
                         isEnabled: viewModel.canEstimateMeal,
                         accessibilityLabel: String(localized: "Estimate carbs", comment: "Button label asking AI to estimate the carbs of the described meal"),
@@ -103,7 +104,7 @@ struct MealEstimateCard: View {
                 if viewModel.mealEstimate != nil {
                     Text("AI estimate — check the numbers before you continue.", comment: "Reminder under the meal estimate that the numbers must be reviewed")
                 } else {
-                    Text("Type what he is eating, ask a question or take a photo. The answer fills in the carbs below.", comment: "Explanation under the empty meal estimate card, which is above the carb entry")
+                    Text("Just type the food, ask a question or take a photo. The answer fills in the carbs below.", comment: "Explanation under the empty meal estimate card, which is above the carb entry")
                 }
             }
             .font(.caption)
@@ -306,14 +307,54 @@ struct MealEstimateCard: View {
     }
 
     /// A rounded, chat-style field with its send button inside.
-    private func promptField(_ placeholder: String, text: Binding<String>, isEnabled: Bool, accessibilityLabel: String, action: @escaping () -> Void) -> some View {
+    /// What the empty field shows in turn: mostly just the food, as it is enough, and one
+    /// question, to show that asking works too.
+    static let examples = [
+        String(localized: "1 Nonstop and 1 jelly man", comment: "Example in the empty meal estimate field: just the foods, no question"),
+        String(localized: "2 wholemeal rolls", comment: "Example in the empty meal estimate field: just the foods, no question"),
+        String(localized: "a glass of milk and a banana", comment: "Example in the empty meal estimate field: just the foods, no question"),
+        String(localized: "carbs in a fruit pouch?", comment: "Example in the empty meal estimate field: a question"),
+    ]
+
+    private static let exampleInterval: TimeInterval = 3
+
+    /// The placeholder, one example at a time, sliding up to the next every few seconds.
+    private func cyclingExamples(_ examples: [String]) -> some View {
+        TimelineView(.periodic(from: .now, by: Self.exampleInterval)) { context in
+            let index = Int(context.date.timeIntervalSinceReferenceDate / Self.exampleInterval) % examples.count
+            ZStack(alignment: .leading) {
+                Text(String(format: String(localized: "E.g. %@", comment: "An example shown in the empty meal estimate field (1: the example)"), examples[index]))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .id(index)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .clipped()
+            .animation(.easeInOut(duration: 0.35), value: index)
+        }
+        .foregroundColor(Color(.placeholderText))
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func promptField(_ placeholder: String, examples: [String]? = nil, text: Binding<String>, isEnabled: Bool, accessibilityLabel: String, action: @escaping () -> Void) -> some View {
         HStack(alignment: .bottom, spacing: 8) {
             Image(systemName: "sparkles")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(accentGradient)
                 .frame(height: 40)
 
-            growingTextField(placeholder, text: text)
+            growingTextField(examples == nil ? placeholder : "", text: text)
+                .accessibilityLabel(placeholder)
+                .overlay(alignment: .leading) {
+                    if let examples, text.wrappedValue.isEmpty {
+                        cyclingExamples(examples)
+                    }
+                }
                 .focused($isInputFocused)
                 .padding(.vertical, 9)
 

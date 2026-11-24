@@ -1,14 +1,86 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Type what he is eating, ask a question or take a photo. The answer fills in the carbs below." : {
+    "Type the food" : {
+      "comment" : "Accessibility label of the empty meal estimate field, whose placeholder cycles through examples",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skriv maten"
+          }
+        }
+      }
+    },
+    "1 Nonstop and 1 jelly man" : {
+      "comment" : "Example in the empty meal estimate field: just the foods, no question",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 nonstop og 1 seigmann"
+          }
+        }
+      }
+    },
+    "2 wholemeal rolls" : {
+      "comment" : "Example in the empty meal estimate field: just the foods, no question",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 grove rundstykker"
+          }
+        }
+      }
+    },
+    "a glass of milk and a banana" : {
+      "comment" : "Example in the empty meal estimate field: just the foods, no question",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "et glass melk og en banan"
+          }
+        }
+      }
+    },
+    "carbs in a fruit pouch?" : {
+      "comment" : "Example in the empty meal estimate field: a question",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "karbo i en klemmepose?"
+          }
+        }
+      }
+    },
+    "E.g. %@" : {
+      "comment" : "An example shown in the empty meal estimate field (1: the example)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "F.eks. %@"
+          }
+        }
+      }
+    },
+    "Just type the food, ask a question or take a photo. The answer fills in the carbs below." : {
       "comment" : "Explanation under the empty meal estimate card, which is above the carb entry",
       "extractionState" : "manual",
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skriv hva han spiser, still et spørsmål eller ta bilde. Svaret fylles inn i feltene under."
+            "value" : "Skriv bare maten, still et spørsmål eller ta bilde. Svaret fylles inn i feltene under."
           }
         }
       }
@@ -93,18 +165,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SPØR OM KARBO"
-          }
-        }
-      }
-    },
-    "How many carbs in …?" : {
-      "comment" : "Placeholder for the free-text meal description on the carb entry screen",
-      "extractionState" : "manual",
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hvor mye karbo i …?"
           }
         }
       }
