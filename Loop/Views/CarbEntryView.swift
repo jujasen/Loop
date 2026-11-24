@@ -14,6 +14,7 @@ import HealthKit
 struct CarbEntryView: View, HorizontalSizeClassOverride {
     @EnvironmentObject private var displayGlucosePreference: DisplayGlucosePreference
     @Environment(\.dismissAction) private var dismiss
+    @Environment(\.carbTintColor) private var carbTintColor
 
     @ObservedObject var viewModel: CarbEntryViewModel
         
@@ -23,6 +24,9 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     @State private var showAddFavoriteFood = false
     @State private var showFavoriteFoodPicker = false
     @State private var showFatProteinEditor = false
+    @State private var focusMealPrompt = false
+
+    private static let mealEstimateCardID = "mealEstimateCard"
     
     private let isNewEntry: Bool
 
@@ -66,30 +70,33 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
             Color(.systemGroupedBackground)
                 .edgesIgnoringSafeArea(.all)
             
-            ScrollView {
-                warningsCard
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    warningsCard
 
-                mainCard
-                    .padding(.top, 8)
+                    mainCard(scrollProxy: scrollProxy)
+                        .padding(.top, 8)
 
-                if viewModel.mealEstimator != nil {
-                    MealEstimateCard(viewModel: viewModel)
-                        .padding(.top, 16)
-                }
+                    if viewModel.mealEstimator != nil {
+                        MealEstimateCard(viewModel: viewModel, focusRequest: $focusMealPrompt)
+                            .padding(.top, 16)
+                            .id(Self.mealEstimateCardID)
+                    }
                 
-                continueActionButton
+                    continueActionButton
                 
-                if isNewEntry, FeatureFlags.allowExperimentalFeatures {
-                    favoriteFoodsCard
-                }
+                    if isNewEntry, FeatureFlags.allowExperimentalFeatures {
+                        favoriteFoodsCard
+                    }
                 
-                let isBolusViewActive = Binding(get: { viewModel.bolusViewModel != nil }, set: { _, _ in viewModel.bolusViewModel = nil })
-                NavigationLink(destination: bolusView, isActive: isBolusViewActive) {
-                    EmptyView()
+                    let isBolusViewActive = Binding(get: { viewModel.bolusViewModel != nil }, set: { _, _ in viewModel.bolusViewModel = nil })
+                    NavigationLink(destination: bolusView, isActive: isBolusViewActive) {
+                        EmptyView()
+                    }
+                    .frame(width: 0, height: 0)
+                    .opacity(0)
+                    .accessibility(hidden: true)
                 }
-                .frame(width: 0, height: 0)
-                .opacity(0)
-                .accessibility(hidden: true)
             }
         }
         .alert(item: $viewModel.alert, content: alert(for:))
@@ -123,7 +130,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         }
     }
     
-    private var mainCard: some View {
+    private func mainCard(scrollProxy: ScrollViewProxy) -> some View {
         VStack(spacing: 10) {
             let amountConsumedFocused: Binding<Bool> = Binding(get: { expandedRow == .amountConsumed }, set: { expandedRow = $0 ? .amountConsumed : nil })
             let timeFocused: Binding<Bool> = Binding(get: { expandedRow == .time }, set: { expandedRow = $0 ? .time : nil })
@@ -131,6 +138,10 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
             let absorptionTimeFocused: Binding<Bool> = Binding(get: { expandedRow == .absorptionTime }, set: { expandedRow = $0 ? .absorptionTime : nil })
             
             CarbQuantityRow(quantity: $viewModel.carbsQuantity, isFocused: amountConsumedFocused, title: NSLocalizedString("Amount Consumed", comment: "Label for carb quantity entry row on carb entry screen"), preferredCarbUnit: viewModel.preferredCarbUnit)
+
+            if showsAskAboutCarbsHint {
+                askAboutCarbsHint(scrollProxy: scrollProxy)
+            }
 
             CardSectionDivider()
             
@@ -161,6 +172,43 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         .padding(.horizontal)
     }
     
+    /// Shown where the number is missing, for whoever doesn't know it: the card that can answer
+    /// is further down, out of the way of those who do.
+    private var showsAskAboutCarbsHint: Bool {
+        viewModel.mealEstimator != nil
+            && viewModel.mealEstimate == nil
+            && !viewModel.isEstimatingMeal
+            && (viewModel.carbsQuantity ?? 0) == 0
+            && viewModel.selectedFavoriteFood == nil
+    }
+
+    private func askAboutCarbsHint(scrollProxy: ScrollViewProxy) -> some View {
+        Button(action: {
+            expandedRow = nil
+            withAnimation {
+                scrollProxy.scrollTo(Self.mealEstimateCardID, anchor: .top)
+            }
+            focusMealPrompt = true
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                Text("Don't know the carbs? Ask here", comment: "Link under the carb amount field that jumps to the AI meal estimate")
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundColor(carbTintColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(carbTintColor.opacity(0.12))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     @ViewBuilder
     private var bolusView: some View {
         if let viewModel = viewModel.bolusViewModel {

@@ -34,6 +34,27 @@ final class MealCarbEstimatorTests: XCTestCase {
         XCTAssertEqual(estimate.absorptionTime(in: range), .hours(3))
     }
 
+    func testItemsMayCarryCarbsPer100g() throws {
+        // Older estimates (and the one above) have none; a new one says what to multiply a weight by.
+        XCTAssertNil(try MealCarbEstimator.parseResponse(completion(content: estimateJSON)).items[0].carbsPer100g)
+
+        let json = """
+            {"name":"Grovt rundstykke","emoji":"🥯","carbs_grams":28.7,"absorption_hours":2.5,
+             "items":[{"food":"Grovt rundstykke med havregryn","amount":"1 stk, ca. 70 g","carbs_grams":28.7,"carbs_per_100g":41}],
+             "assumptions":[],"confidence":"medium"}
+            """
+        let estimate = try MealCarbEstimator.parseResponse(completion(content: json))
+        XCTAssertEqual(estimate.items[0].carbsPer100g, 41)
+    }
+
+    func testTheSchemaAsksForCarbsPer100gOnEveryItem() throws {
+        let body = MealCarbEstimator.requestBody(conversation: [MealCarbEstimator.Message(role: "user", content: "Hvor mye kh i en nonstop?")])
+        let format = try XCTUnwrap(body["response_format"] as? [String: Any])
+        let schema = try XCTUnwrap((format["json_schema"] as? [String: Any])?["schema"] as? [String: Any])
+        let items = try XCTUnwrap(((schema["properties"] as? [String: Any])?["items"] as? [String: Any])?["items"] as? [String: Any])
+        XCTAssertEqual(items["required"] as? [String], ["food", "amount", "carbs_grams", "carbs_per_100g"])
+    }
+
     func testAbsorptionTimeIsHeldToLoopsRange() {
         var estimate = try! MealCarbEstimator.parseResponse(completion(content: estimateJSON))
         estimate.absorptionHours = 12

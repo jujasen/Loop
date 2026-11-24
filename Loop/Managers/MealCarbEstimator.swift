@@ -21,10 +21,14 @@ struct MealCarbEstimate: Codable, Equatable {
         var food: String
         var amount: String
         var carbsGrams: Double
+        /// Carbs per 100 g of the food, so someone with a kitchen scale can work the amount out
+        /// themselves. Absent from estimates made before it was asked for.
+        var carbsPer100g: Double? = nil
 
         enum CodingKeys: String, CodingKey {
             case food, amount
             case carbsGrams = "carbs_grams"
+            case carbsPer100g = "carbs_per_100g"
         }
     }
 
@@ -311,11 +315,12 @@ final class MealCarbEstimator {
                 "items": [
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["food", "amount", "carbs_grams"],
+                    "required": ["food", "amount", "carbs_grams", "carbs_per_100g"],
                     "properties": [
                         "food": ["type": "string"],
                         "amount": ["type": "string"],
                         "carbs_grams": ["type": "number"],
+                        "carbs_per_100g": ["type": "number"],
                     ],
                 ] as [String: Any],
             ] as [String: Any],
@@ -335,10 +340,12 @@ final class MealCarbEstimator {
         - carbs_grams: total digestible carbohydrates in grams for the amount actually eaten. Count available carbohydrate as on Norwegian and European labels (fibre is not included).
         - absorption_hours: how long the carbs take to absorb, between 0.5 and 8, in steps of 0.5. Loop's reference points: 2 h for fast carbs (juice, fruit, candy, white bread alone), 3 h for an ordinary mixed meal, 4 h for slow meals (pasta, rice, whole grains, or meals with moderate fat and protein), 5-6 h for very fatty or protein-heavy meals (pizza, taco, burgers, creamy sauces). More reference points for a small child: juice, sports drink, glucose tablets, fruit puree pouches and dried fruit 1-1.5 h; fresh fruit, rice cakes, biscuits and sweet yoghurt or milk drinks 1.5-2 h; milk and plain yoghurt, bread with spread, cereal with milk and porridge 2-2.5 h; dinner with potatoes or bread 3 h; pasta, rice, pancakes or waffles with fat 3-4 h. Decide from what is actually in it: fat, protein and fibre slow it, liquids and sugar speed it up. When the caregiver gives the carbs, the absorption time is what they need from you, so think it through.
         - absorption_reason: one short sentence, in the caregiver's language, on why that absorption time (for example «2 t: melkeprodukt med sukker og litt fett – raskere enn et måltid»).
-        - items: each component with the amount you assumed and its carbs. The item carbs must add up to carbs_grams.
+        - items: each component with the amount you assumed and its carbs. The item carbs must add up to carbs_grams. In amount, say how many pieces and roughly what they weigh (for example «1 stk, ca. 70 g»). carbs_per_100g is the food's carbs per 100 g, so the caregiver can weigh it and work it out.
         - assumptions: short notes, in the caregiver's language, on anything you had to guess — portion size, brand, recipe. Empty when nothing was guessed.
         - confidence: high when amounts and foods are clear, medium when portions had to be guessed, low when the description is vague.
         - fat_grams and protein_grams: total fat and protein in grams for the amount actually eaten, from Norwegian food tables (Matvaretabellen) and labels. Count butter, oil, cheese, cream and whole milk that go with the food.
+
+        The caregiver often asks it as a question, the way they would ask a chatbot («Hvor mye kh i en nonstop og en seigmann?», «hvor mye karbo i grove rundstykker med havregryn»). Treat a question exactly like a description: what is named is what the child eats now. «En», «ett» or a plural without a number means one piece or one typical portion for a small child; say which in assumptions.
 
         The caregiver may attach one or more photos of the meal, with or without text. Use them to identify the foods and judge the portions — the plate, cutlery, a glass or a hand gives the scale. Several photos are of the same meal, from different angles or at different moments; do not count food twice. When a photo shows a nutrition label, use its carbohydrate values. When the text and the photos disagree, the text wins, since the caregiver knows what was actually eaten. Name in assumptions anything in the photos you could not identify.
 
@@ -351,6 +358,6 @@ final class MealCarbEstimator {
     static let webSearchPrompt = """
         You can search the web. Do it when the meal has a packaged or branded product whose label you don't know for certain (for example Tine Yoghurt Junior klemmepose, a Nora or Freia product, a ready meal or a café item): look up its nutrition facts, preferably on the producer's site, Kassalapp or Oda, and use the carbohydrate per package or per 100 g. Say in assumptions where the number came from, briefly (for example «Tine.no: 10,8 g karbo per 90 g pose»). Don't search for ordinary foods you know well, and never when the caregiver gave the carbs. Search in Norwegian.
 
-        End your answer with the estimate as one JSON object and nothing after it, with exactly these keys: name, emoji, carbs_grams, absorption_hours, absorption_reason, items (each with food, amount, carbs_grams), assumptions, confidence ("high", "medium" or "low"), fat_grams, protein_grams.
+        End your answer with the estimate as one JSON object and nothing after it, with exactly these keys: name, emoji, carbs_grams, absorption_hours, absorption_reason, items (each with food, amount, carbs_grams, carbs_per_100g), assumptions, confidence ("high", "medium" or "low"), fat_grams, protein_grams.
         """
 }

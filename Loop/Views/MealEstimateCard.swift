@@ -2,9 +2,13 @@
 //  MealEstimateCard.swift
 //  Loop
 //
-//  The "describe the meal" card on the carb entry screen: free text and/or photos of the meal in,
-//  carbs, absorption time and an emoji filled into the entry above. The breakdown and the guesses behind the numbers
-//  can be opened to check them, and a follow-up re-evaluates the whole meal.
+//  The "ask about carbs" card on the carb entry screen: a question, a description and/or photos
+//  of the meal in, carbs, absorption time and an emoji filled into the entry above. The breakdown
+//  and the guesses behind the numbers can be opened to check them, and a follow-up (typed, or one
+//  of the quick ones) re-evaluates the whole meal.
+//
+//  It is worded as a place to ask, the way one would ask a chatbot, because the caregivers at
+//  kindergarten asked a chatbot app instead: «describe the meal» read as logging, not asking.
 //
 
 import SwiftUI
@@ -17,6 +21,8 @@ struct MealEstimateCard: View {
     @Environment(\.carbTintColor) private var carbTintColor
 
     @ObservedObject var viewModel: CarbEntryViewModel
+    /// Set from outside (the hint by the amount field) to put the cursor in the field.
+    @Binding var focusRequest: Bool
 
     @FocusState private var isInputFocused: Bool
     @State private var showsBreakdown = false
@@ -29,7 +35,7 @@ struct MealEstimateCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("DESCRIBE THE MEAL", comment: "Section title for the meal estimate card on the carb entry screen")
+            Text("ASK ABOUT CARBS", comment: "Section title for the meal estimate card on the carb entry screen")
                 .font(.footnote)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 26)
@@ -43,10 +49,14 @@ struct MealEstimateCard: View {
                             .transition(.opacity)
                     }
 
+                    if !viewModel.isEstimatingMeal {
+                        quickFollowUps
+                    }
+
                     photoStrip
 
                     promptField(
-                        String(localized: "Add or correct something…", comment: "Placeholder for adding more information to a meal estimate"),
+                        String(localized: "Ask more or correct something…", comment: "Placeholder for adding more information to a meal estimate"),
                         text: $viewModel.mealFollowUp,
                         isEnabled: viewModel.canRefineMealEstimate,
                         accessibilityLabel: String(localized: "Update estimate", comment: "Button label asking AI to re-evaluate the meal with the added information"),
@@ -54,10 +64,15 @@ struct MealEstimateCard: View {
                     )
                 }
                 else {
+                    Text("Type what he is eating, ask a question or take a photo. The answer fills in the carbs above.", comment: "Explanation at the top of the empty meal estimate card on the carb entry screen")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
                     photoStrip
 
                     promptField(
-                        String(localized: "E.g. fish gratin, or a product and its carbs", comment: "Placeholder for the free-text meal description on the carb entry screen"),
+                        String(localized: "How many carbs in …?", comment: "Placeholder for the free-text meal description on the carb entry screen"),
                         text: $viewModel.mealDescription,
                         isEnabled: viewModel.canEstimateMeal,
                         accessibilityLabel: String(localized: "Estimate carbs", comment: "Button label asking AI to estimate the carbs of the described meal"),
@@ -85,6 +100,11 @@ struct MealEstimateCard: View {
                     .padding(.horizontal, 26)
             }
         }
+        .onChange(of: focusRequest) { requested in
+            guard requested else { return }
+            isInputFocused = true
+            focusRequest = false
+        }
         .fullScreenCover(item: $photoSource) { source in
             switch source {
             case .camera:
@@ -100,6 +120,39 @@ struct MealEstimateCard: View {
     }
 
     // MARK: - Input
+
+    /// One tap for the corrections asked most often; "weighed it" puts the start of the sentence
+    /// in the field, for the weight to be typed after it.
+    private var quickFollowUps: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                quickFollowUpButton(String(localized: "Only half", comment: "Quick follow-up on a meal estimate: the child ate half of it")) {
+                    isInputFocused = false
+                    viewModel.refineMealEstimate(.half)
+                }
+                quickFollowUpButton(String(localized: "Twice as much", comment: "Quick follow-up on a meal estimate: the child ate twice as much")) {
+                    isInputFocused = false
+                    viewModel.refineMealEstimate(.double)
+                }
+                quickFollowUpButton(String(localized: "I weighed it", comment: "Quick follow-up on a meal estimate: starts a sentence giving the weight of the food")) {
+                    viewModel.mealFollowUp = String(localized: "It weighed ", comment: "Start of the follow-up sentence giving the weight of the food, followed by the weight the caregiver types")
+                    isInputFocused = true
+                }
+            }
+        }
+    }
+
+    private func quickFollowUpButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(carbTintColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(carbTintColor.opacity(0.14)))
+        }
+        .buttonStyle(.plain)
+    }
 
     /// The photos that go with the next message, each with a button to take it out again.
     @ViewBuilder
@@ -236,6 +289,13 @@ struct MealEstimateCard: View {
                     .font(.subheadline.monospacedDigit())
                     .foregroundColor(.secondary)
 
+                if estimate.items.count == 1, let per100g = estimate.items[0].carbsPer100g, per100g > 0 {
+                    // For a single food, the number to multiply the weight by, as a chatbot would give.
+                    Text(String(format: String(localized: "%@ per 100 g", comment: "Carbs per 100 g of a food in a meal estimate (1: carbs in grams)"), grams(per100g)))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 if let reason = estimate.absorptionReason, !reason.isEmpty {
                     // Why this absorption time: often the one thing the caregiver doesn't know.
                     Text(reason)
@@ -284,7 +344,7 @@ struct MealEstimateCard: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(item.food)
                             .font(.subheadline)
-                        Text(item.amount)
+                        Text(amountLine(for: item))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -342,6 +402,13 @@ struct MealEstimateCard: View {
         let photos = viewModel.mealEstimatePhotoCount
         guard photos > 0 else { return text }
         return text + Text(verbatim: " · ") + Text(Image(systemName: "photo")) + Text(verbatim: " \(photos)")
+    }
+
+    /// "1 stk, ca. 70 g · 41 g per 100 g", when the model said what the food holds per 100 g.
+    private func amountLine(for item: MealCarbEstimate.Item) -> String {
+        guard let per100g = item.carbsPer100g, per100g > 0 else { return item.amount }
+        let per100gText = String(format: String(localized: "%@ per 100 g", comment: "Carbs per 100 g of a food in a meal estimate (1: carbs in grams)"), grams(per100g))
+        return "\(item.amount) · \(per100gText)"
     }
 
     private func grams(_ value: Double) -> String {

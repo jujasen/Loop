@@ -544,6 +544,26 @@ final class CarbEntryViewModel: ObservableObject {
         ])
     }
 
+    /// The follow-ups a caregiver needs most often, one tap each, so it is plain that the
+    /// answer can be corrected here.
+    enum MealQuickFollowUp: CaseIterable {
+        case half, double
+
+        /// What the model is told.
+        var message: String {
+            switch self {
+            case .half: return "Barnet spiste bare halvparten av dette."
+            case .double: return "Barnet spiste dobbelt så mye av dette."
+            }
+        }
+    }
+
+    func refineMealEstimate(_ quickFollowUp: MealQuickFollowUp) {
+        guard !isEstimatingMeal, mealEstimate != nil else { return }
+        mealFollowUp = quickFollowUp.message
+        refineMealEstimate()
+    }
+
     /// Stops an estimate on its way, leaving what was typed and the photos so they can be corrected
     /// and sent again.
     func cancelMealEstimate() {
