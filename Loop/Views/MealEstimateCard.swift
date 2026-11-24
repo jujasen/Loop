@@ -23,6 +23,8 @@ struct MealEstimateCard: View {
     @ObservedObject var viewModel: CarbEntryViewModel
     /// Set from outside (the hint by the amount field) to put the cursor in the field.
     @Binding var focusRequest: Bool
+    /// Opens the favorite food editor with the answer filled in; nil where favorites can't be saved.
+    var onSaveFavorite: (() -> Void)? = nil
 
     @FocusState private var isInputFocused: Bool
     @State private var showsBreakdown = false
@@ -50,6 +52,10 @@ struct MealEstimateCard: View {
                     }
 
                     if !viewModel.isEstimatingMeal {
+                        if let onSaveFavorite {
+                            saveFavoriteButton(action: onSaveFavorite)
+                        }
+
                         quickFollowUps
                     }
 
@@ -78,6 +84,10 @@ struct MealEstimateCard: View {
                         accessibilityLabel: String(localized: "Estimate carbs", comment: "Button label asking AI to estimate the carbs of the described meal"),
                         action: viewModel.estimateMeal
                     )
+                }
+
+                if viewModel.isEstimatingMeal, let startedAt = viewModel.mealEstimateStartedAt {
+                    waitingLine(since: startedAt)
                 }
 
                 if let error = viewModel.mealEstimateError {
@@ -140,6 +150,61 @@ struct MealEstimateCard: View {
                 }
             }
         }
+    }
+
+    /// Saving the answer turns the next time into one tap on a favorite.
+    private func saveFavoriteButton(action: @escaping () -> Void) -> some View {
+        let isSaved = viewModel.selectedFavoriteFood != nil
+        return Button(action: {
+            isInputFocused = false
+            action()
+        }) {
+            Label(
+                isSaved
+                    ? String(localized: "Saved as favorite food", comment: "Shown on a meal estimate once it has been saved as a favorite food")
+                    : String(localized: "Save as favorite – one tap next time", comment: "Button saving a meal estimate as a favorite food"),
+                systemImage: isSaved ? "star.fill" : "star"
+            )
+            .font(.subheadline.weight(.medium))
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.borderless)
+        .disabled(isSaved || viewModel.saveFavoriteFoodButtonDisabled)
+    }
+
+    /// What is happening while the answer is on its way: a search or photos can take a minute,
+    /// and a spinner alone looks stuck long before that.
+    private func waitingLine(since startedAt: Date) -> some View {
+        TimelineView(.periodic(from: startedAt, by: 1)) { context in
+            let seconds = max(0, Int(context.date.timeIntervalSince(startedAt)))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(waitingTitle(after: seconds))
+                        .font(.subheadline)
+                    if seconds >= 10 {
+                        Text("It can take up to a minute. Keep the screen open.", comment: "Shown under a meal estimate that is taking a while")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                Spacer(minLength: 4)
+                Text(verbatim: "\(seconds) s")
+                    .font(.caption.monospacedDigit())
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private func waitingTitle(after seconds: Int) -> String {
+        if seconds < 10 {
+            return String(localized: "Working out the carbs…", comment: "First line while a meal estimate is on its way")
+        }
+        if !viewModel.mealPhotos.isEmpty || viewModel.mealEstimatePhotoCount > 0 {
+            return String(localized: "Looking at the photos…", comment: "Line while a meal estimate with photos takes a while")
+        }
+        return String(localized: "Looking the food up…", comment: "Line while a meal estimate takes a while, usually because it searches the web")
     }
 
     private func quickFollowUpButton(_ title: String, action: @escaping () -> Void) -> some View {

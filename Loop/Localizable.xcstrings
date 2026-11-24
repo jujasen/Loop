@@ -1,6 +1,78 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Saved as favorite food" : {
+      "comment" : "Shown on a meal estimate once it has been saved as a favorite food",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagret som favoritt"
+          }
+        }
+      }
+    },
+    "Save as favorite – one tap next time" : {
+      "comment" : "Button saving a meal estimate as a favorite food",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagre som favoritt – ett trykk neste gang"
+          }
+        }
+      }
+    },
+    "It can take up to a minute. Keep the screen open." : {
+      "comment" : "Shown under a meal estimate that is taking a while",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det kan ta opptil ett minutt. La skjermen være åpen."
+          }
+        }
+      }
+    },
+    "Working out the carbs…" : {
+      "comment" : "First line while a meal estimate is on its way",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regner ut karboen …"
+          }
+        }
+      }
+    },
+    "Looking at the photos…" : {
+      "comment" : "Line while a meal estimate with photos takes a while",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ser på bildene …"
+          }
+        }
+      }
+    },
+    "Looking the food up…" : {
+      "comment" : "Line while a meal estimate takes a while, usually because it searches the web",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Søker etter maten på nettet …"
+          }
+        }
+      }
+    },
     "ASK ABOUT CARBS" : {
       "comment" : "Section title for the meal estimate card on the carb entry screen",
       "extractionState" : "manual",
@@ -7661,7 +7733,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mengde karbohydrater\n(Mengde inntatt)"
+            "value" : "Karbo spist"
           }
         },
         "nl" : {

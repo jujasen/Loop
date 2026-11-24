@@ -25,6 +25,7 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
     @State private var showFavoriteFoodPicker = false
     @State private var showFatProteinEditor = false
     @State private var focusMealPrompt = false
+    @State private var isKeyboardShown = false
 
     private static let mealEstimateCardID = "mealEstimateCard"
     
@@ -78,15 +79,25 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
                         .padding(.top, 8)
 
                     if viewModel.mealEstimator != nil {
-                        MealEstimateCard(viewModel: viewModel, focusRequest: $focusMealPrompt)
-                            .padding(.top, 16)
-                            .id(Self.mealEstimateCardID)
+                        MealEstimateCard(
+                            viewModel: viewModel,
+                            focusRequest: $focusMealPrompt,
+                            onSaveFavorite: canSaveFavoriteFoods ? saveAsFavoriteFood : nil
+                        )
+                        .padding(.top, 16)
+                        .id(Self.mealEstimateCardID)
                     }
-                
-                    continueActionButton
-                
-                    if isNewEntry, FeatureFlags.allowExperimentalFeatures {
+
+                    // Favorites before the way on, so a chosen one is followed by "Continue"
+                    // rather than a scroll back up.
+                    if canSaveFavoriteFoods {
                         favoriteFoodsCard
+                            .padding(.top, 16)
+                    }
+
+                    if isKeyboardShown {
+                        // Out of the keyboard's way; the bar below comes back when it closes.
+                        continueActionButton
                     }
                 
                     let isBolusViewActive = Binding(get: { viewModel.bolusViewModel != nil }, set: { _, _ in viewModel.bolusViewModel = nil })
@@ -97,7 +108,19 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
                     .opacity(0)
                     .accessibility(hidden: true)
                 }
+                .safeAreaInset(edge: .bottom) {
+                    if !isKeyboardShown {
+                        continueActionButton
+                            .background(.bar)
+                    }
+                }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            isKeyboardShown = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            isKeyboardShown = false
         }
         .alert(item: $viewModel.alert, content: alert(for:))
         .sheet(isPresented: $showAddFavoriteFood, onDismiss: clearExpandedRow) {
@@ -172,6 +195,10 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
         .padding(.horizontal)
     }
     
+    private var canSaveFavoriteFoods: Bool {
+        isNewEntry && FeatureFlags.allowExperimentalFeatures
+    }
+
     /// Shown where the number is missing, for whoever doesn't know it: the card that can answer
     /// is further down, out of the way of those who do.
     private var showsAskAboutCarbsHint: Bool {

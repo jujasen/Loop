@@ -127,6 +127,8 @@ final class CarbEntryViewModel: ObservableObject {
     @Published private(set) var mealPhotos: [Data] = []
     @Published private(set) var mealEstimate: MealCarbEstimate?
     @Published private(set) var isEstimatingMeal = false
+    /// When the estimate on its way was asked for, to tell a long wait from a stuck one.
+    @Published private(set) var mealEstimateStartedAt: Date?
     @Published var mealEstimateError: String?
     /// Everything said about this meal so far, so a follow-up re-evaluates the whole meal.
     private var mealConversation: [MealCarbEstimator.Message] = []
@@ -291,8 +293,16 @@ final class CarbEntryViewModel: ObservableObject {
     // MARK: - Favorite Foods
     func onFavoriteFoodSave(_ food: NewFavoriteFood) {
         let newStoredFood = StoredFavoriteFood(name: food.name, portions: food.portions, foodType: food.foodType, absorptionTime: food.absorptionTime, folderID: food.folderID)
+        // The favorite is what is on screen, so the fat and protein found for it still hold
+        // (selecting a favorite otherwise forgets them, being about another food).
+        let nutrition = mealNutrition
         favoriteFoods.append(newStoredFood)
         selectFavoriteFood(newStoredFood)
+        if let nutrition, let carbs = carbsQuantity, carbs > 0, nutrition.carbGrams > 0 {
+            // Scaled, in case the amount was changed while saving.
+            mealNutrition = nutrition.scaled(toCarbs: carbs)
+            updateFatProteinBoost()
+        }
     }
 
     var selectedFavoriteFood: StoredFavoriteFood? {
@@ -589,6 +599,7 @@ final class CarbEntryViewModel: ObservableObject {
         guard let mealEstimator else { return }
         mealEstimateTask?.cancel()
         isEstimatingMeal = true
+        mealEstimateStartedAt = Date()
         mealEstimateError = nil
 
         mealEstimateTask = Task { @MainActor [weak self] in
