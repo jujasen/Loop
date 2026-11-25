@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FB0090010000000000000701 /* RemoteMealBolusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0090010000000000000702 /* RemoteMealBolusTests.swift */; };
+		FB0090010000000000000601 /* RemoteMealBolus.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0090010000000000000602 /* RemoteMealBolus.swift */; };
 		FA006001000000000000000B /* GlucoseInsightNightscout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA006001000000000000000C /* GlucoseInsightNightscout.swift */; };
 		FA0060010000000000000001 /* GlucoseInsight.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000002 /* GlucoseInsight.swift */; };
 		FA0060010000000000000003 /* GlucoseInsightManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0060010000000000000004 /* GlucoseInsightManager.swift */; };
@@ -812,6 +814,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		FB0090010000000000000702 /* RemoteMealBolusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteMealBolusTests.swift; sourceTree = "<group>"; };
+		FB0090010000000000000602 /* RemoteMealBolus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteMealBolus.swift; sourceTree = "<group>"; };
 		FA006001000000000000000C /* GlucoseInsightNightscout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightNightscout.swift; sourceTree = "<group>"; };
 		FA0060010000000000000002 /* GlucoseInsight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsight.swift; sourceTree = "<group>"; };
 		FA0060010000000000000004 /* GlucoseInsightManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlucoseInsightManager.swift; sourceTree = "<group>"; };
@@ -1679,6 +1683,7 @@
 				FB0080010000000000000402 /* EveningWatchTests.swift */,
 				FB00C0010000000000000402 /* LowWatchTests.swift */,
 				FB0090010000000000000402 /* ManualDoseLogTests.swift */,
+				FB0090010000000000000702 /* RemoteMealBolusTests.swift */,
 				FB00A0010000000000000402 /* BGChartDeviceChangeTests.swift */,
 				FA006001000000000000000A /* GlucoseInsightTests.swift */,
 				FA0021010000000000000004 /* CarbFoodLabelTests.swift */,
@@ -2161,6 +2166,7 @@
 				FB0080010000000000000202 /* EveningWatch.swift */,
 				FB00C0010000000000000102 /* LowWatch.swift */,
 				FB0090010000000000000202 /* ManualDoseLog.swift */,
+				FB0090010000000000000602 /* RemoteMealBolus.swift */,
 				FA0050010000000000000002 /* AIChat.swift */,
 				FA0050010000000000000004 /* AIDoseAdvisor.swift */,
 				FA0060010000000000000002 /* GlucoseInsight.swift */,
@@ -3628,6 +3634,7 @@
 				FB0080010000000000000201 /* EveningWatch.swift in Sources */,
 				FB00C0010000000000000101 /* LowWatch.swift in Sources */,
 				FB0090010000000000000201 /* ManualDoseLog.swift in Sources */,
+				FB0090010000000000000601 /* RemoteMealBolus.swift in Sources */,
 				FA0050010000000000000001 /* AIChat.swift in Sources */,
 				FA0050010000000000000003 /* AIDoseAdvisor.swift in Sources */,
 				FA0060010000000000000001 /* GlucoseInsight.swift in Sources */,
@@ -3945,6 +3952,7 @@
 				FB0080010000000000000401 /* EveningWatchTests.swift in Sources */,
 				FB00C0010000000000000401 /* LowWatchTests.swift in Sources */,
 				FB0090010000000000000401 /* ManualDoseLogTests.swift in Sources */,
+				FB0090010000000000000701 /* RemoteMealBolusTests.swift in Sources */,
 				FB00A0010000000000000401 /* BGChartDeviceChangeTests.swift in Sources */,
 				FA0060010000000000000009 /* GlucoseInsightTests.swift in Sources */,
 				FA0021010000000000000003 /* CarbFoodLabelTests.swift in Sources */,

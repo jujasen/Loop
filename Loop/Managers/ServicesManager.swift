@@ -243,6 +243,14 @@ class ServicesManager {
 public protocol ServicesManagerDosingDelegate: AnyObject {
     /// A remote bolus. See `RemoteActionDelegate.deliverRemoteBolus` for `knownDosesUntil`.
     func deliverBolus(amountInUnits: Double, knownDosesUntil: Date?) async throws
+    /// Waits, as `deliverBolus` does, while the pump gives a bolus Loop gave itself, so that what
+    /// comes next sees that dose.
+    func waitForAutomaticBolusToFinish() async
+    /// Loop's bolus recommendation as its own bolus screen calculates it, with `carbEntry` as a meal
+    /// about to be saved; nil when Loop cannot calculate one (old glucose or pump data, say).
+    func manualBolusRecommendation(consideringPotentialCarbEntry carbEntry: NewCarbEntry) async -> Double?
+    /// The largest volume the pump can deliver that is not above `units`; nil without a pump.
+    func roundDownToSupportedBolusVolume(units: Double) -> Double?
     /// What the current pump can deliver, or nil without a pump.
     func remoteTherapySettingsPumpIncrements() -> RemoteTherapySettingsPumpIncrements?
     /// Through the same preflight (cancelling a temp basal above a lowered maximum) and pump sync as Loop's delivery limits editor.
@@ -268,6 +276,10 @@ public protocol ServicesManagerDelegate: AnyObject {
     func enactOverride(name: String, duration: TemporaryScheduleOverride.Duration?, remoteAddress: String) async throws
     func cancelCurrentOverride() async throws
     func deliverCarbs(amountInGrams: Double, absorptionTime: TimeInterval?, foodType: String?, startDate: Date?) async throws
+    /// The carb entry a remote carb command would save, held to the same limits; throws when it is outside them.
+    func validateRemoteCarbs(amountInGrams: Double, absorptionTime: TimeInterval?, foodType: String?, startDate: Date?) throws -> NewCarbEntry
+    /// Saves a carb entry from `validateRemoteCarbs`, as `deliverCarbs` does.
+    func saveRemoteCarbEntry(_ carbEntry: NewCarbEntry) async throws
     func editCarbs(_ edit: RemoteCarbEdit) async throws
     func updateTherapySettings(_ changes: (_ settings: inout LoopSettings) -> Void) async
 }
@@ -397,6 +409,64 @@ extension ServicesManager: ServiceDelegate {
         }
     }
     
+    func deliverRemoteMealBolus(_ mealBolus: RemoteMealBolus) async throws -> RemoteMealBolusOutcome {
+        let nothingDone = RemoteMealBolusOutcome(carbsSaved: false, carbsInGrams: mealBolus.carbsInGrams, approvedUnits: mealBolus.approvedUnits, recommendedUnits: nil, deliveredUnits: 0)
+        guard let loop = servicesManagerDelegate, let dosing = servicesManagerDosingDelegate else {
+            let error = RemoteMealBolusError(outcome: nothingDone, underlyingError: LoopError.configurationError(.pumpManager))
+            await NotificationManager.sendRemoteCarbEntryFailureNotification(for: error, amountInGrams: mealBolus.carbsInGrams)
+            throw error
+        }
+
+        let runner = RemoteMealBolusRunner(
+            maximumBolus: { [settingsManager] in settingsManager.loopSettings.maximumBolus },
+            validateCarbs: { meal in
+                try loop.validateRemoteCarbs(amountInGrams: meal.carbsInGrams, absorptionTime: meal.absorptionTime, foodType: meal.foodType, startDate: meal.startDate)
+            },
+            waitForAutomaticBolus: { await dosing.waitForAutomaticBolusToFinish() },
+            checkDoseGuard: { units, knownDosesUntil in
+                try ManualDoseLog.shared.check(units: units, knownDosesUntil: knownDosesUntil)
+            },
+            recommendation: { await dosing.manualBolusRecommendation(consideringPotentialCarbEntry: $0) },
+            roundDown: { dosing.roundDownToSupportedBolusVolume(units: $0) },
+            saveCarbs: { try await loop.saveRemoteCarbEntry($0) },
+            deliverBolus: { try await dosing.deliverBolus(amountInUnits: $0, knownDosesUntil: $1) }
+        )
+
+        do {
+            let outcome = try await runner.run(mealBolus)
+            log.default("Remote meal with bolus: %{public}@", String(describing: outcome))
+            await carbsSaved(fromRemoteMealBolus: outcome)
+            if outcome.deliveredUnits > 0 {
+                await NotificationManager.sendRemoteBolusNotification(amount: outcome.deliveredUnits)
+                await remoteDataServicesManager.triggerUpload(for: .dose)
+                analyticsServicesManager.didBolus(source: "Remote")
+            }
+            return outcome
+        } catch let error as RemoteMealBolusError {
+            log.error("Remote meal with bolus stopped: %{public}@ %{public}@", String(describing: error.outcome), String(describing: error.underlyingError))
+            if error.outcome.carbsSaved {
+                await carbsSaved(fromRemoteMealBolus: error.outcome)
+                await NotificationManager.sendRemoteBolusFailureNotification(for: error.underlyingError, amountInUnits: mealBolus.approvedUnits)
+                if error.outcome.deliveredUnits > 0 {
+                    await remoteDataServicesManager.triggerUpload(for: .dose)
+                }
+            } else {
+                await NotificationManager.sendRemoteCarbEntryFailureNotification(for: error.underlyingError, amountInGrams: mealBolus.carbsInGrams)
+            }
+            throw error
+        } catch {
+            // The runner only throws `RemoteMealBolusError`; anything else did nothing.
+            await NotificationManager.sendRemoteCarbEntryFailureNotification(for: error, amountInGrams: mealBolus.carbsInGrams)
+            throw RemoteMealBolusError(outcome: nothingDone, underlyingError: error)
+        }
+    }
+
+    private func carbsSaved(fromRemoteMealBolus outcome: RemoteMealBolusOutcome) async {
+        await NotificationManager.sendRemoteCarbEntryNotification(amountInGrams: outcome.carbsInGrams)
+        await remoteDataServicesManager.triggerUpload(for: .carb)
+        analyticsServicesManager.didAddCarbs(source: "Remote")
+    }
+
     func applyRemoteTherapySettings(_ change: RemoteTherapySettingsChange) async throws {
         do {
             try await applyTherapySettings(change)

@@ -1,6 +1,30 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Nothing was saved or given: Loop cannot calculate a bolus recommendation right now." : {
+      "comment" : "Why a remote meal with bolus was refused: no fresh bolus recommendation",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingenting ble lagret eller gitt: Loop kan ikke regne ut et bolusforslag akkurat nå."
+          }
+        }
+      }
+    },
+    "Nothing was saved or given: the command did not say which doses its sender had seen." : {
+      "comment" : "Why a remote meal with bolus was refused: the command lacks known-doses-until",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingenting ble lagret eller gitt: kommandoen sa ikke hvilke doser avsenderen hadde sett."
+          }
+        }
+      }
+    },
     "Type the food" : {
       "comment" : "Accessibility label of the empty meal estimate field, whose placeholder cycles through examples",
       "extractionState" : "manual",

@@ -2542,7 +2542,15 @@ extension LoopDataManager: ServicesManagerDelegate {
     //Carb Entry
     
     func deliverCarbs(amountInGrams: Double, absorptionTime: TimeInterval?, foodType: String?, startDate: Date?) async throws {
-        
+        let carbEntry = try validateRemoteCarbs(amountInGrams: amountInGrams, absorptionTime: absorptionTime, foodType: foodType, startDate: startDate)
+        try await saveRemoteCarbEntry(carbEntry)
+    }
+
+    func saveRemoteCarbEntry(_ carbEntry: NewCarbEntry) async throws {
+        let _ = try await devliverCarbEntry(carbEntry)
+    }
+
+    func validateRemoteCarbs(amountInGrams: Double, absorptionTime: TimeInterval?, foodType: String?, startDate: Date?) throws -> NewCarbEntry {
         let absorptionTime = absorptionTime ?? carbStore.defaultAbsorptionTimes.medium
         if absorptionTime < LoopConstants.minCarbAbsorptionTime || absorptionTime > LoopConstants.maxCarbAbsorptionTime {
             throw CarbActionError.invalidAbsorptionTime(absorptionTime)
@@ -2565,9 +2573,7 @@ extension LoopDataManager: ServicesManagerDelegate {
         }
         
         let quantity = HKQuantity(unit: .gram(), doubleValue: amountInGrams)
-        let candidateCarbEntry = NewCarbEntry(quantity: quantity, startDate: startDate ?? Date(), foodType: foodType, absorptionTime: absorptionTime)
-        
-        let _ = try await devliverCarbEntry(candidateCarbEntry)
+        return NewCarbEntry(quantity: quantity, startDate: startDate ?? Date(), foodType: foodType, absorptionTime: absorptionTime)
     }
     
     enum CarbActionError: LocalizedError {

@@ -158,6 +158,16 @@ final class ManualDoseLog {
         return dose.id
     }
 
+    /// Throws `RemoteBolusStopped` when the sender who had seen everything up to `knownDosesUntil`
+    /// did not know of a dose, without recording anything. For a meal with bolus, checked before
+    /// the carbs are saved; `began` checks again as the bolus is sent.
+    func check(units: Double, knownDosesUntil: Date, at now: Date = Date()) throws {
+        let unknown = Self.unknown(in: doses, knownUntil: knownDosesUntil, now: now)
+        if !unknown.isEmpty {
+            throw RemoteBolusStopped(units: units, doses: unknown)
+        }
+    }
+
     /// The pump's answer. A dose that was definitely not given is forgotten; one whose answer was
     /// lost stays, since it may have been given.
     func finished(_ id: String, error: Error?) {

@@ -1852,10 +1852,40 @@ extension DeviceDataManager: ServicesManagerDosingDelegate {
         }
     }
 
+    func waitForAutomaticBolusToFinish() async {
+        await waitForAutomaticBolusToFinish(timeout: 60)
+    }
+
+    func manualBolusRecommendation(consideringPotentialCarbEntry carbEntry: NewCarbEntry) async -> Double? {
+        // The same calculation as the bolus screen (`BolusEntryViewModel.computeBolusRecommendation`).
+        await withCheckedContinuation { continuation in
+            loopManager.getLoopState { _, state in
+                do {
+                    let recommendation = try state.recommendBolus(
+                        consideringPotentialCarbEntry: carbEntry,
+                        replacingCarbEntry: nil,
+                        considerPositiveVelocityAndRC: FeatureFlags.usePositiveMomentumAndRCForManualBoluses
+                    )
+                    continuation.resume(returning: recommendation.map { max(0, $0.amount) })
+                } catch {
+                    self.log.default("No bolus recommendation for a remote meal: %{public}@", String(describing: error))
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+
+    func roundDownToSupportedBolusVolume(units: Double) -> Double? {
+        guard let pumpManager else { return nil }
+        return RemoteMealBolusRunner.roundDown(units, supportedVolumes: pumpManager.supportedBolusVolumes) {
+            pumpManager.roundToSupportedBolusVolume(units: $0)
+        }
+    }
+
     /// Waits up to a minute while the pump is busy with a bolus Loop gave itself. A bolus someone
     /// gave by hand is not waited for: the remote one then fails, as it would have.
     @MainActor
-    private func waitForAutomaticBolusToFinish(timeout: TimeInterval = 60) async {
+    private func waitForAutomaticBolusToFinish(timeout: TimeInterval) async {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline, automaticBolusIsRunning() {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
