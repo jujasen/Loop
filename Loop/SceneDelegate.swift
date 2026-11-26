@@ -67,6 +67,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate, WindowProvider {
 
     func sceneWillResignActive(_ scene: UIScene) {
         log.default(#function)
+
+        loopAppManager?.willResignActive()
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {

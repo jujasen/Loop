@@ -374,10 +374,33 @@ class LoopAppManager: NSObject {
         }
         settingsManager?.didBecomeActive()
         deviceDataManager?.didBecomeActive()
+        startCheckingRemoteCommands()
         alertManager.inferDeliveredLoopNotRunningNotifications()
         
         widgetLog.default("Refreshing widget. Reason: App didBecomeActive")
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    func willResignActive() {
+        remoteCommandTimer?.invalidate()
+        remoteCommandTimer = nil
+    }
+
+    /// While Loop is open it looks for remote commands now and then, not only after a run.
+    ///
+    /// A push from LoopFollow only reaches Loop when iOS lets it, and otherwise Loop fetched the
+    /// command on its next run, up to five minutes later, even with someone looking at it: on
+    /// 25 November 2026 a remote bolus from the high watch card waited until someone had held
+    /// Loop open on the home screen for a good while.
+    static let remoteCommandCheckInterval: TimeInterval = 20
+    private var remoteCommandTimer: Timer?
+
+    private func startCheckingRemoteCommands() {
+        deviceDataManager?.servicesManager.checkForRemoteCommandsNow()
+        remoteCommandTimer?.invalidate()
+        remoteCommandTimer = Timer.scheduledTimer(withTimeInterval: Self.remoteCommandCheckInterval, repeats: true) { [weak self] _ in
+            self?.deviceDataManager?.servicesManager.checkForRemoteCommandsNow()
+        }
     }
 
     // MARK: - Remote Notification

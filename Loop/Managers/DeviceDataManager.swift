@@ -29,6 +29,10 @@ final class DeviceDataManager {
     /// Outcome of the most recent manual bolus, surfaced as a banner on the status screen.
     let manualBolusRecovery = ManualBolusRecovery()
 
+    /// When Loop last sent an automatic bolus, and how long the pump said it takes. The pump can be
+    /// busy with it for a while after the pump manager stops reporting it (`deliverBolus`).
+    private let lastAutomaticBolus = Locked<(start: Date, duration: TimeInterval)?>(nil)
+
     /// Remember the launch date of the app for diagnostic reporting
     private let launchDate = Date()
 
@@ -1165,6 +1169,11 @@ extension DeviceDataManager {
             return
         }
 
+        if activationType.isAutomatic {
+            let duration = pumpManager.estimatedDuration(toBolus: units)
+            lastAutomaticBolus.mutate { $0 = (start: Date(), duration: duration) }
+        }
+
         var loggedDose: String?
         if !activationType.isAutomatic {
             do {
@@ -1835,21 +1844,57 @@ extension DeviceDataManager: ServicesManagerDosingDelegate {
     
     func deliverBolus(amountInUnits: Double, knownDosesUntil: Date?) async throws {
         // A remote command is fetched right after a Loop run, which is when Loop's own automatic
-        // bolus is being delivered. The pump refuses a second bolus meanwhile ("Bolus in progress"),
-        // so wait for Loop's own dose to finish instead of rejecting the remote one.
+        // bolus is being delivered. The pump refuses a second bolus meanwhile, so wait for Loop's
+        // own dose to finish instead of rejecting the remote one.
+        //
+        // On 24 November 2026 a remote bolus was refused with «Bolus pågår» less than a second after
+        // Loop's own 0.05 U: the pod was still delivering it, and Omnipod reports that as a
+        // communication error, not a device state. So wait for the time the pump said the automatic
+        // bolus takes too, and when the pump refuses for certain (nothing given) while it may still
+        // be busy with Loop's own bolus, wait and try again.
         await waitForAutomaticBolusToFinish()
-        do {
-            // Checked against the log of doses given by hand at the moment it is sent to the pump,
-            // so a dose given on the phone during the wait stops it too.
-            try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation, source: .remote, knownDosesUntil: knownDosesUntil)
-        } catch PumpManagerError.deviceState(let deviceError) {
-            // Loop started an automatic bolus between the wait and the remote one: try once more.
-            guard await automaticBolusIsRunning() else {
-                throw PumpManagerError.deviceState(deviceError)
+        var attempt = 1
+        while true {
+            do {
+                // Checked against the log of doses given by hand at the moment it is sent to the pump,
+                // so a dose given on the phone during the wait stops it too.
+                try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation, source: .remote, knownDosesUntil: knownDosesUntil)
+                return
+            } catch let error as PumpManagerError {
+                let running = await automaticBolusIsRunning()
+                let busy = running || automaticBolusMayStillRun(margin: Self.remoteBolusRetryAfterAutomatic)
+                guard Self.mayRetryRemoteBolus(after: error, attempt: attempt, pumpMayBeBusy: busy) else {
+                    throw error
+                }
+                log.default("Remote bolus refused while Loop's own bolus may still run (%{public}@); trying again", String(describing: error))
+                attempt += 1
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                await waitForAutomaticBolusToFinish()
             }
-            await waitForAutomaticBolusToFinish()
-            try await enactBolus(units: amountInUnits, activationType: .manualNoRecommendation, source: .remote, knownDosesUntil: knownDosesUntil)
         }
+    }
+
+    /// A remote bolus refused this long after Loop's own automatic one should have ended may have
+    /// been refused because of it: Omnipod's estimate and the pod's own clock differ a little.
+    static let remoteBolusRetryAfterAutomatic: TimeInterval = 30
+    static let remoteBolusAttempts = 3
+
+    /// Only a refusal that gave nothing for certain, and only while Loop's own bolus may have been
+    /// the reason. An uncertain delivery is never tried again: the first may have been given.
+    static func mayRetryRemoteBolus(after error: PumpManagerError, attempt: Int, pumpMayBeBusy: Bool) -> Bool {
+        guard attempt < remoteBolusAttempts, pumpMayBeBusy else { return false }
+        switch error {
+        case .communication, .deviceState:
+            return true
+        case .configuration, .connection, .uncertainDelivery:
+            return false
+        }
+    }
+
+    /// Loop's own last automatic bolus may still be running `margin` after the pump said it ends.
+    private func automaticBolusMayStillRun(margin: TimeInterval, now: Date = Date()) -> Bool {
+        guard let last = lastAutomaticBolus.value else { return false }
+        return now < last.start.addingTimeInterval(last.duration + margin)
     }
 
     func waitForAutomaticBolusToFinish() async {
@@ -1887,7 +1932,8 @@ extension DeviceDataManager: ServicesManagerDosingDelegate {
     @MainActor
     private func waitForAutomaticBolusToFinish(timeout: TimeInterval) async {
         let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline, automaticBolusIsRunning() {
+        // The pump manager can stop reporting the bolus before the pump is done with it.
+        while Date() < deadline, automaticBolusIsRunning() || automaticBolusMayStillRun(margin: 2) {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
         }
     }

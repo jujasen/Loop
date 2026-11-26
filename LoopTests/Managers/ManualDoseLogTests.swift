@@ -176,3 +176,28 @@ final class ManualDoseLogTests: XCTestCase {
         XCTAssertTrue(JSONSerialization.isValidJSONObject(document))
     }
 }
+
+/// When a remote bolus the pump refused is tried again (`DeviceDataManager.deliverBolus`).
+final class RemoteBolusRetryTests: XCTestCase {
+    private struct Refusal: LocalizedError {
+        var errorDescription: String? { "Bolus pågår" }
+    }
+
+    /// 24 November 2026: Omnipod refused a remote bolus as a communication error while it was still
+    /// giving Loop's own 0.05 U.
+    func testARefusalWhileLoopsOwnBolusMayRunIsTriedAgain() {
+        XCTAssertTrue(DeviceDataManager.mayRetryRemoteBolus(after: .communication(Refusal()), attempt: 1, pumpMayBeBusy: true))
+        XCTAssertTrue(DeviceDataManager.mayRetryRemoteBolus(after: .deviceState(Refusal()), attempt: 2, pumpMayBeBusy: true))
+    }
+
+    func testAnUncertainDeliveryIsNeverTriedAgain() {
+        XCTAssertFalse(DeviceDataManager.mayRetryRemoteBolus(after: .uncertainDelivery, attempt: 1, pumpMayBeBusy: true))
+    }
+
+    func testNoRetryWithoutLoopsOwnBolusOrAfterTheLastAttempt() {
+        XCTAssertFalse(DeviceDataManager.mayRetryRemoteBolus(after: .communication(Refusal()), attempt: 1, pumpMayBeBusy: false))
+        XCTAssertFalse(DeviceDataManager.mayRetryRemoteBolus(after: .communication(Refusal()), attempt: DeviceDataManager.remoteBolusAttempts, pumpMayBeBusy: true))
+        XCTAssertFalse(DeviceDataManager.mayRetryRemoteBolus(after: .configuration(nil), attempt: 1, pumpMayBeBusy: true))
+        XCTAssertFalse(DeviceDataManager.mayRetryRemoteBolus(after: .connection(nil), attempt: 1, pumpMayBeBusy: true))
+    }
+}
