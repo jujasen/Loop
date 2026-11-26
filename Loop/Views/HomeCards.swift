@@ -183,14 +183,12 @@ struct HomeGlucoseCard: View {
         }()
         let trend = isCurrent && glucose?.isManual == false ? glucose?.trendSymbol : nil
         let delta = isCurrent && glucose?.isManual == false ? glucose?.deltaText : nil
-        let detail = [model.glucoseUnitText, glucose.map { Self.ageText(of: $0.date, now: now) } ?? ""]
-            .filter { !$0.isEmpty }
-            .joined(separator: " · ")
 
         return Button {
             model.onGlucoseTapped?()
         } label: {
-            VStack(alignment: .center, spacing: 2) {
+            // The big number's line has room under the digits; the age sits up against them.
+            VStack(alignment: .center, spacing: -3) {
                 HStack(alignment: .center, spacing: 10) {
                     Text(valueText)
                         // No current reading: dashes, as Loop's HUD showed, in a size that
@@ -218,12 +216,18 @@ struct HomeGlucoseCard: View {
                         .minimumScaleFactor(0.5)
                     }
                 }
-                if !detail.isEmpty {
-                    Text(detail)
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                // Counts every second, as LoopFollow's.
+                TimelineView(.periodic(from: .now, by: 1)) { second in
+                    let detail = [model.glucoseUnitText, glucose.map { Self.ageText(of: $0.date, now: second.date) } ?? ""]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " · ")
+                    if !detail.isEmpty {
+                        Text(detail)
+                            .font(.subheadline.weight(.medium).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
                 }
             }
             .frame(maxWidth: .infinity)
@@ -236,8 +240,9 @@ struct HomeGlucoseCard: View {
 
     /// "1 min ago" under the glucose.
     private static func ageText(of date: Date, now: Date) -> String {
-        let minutes = max(0, Int(now.timeIntervalSince(date) / 60))
-        return String(format: NSLocalizedString("%lld min ago", comment: "How long ago the glucose shown was measured, under the glucose value (1: minutes)"), minutes)
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        let duration = "\(seconds / 60):" + String(format: "%02d", seconds % 60)
+        return String(format: NSLocalizedString("%@ min ago", comment: "How long ago the glucose shown was measured, under the glucose value, e.g. 2:15 min ago (1: minutes:seconds)"), duration)
     }
 }
 
@@ -296,7 +301,7 @@ struct HomeDeviceTile: View {
                     }
                 VStack(alignment: .leading, spacing: 0) {
                     Text(device.title)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                     if let highlight = device.highlight {
                         HStack(spacing: 3) {
@@ -312,7 +317,7 @@ struct HomeDeviceTile: View {
                         .foregroundStyle(Color(highlight.color))
                     } else {
                         Text(remainingText)
-                            .font(.headline.monospacedDigit())
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
                             .foregroundStyle(level == .normal ? Color.primary : barColor)
                     }
                 }
@@ -322,7 +327,7 @@ struct HomeDeviceTile: View {
                         ReservoirGauge(fill: reservoir.fill, color: reservoir.level.color(normal: tint))
                             .frame(width: 12, height: 16)
                         Text(reservoir.text)
-                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .font(.footnote.weight(.semibold).monospacedDigit())
                             .foregroundStyle(reservoir.level.color(normal: .primary))
                     }
                 }

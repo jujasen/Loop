@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ min ago" : {
+      "comment" : "How long ago the glucose shown was measured, under the glucose value, e.g. 2:15 min ago (1: minutes:seconds)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ min siden"
+          }
+        }
+      }
+    },
     "Infusion set" : {
       "comment" : "Title of the pump tile on the status screen, for a pump that is not an Omnipod",
       "extractionState" : "manual",
