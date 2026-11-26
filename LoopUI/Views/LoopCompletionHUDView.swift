@@ -148,8 +148,6 @@ public final class LoopCompletionHUDView: BaseHUDView {
 
     @objc private func updateDisplay(_: Timer?) {
         lastLoopMessage = ""
-        let timeAgoToIncludeTimeStamp: TimeInterval = .minutes(20)
-        let timeAgoToIncludeDate: TimeInterval = .hours(4)
         if let date = lastLoopCompleted {
             let ago = abs(min(0, date.timeIntervalSinceNow))
 
@@ -169,17 +167,7 @@ public final class LoopCompletionHUDView: BaseHUDView {
 
                 accessibilityLabel = String(format: LocalizedString("Loop ran %@ ago", comment: "Accessbility format label describing the time interval since the last completion date. (1: The localized date components)"), timeString)
 
-                var fullTimeStr: String = ""
-                if ago >= timeAgoToIncludeDate {
-                    fullTimeStr = String(format: LocalizedString("was at %1$@", comment: "Format string describing last completion. (1: the date"), timeDateFormatter.string(from: date))
-                } else if ago >= timeAgoToIncludeTimeStamp {
-                    fullTimeStr = String(format: LocalizedString("%1$@ ago at %2$@", comment: "Format string describing last completion. (1: time ago, (2: the date"), timeAgoFormatter.string(from: ago)!, timeFormatter.string(from: date))
-                } else if ago < .minutes(1) {
-                    fullTimeStr = String(format: LocalizedString("<1 min ago", comment: "Format string describing last completion"))
-                } else {
-                    fullTimeStr = String(format: LocalizedString("%1$@ ago", comment: "Format string describing last completion. (1: time ago"), timeAgoFormatter.string(from: ago)!)
-                }
-                lastLoopMessage = String(format: LocalizedString("Last completed loop %1$@.", comment: "Last loop time completed message (1: last loop time string)"), fullTimeStr)
+                lastLoopMessage = Self.lastLoopMessage(lastLoopCompleted: date) ?? ""
             } else {
                 caption?.text = "–"
                 accessibilityLabel = nil
@@ -205,9 +193,66 @@ public final class LoopCompletionHUDView: BaseHUDView {
 
 extension LoopCompletionHUDView {
     public var loopCompletionMessage: (title: String, message: String) {
+        Self.loopCompletionMessage(freshness: freshness,
+                                   isOpenLoop: loopStateView.open,
+                                   lastLoopMessage: lastLoopMessage,
+                                   closedLoopDisallowedLocalizedDescription: closedLoopDisallowedLocalizedDescription)
+    }
+
+    /// The message shown when the loop status is tapped, for screens that draw the loop
+    /// status themselves rather than with this view.
+    public static func loopCompletionMessage(lastLoopCompleted: Date?,
+                                             isClosedLoop: Bool,
+                                             closedLoopDisallowedLocalizedDescription: String?,
+                                             now: Date = Date()) -> (title: String, message: String) {
+        let age = lastLoopCompleted.map { abs(min(0, $0.timeIntervalSince(now))) }
+        return loopCompletionMessage(freshness: LoopCompletionFreshness(age: age),
+                                     isOpenLoop: !isClosedLoop,
+                                     lastLoopMessage: lastLoopCompleted.flatMap { lastLoopMessage(lastLoopCompleted: $0, now: now) } ?? "",
+                                     closedLoopDisallowedLocalizedDescription: closedLoopDisallowedLocalizedDescription)
+    }
+
+    /// "Last completed loop 3 min ago.", with the time or date once it is a while ago.
+    static func lastLoopMessage(lastLoopCompleted date: Date, now: Date = Date()) -> String? {
+        let timeAgoFormatter = DateComponentsFormatter()
+        timeAgoFormatter.allowedUnits = [.day, .hour, .minute]
+        timeAgoFormatter.maximumUnitCount = 1
+        timeAgoFormatter.unitsStyle = .short
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateStyle = .none
+        timeFormatter.timeStyle = .short
+
+        let timeDateFormatter = DateFormatter()
+        timeDateFormatter.dateStyle = .medium
+        timeDateFormatter.timeStyle = .short
+        timeDateFormatter.locale = Locale.current
+
+        let timeAgoToIncludeTimeStamp: TimeInterval = .minutes(20)
+        let timeAgoToIncludeDate: TimeInterval = .hours(4)
+        let ago = abs(min(0, date.timeIntervalSince(now)))
+        guard let timeAgo = timeAgoFormatter.string(from: ago) else { return nil }
+
+        let fullTimeStr: String
+        if ago >= timeAgoToIncludeDate {
+            fullTimeStr = String(format: LocalizedString("was at %1$@", comment: "Format string describing last completion. (1: the date"), timeDateFormatter.string(from: date))
+        } else if ago >= timeAgoToIncludeTimeStamp {
+            fullTimeStr = String(format: LocalizedString("%1$@ ago at %2$@", comment: "Format string describing last completion. (1: time ago, (2: the date"), timeAgo, timeFormatter.string(from: date))
+        } else if ago < .minutes(1) {
+            fullTimeStr = String(format: LocalizedString("<1 min ago", comment: "Format string describing last completion"))
+        } else {
+            fullTimeStr = String(format: LocalizedString("%1$@ ago", comment: "Format string describing last completion. (1: time ago"), timeAgo)
+        }
+        return String(format: LocalizedString("Last completed loop %1$@.", comment: "Last loop time completed message (1: last loop time string)"), fullTimeStr)
+    }
+
+    private static func loopCompletionMessage(freshness: LoopCompletionFreshness,
+                                              isOpenLoop: Bool,
+                                              lastLoopMessage: String,
+                                              closedLoopDisallowedLocalizedDescription: String?) -> (title: String, message: String) {
         switch freshness {
         case .fresh:
-            if loopStateView.open {
+            if isOpenLoop {
                 let reason = closedLoopDisallowedLocalizedDescription ?? LocalizedString("Tap Settings to toggle Closed Loop ON if you wish for the app to automate your insulin.", comment: "Instructions for user to close loop if it is allowed.")
                 return (title: LocalizedString("Closed Loop OFF", comment: "Title of green open loop OFF message"),
                         message: String(format: LocalizedString("\n%1$@ is operating with Closed Loop in the OFF position. Your pump and CGM will continue operating, but the app will not adjust dosing automatically.\n\n%2$@", comment: "Green closed loop OFF message (1: app name)(2: reason for open loop)"), Bundle.main.bundleDisplayName, reason))

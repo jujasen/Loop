@@ -59,10 +59,13 @@ final class StatusTableViewController: LoopChartsTableViewController {
         tableView.register(LowWatchCell.self, forCellReuseIdentifier: LowWatchCell.className)
         tableView.register(ChartDetailsHeaderCell.self, forCellReuseIdentifier: ChartDetailsHeaderCell.className)
         tableView.register(ChartDetailsNavigationCell.self, forCellReuseIdentifier: ChartDetailsNavigationCell.className)
+        tableView.register(HomeHeaderTableViewCell.self, forCellReuseIdentifier: HomeHeaderTableViewCell.className)
+        tableView.register(HomeStatsTableViewCell.self, forCellReuseIdentifier: HomeStatsTableViewCell.className)
 
         if #available(iOS 17.0, *) {
             tableView.register(BGChartTableViewCell.self, forCellReuseIdentifier: Self.bgChartCellIdentifier)
             tableView.register(GlucoseStatsTableViewCell.self, forCellReuseIdentifier: Self.glucoseStatsCellIdentifier)
+            tableView.register(HomeChartCardTableViewCell.self, forCellReuseIdentifier: HomeChartCardTableViewCell.className)
             // The chart latches a press into inspect mode after 0.2 s; the
             // table's default touch delay would swallow that.
             tableView.delaysContentTouches = false
@@ -99,6 +102,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     }
 
                     self?.hudView?.loopCompletionHUD.loopInProgress = false
+                    self?.homeStatusModel.loopInProgress = false
                     self?.log.debug("[reloadData] from notification with context %{public}@", String(describing: context))
                     self?.reloadData(animated: true)
                 }
@@ -108,6 +112,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             notificationCenter.addObserver(forName: .LoopRunning, object: deviceManager.loopManager, queue: nil) { [weak self] _ in
                 DispatchQueue.main.async {
                     self?.hudView?.loopCompletionHUD.loopInProgress = true
+                    self?.homeStatusModel.loopInProgress = true
                 }
             },
             notificationCenter.addObserver(forName: .PumpManagerChanged, object: deviceManager, queue: nil) { [weak self] (notification: Notification) in
@@ -233,8 +238,11 @@ final class StatusTableViewController: LoopChartsTableViewController {
 
         addScenarioStepGestureRecognizers()
 
-        tableView.backgroundColor = .secondarySystemBackground
-    
+        // The cards sit on the grouped background, as on LoopFollow's Home.
+        tableView.backgroundColor = .systemGroupedBackground
+
+        configureHomeStatusModel()
+        configurePumpManagerHUDViews()
     }
 
     override func didReceiveMemoryWarning() {
@@ -464,6 +472,22 @@ final class StatusTableViewController: LoopChartsTableViewController {
     /// Data behind the time-in-range summary.
     private let statsDisplayModel = StatsDisplayModel()
 
+    /// What the cards at the top show: loop, glucose, sensor, pod and the four numbers.
+    private let homeStatusModel = HomeStatusModel()
+
+    /// Today's time in range, for the statistics card.
+    private let timeInRangeModel = TimeInRangeModel()
+
+    /// Measures the cards at the top, so the chart can take what is left of the screen.
+    private lazy var homeHeaderSizingController = UIHostingController(rootView: HomeHeaderView(model: homeStatusModel, isForMeasuring: true))
+    private lazy var homeStatsSizingController = UIHostingController(rootView: HomeStatsCard(model: timeInRangeModel))
+
+    /// When the pod (or infusion set) was last changed and the sensor last started, for the tiles.
+    private var lastPumpChange: Date?
+    private var lastSensorStart: Date?
+    private var currentInsulinOnBoard: Double?
+    private var currentCarbsOnBoard: Double?
+
     /// The ported chart relies on SwiftUI APIs introduced in iOS 17
     /// (`MagnifyGesture`, `SectorMark`). Below that the screen keeps the
     /// original SwiftCharts layout, which shows the same information.
@@ -583,6 +607,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
 
         // This should be kept up to date immediately
         hudView?.loopCompletionHUD.lastLoopCompleted = deviceManager.loopManager.lastLoopCompleted
+        homeStatusModel.lastLoopCompleted = deviceManager.loopManager.lastLoopCompleted
 
         guard !reloading && !deviceManager.authorizationRequired else {
             return
@@ -620,9 +645,12 @@ final class StatusTableViewController: LoopChartsTableViewController {
         var doseEntries: [DoseEntry]?
         var pumpChanges: [Date]?
         var sensorChanges: [Date]?
+        var latestPumpChange: Date?
+        var latestSensorStart: Date?
         var totalDelivery: Double?
         var cobValues: [CarbValue]?
         var carbsOnBoard: HKQuantity?
+        var insulinOnBoard: Double?
         var carbEntries: [StoredCarbEntry]?
         let startDate = charts.startDate
         // The interactive chart can be panned back further than the legacy
@@ -633,7 +661,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
         // The yesterday overlay needs a further day of readings behind the
         // chart's own window.
         let chartHistoryHours = BGChartSettings.shared.historyHours + (BGChartSettings.shared.showYesterdayLine ? 24 : 0)
-        let interactiveChartStartDate = now.addingTimeInterval(-chartHistoryHours * 3600)
+        // Today's time in range counts from midnight.
+        let interactiveChartStartDate = min(now.addingTimeInterval(-chartHistoryHours * 3600), Calendar.current.startOfDay(for: now))
         let dataStartDate = interactiveChartAvailable ? min(startDate, interactiveChartStartDate) : startDate
         let basalDeliveryState = self.basalDeliveryState
         let automaticDosingEnabled = automaticDosingStatus.automaticDosingEnabled
@@ -659,9 +688,13 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 netBasal = nil
             }
             self.log.debug("Update net basal to %{public}@", String(describing: netBasal))
+            let currentBasalRate = Self.currentBasalRate(deliveryState: basalDeliveryState,
+                                                         schedule: manager.basalRateScheduleApplyingOverrideHistory,
+                                                         at: now)
 
             DispatchQueue.main.async {
                 self.lastLoopError = lastLoopError
+                self.homeStatusModel.basalRateText = currentBasalRate.map(Self.basalRateText(_:))
 
                 if let netBasal = netBasal {
                     self.hudView?.pumpStatusHUD.basalRateHUD.setNetBasalRate(netBasal.rate, percent: netBasal.percent, at: netBasal.start)
@@ -699,6 +732,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             }
             // always check for cob
             carbsOnBoard = state.carbsOnBoard?.quantity
+            insulinOnBoard = state.insulinOnBoard?.value
 
             reloadGroup.leave()
         }
@@ -745,14 +779,18 @@ final class StatusTableViewController: LoopChartsTableViewController {
             }
 
             if interactiveChartAvailable {
-                // Pump and sensor changes, for the lines the chart draws at them.
+                // Pump and sensor changes, for the lines the chart draws at them and for the
+                // time left on the pod and sensor tiles. A pod lasts at most 80 hours, so four
+                // days back always finds the one in use.
                 reloadGroup.enter()
-                deviceManager.doseStore.getPumpEventValues(since: dataStartDate) { (result) -> Void in
+                deviceManager.doseStore.getPumpEventValues(since: min(dataStartDate, now.addingTimeInterval(-.hours(96)))) { (result) -> Void in
                     if case .success(let events) = result {
-                        pumpChanges = events.compactMap { event -> Date? in
+                        let changes = events.compactMap { event -> Date? in
                             if case .replaceComponent = event.type { return event.date }
                             return nil
                         }
+                        pumpChanges = changes.filter { $0 >= dataStartDate }
+                        latestPumpChange = changes.max()
                     }
                     reloadGroup.leave()
                 }
@@ -760,7 +798,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 reloadGroup.enter()
                 deviceManager.cgmEventStore.executeCgmEventQuery(fromQueryAnchor: nil) { (result) -> Void in
                     if case .success(_, let events) = result {
-                        sensorChanges = events.filter { $0.type == .sensorStart && $0.date >= dataStartDate }.map(\.date)
+                        let starts = events.filter { $0.type == .sensorStart }.map(\.date)
+                        sensorChanges = starts.filter { $0 >= dataStartDate }
+                        latestSensorStart = starts.max()
                     }
                     reloadGroup.leave()
                 }
@@ -877,11 +917,27 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 if let sensorChanges = sensorChanges {
                     self.cachedChartSensorChanges = sensorChanges
                 }
+                if pumpChanges != nil {
+                    self.lastPumpChange = latestPumpChange
+                }
+                if sensorChanges != nil {
+                    self.lastSensorStart = latestSensorStart
+                }
                 self.updateInteractiveChart(
                     predictedGlucoseValues: predictedGlucoseValues ?? [],
                     now: now
                 )
             }
+
+            // What Loop dosed from in its last run, as the dosing screens show it.
+            self.currentInsulinOnBoard = insulinOnBoard
+            if let cobValues = cobValues, let index = cobValues.closestIndex(priorTo: now) {
+                self.currentCarbsOnBoard = cobValues[index].quantity.doubleValue(for: .gram())
+            } else if let carbsOnBoard = carbsOnBoard {
+                self.currentCarbsOnBoard = carbsOnBoard.doubleValue(for: .gram())
+            }
+            let showsForecast = automaticDosingEnabled || !FeatureFlags.simpleBolusCalculatorEnabled
+            self.updateHomeStatus(eventualGlucose: showsForecast ? predictedGlucoseValues?.last : nil)
 
             self.tableView.beginUpdates()
             if let hudView = self.hudView {
@@ -971,11 +1027,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
             return [.glucose, .iob, .dose, .cob]
         }
 
+        // The small overview chart sits in the chart's card rather than in a row of its own.
         var rows: [ChartRow] = [.glucose]
         let settings = BGChartSettings.shared
-        if settings.showSmallGraph {
-            rows.append(.glucoseOverview)
-        }
         if settings.showStats {
             rows.append(.stats)
         }
@@ -995,6 +1049,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
     // content does end up taller than the screen.
     private static let minimumMainChartHeight: CGFloat = 180
     private static let smallChartRowHeight: CGFloat = 60
+    private static let minimumMainChartInCardHeight: CGFloat = 120
+    /// The chart card's title row with the 3/6/12/24 h control, and its padding.
+    private static let chartCardHeaderHeight: CGFloat = 40
     private static let statsRowHeight: CGFloat = 100
     private static let detailsHeaderRowHeight: CGFloat = 44
     private static let statusRowEstimatedHeight: CGFloat = 54
@@ -1011,9 +1068,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
         case .glucoseOverview:
             return Self.smallChartRowHeight
         case .stats:
-            return UIFontMetrics(forTextStyle: .subheadline).scaledValue(for: Self.statsRowHeight)
+            return homeStatsHeight
         case .detailsHeader, .prediction:
-            return UIFontMetrics(forTextStyle: .body).scaledValue(for: Self.detailsHeaderRowHeight)
+            return UIFontMetrics(forTextStyle: .body).scaledValue(for: Self.detailsHeaderRowHeight) + 2 * HomeLayout.verticalMargin
         case .glucose, .iob, .dose, .cob:
             return 0
         }
@@ -1047,12 +1104,11 @@ final class StatusTableViewController: LoopChartsTableViewController {
             var contentConfig = defaultContentConfiguration().updated(for: state)
             contentConfig.text = title
             contentConfig.textProperties.font = .preferredFont(forTextStyle: .body)
+            contentConfig.image = UIImage(systemName: "chevron.forward")
+            contentConfig.imageProperties.tintColor = .tertiaryLabel
+            contentConfig.imageProperties.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .caption1, scale: .medium)
             contentConfiguration = contentConfig
-            accessoryType = .disclosureIndicator
-
-            var backgroundConfig = backgroundConfiguration?.updated(for: state)
-            backgroundConfig?.backgroundColor = .secondarySystemBackground
-            backgroundConfiguration = backgroundConfig
+            applyHomeCardBackground()
         }
     }
 
@@ -1075,10 +1131,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             contentConfig.imageProperties.tintColor = .secondaryLabel
             contentConfig.imageProperties.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .caption1)
             contentConfiguration = contentConfig
-
-            var backgroundConfig = backgroundConfiguration?.updated(for: state)
-            backgroundConfig?.backgroundColor = .secondarySystemBackground
-            backgroundConfiguration = backgroundConfig
+            applyHomeCardBackground()
         }
     }
 
@@ -1322,6 +1375,18 @@ final class StatusTableViewController: LoopChartsTableViewController {
             useGMI: BGChartSettings.shared.useGMI,
             useCoefficientOfVariation: BGChartSettings.shared.useCoefficientOfVariation
         )
+
+        // The card on the screen counts today, from midnight, in plain words.
+        let midnight = Calendar.current.startOfDay(for: now)
+        let todayStats = GlucoseStats(
+            samples: cachedChartGlucoseSamples.filter { $0.startDate >= midnight },
+            low: BGChartSettings.shared.inRangeLowMGDL,
+            high: BGChartSettings.shared.inRangeHighMGDL
+        )
+        let summary = TimeInRangeSummary(stats: todayStats, periodSeconds: now.timeIntervalSince(midnight))
+        if timeInRangeModel.summary != summary {
+            timeInRangeModel.summary = summary
+        }
     }
 
     private func redrawCharts() {
@@ -1647,8 +1712,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
                         .padding(.horizontal)
                         .background(CardBackground())
                 }
-                .margins(.horizontal, 10)
-                .margins(.vertical, 4)
+                .margins(.horizontal, HomeLayout.horizontalMargin)
+                .margins(.vertical, HomeLayout.verticalMargin)
             } else {
                 var content = defaultContentConfiguration()
                 content.text = card.open.map { EveningWatchText.suggestionTitle($0) + " " + EveningWatchText.reason($0) } ?? EveningWatchText.symbol + " " + EveningWatchText.name
@@ -1669,8 +1734,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
                         .padding(.horizontal)
                         .background(CardBackground())
                 }
-                .margins(.horizontal, 10)
-                .margins(.vertical, 4)
+                .margins(.horizontal, HomeLayout.horizontalMargin)
+                .margins(.vertical, HomeLayout.verticalMargin)
             } else {
                 var content = defaultContentConfiguration()
                 content.text = LowWatchText.title(action) + " " + LowWatchText.reason(action)
@@ -1779,28 +1844,36 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 return cell
             }
         case .hud:
-            let cell = tableView.dequeueReusableCell(withIdentifier: HUDViewTableViewCell.className, for: indexPath) as! HUDViewTableViewCell
-            hudView = cell.hudView
-
+            // LoopFollow's Home: the loop and glucose card, the sensor and pod tiles and the
+            // four numbers, in place of the HUD.
+            let cell = tableView.dequeueReusableCell(withIdentifier: HomeHeaderTableViewCell.className, for: indexPath) as! HomeHeaderTableViewCell
+            cell.configure(model: homeStatusModel)
             return cell
         case .charts:
             let chartRow = visibleChartRows[indexPath.row]
 
             if #available(iOS 17.0, *), interactiveChartAvailable {
                 switch chartRow {
-                case .glucose, .glucoseOverview:
-                    let cell = tableView.dequeueReusableCell(withIdentifier: Self.bgChartCellIdentifier, for: indexPath) as! BGChartTableViewCell
+                case .glucose:
+                    let cell = tableView.dequeueReusableCell(withIdentifier: HomeChartCardTableViewCell.className, for: indexPath) as! HomeChartCardTableViewCell
                     cell.configure(
                         model: bgChartModel,
-                        config: chartRow == .glucose ? .main : .small,
+                        showsSmallGraph: BGChartSettings.shared.showSmallGraph,
+                        smallGraphHeight: Self.smallChartRowHeight,
                         onEditCarbEntry: { [weak self] id in
                             self?.presentCarbEntryEditor(carbEntryID: id)
                         }
                     )
                     return cell
+                case .glucoseOverview:
+                    let cell = tableView.dequeueReusableCell(withIdentifier: Self.bgChartCellIdentifier, for: indexPath) as! BGChartTableViewCell
+                    cell.configure(model: bgChartModel, config: .small)
+                    return cell
                 case .stats:
-                    let cell = tableView.dequeueReusableCell(withIdentifier: Self.glucoseStatsCellIdentifier, for: indexPath) as! GlucoseStatsTableViewCell
-                    cell.configure(model: statsDisplayModel)
+                    let cell = tableView.dequeueReusableCell(withIdentifier: HomeStatsTableViewCell.className, for: indexPath) as! HomeStatsTableViewCell
+                    cell.configure(model: timeInRangeModel) { [weak self] in
+                        self?.presentFullStatistics()
+                    }
                     return cell
                 case .detailsHeader:
                     let cell = tableView.dequeueReusableCell(withIdentifier: ChartDetailsHeaderCell.className, for: indexPath) as! ChartDetailsHeaderCell
@@ -1852,6 +1925,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             cell.setAlpha(alpha: alpha)
 
             cell.setSubtitleTextColor(color: UIColor.secondaryLabel)
+            cell.applyHomeCardBackground()
 
             return cell
         case .status:
@@ -1859,7 +1933,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
             func getTitleSubtitleCell() -> TitleSubtitleTableViewCell {
                 let cell = tableView.dequeueReusableCell(withIdentifier: TitleSubtitleTableViewCell.className, for: indexPath) as! TitleSubtitleTableViewCell
                 cell.selectionStyle = .none
-                cell.backgroundColor = .secondarySystemBackground
+                cell.applyHomeCardBackground()
                 cell.titleLabel.text = nil
                 cell.subtitleLabel.text = nil
                 cell.accessoryView = nil
@@ -1923,7 +1997,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                     progressCell.totalUnits = dose.programmedUnits
                     progressCell.tintColor = .insulinTintColor
                     progressCell.deliveredUnits = bolusProgressReporter?.progress.deliveredUnits
-                    progressCell.backgroundColor = .secondarySystemBackground
+                    progressCell.applyHomeCardBackground()
                     return progressCell
                 case .cancelingBolus:
                     let cell = getTitleSubtitleCell()
@@ -1949,7 +2023,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 case .onboardingSuspended:
                     let cell = tableView.dequeueReusableCell(withIdentifier: IconTitleSubtitleTableViewCell.className, for: indexPath) as! IconTitleSubtitleTableViewCell
                     cell.selectionStyle = .default
-                    cell.backgroundColor = .secondarySystemBackground
+                    cell.applyHomeCardBackground()
                     cell.iconImageView.image = UIImage(systemName: "exclamationmark.circle.fill")
                     cell.iconImageView.tintColor = .warning
                     cell.iconImageView.contentMode = .scaleAspectFit
@@ -2018,8 +2092,8 @@ final class StatusTableViewController: LoopChartsTableViewController {
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         switch Section(rawValue: indexPath.section)! {
         case .charts:
-            // Compute the height of the HUD, defaulting to 70
-            let hudHeight = ceil(hudView?.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height ?? 74)
+            // The cards at the top, measured at the table's width.
+            let hudHeight = shouldShowHUD ? homeHeaderHeight : 0
             var availableSize = landscapeMode ? max(tableView.bounds.width, tableView.bounds.height) : tableView.bounds.height
             availableSize -= (tableView.safeAreaInsets.top + tableView.safeAreaInsets.bottom + tableView.contentInset.top + hudHeight)
 
@@ -2057,7 +2131,13 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 for row in visibleChartRows where row != .glucose {
                     remaining -= fixedChartRowHeight(row)
                 }
-                return max(Self.minimumMainChartHeight, remaining)
+                // The card also holds its title with the span control and the small chart.
+                let cardExtra = UIFontMetrics(forTextStyle: .subheadline).scaledValue(for: Self.chartCardHeaderHeight)
+                    + (BGChartSettings.shared.showSmallGraph ? Self.smallChartRowHeight : 0)
+                    + 2 * HomeLayout.verticalMargin
+                // The plot itself keeps at least the height LoopFollow's Home leaves it, so a
+                // card or banner above makes the plot smaller rather than the screen scroll.
+                return max(Self.minimumMainChartInCardHeight + cardExtra, remaining)
             case .glucoseOverview, .stats, .detailsHeader, .prediction:
                 return fixedChartRowHeight(chartRow)
             case .iob, .dose, .cob:
@@ -2559,6 +2639,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         updatePresetModeAvailability(automaticDosingEnabled: automaticDosingEnabled)
         hudView?.loopCompletionHUD.loopIconClosed = automaticDosingEnabled
         hudView?.loopCompletionHUD.closedLoopDisallowedLocalizedDescription = deviceManager.closedLoopDisallowedLocalizedDescription
+        homeStatusModel.isClosedLoop = automaticDosingEnabled
     }
 
     // MARK: - HUDs
@@ -2609,7 +2690,18 @@ final class StatusTableViewController: LoopChartsTableViewController {
             }
             hudView.pumpStatusHUD.presentStatusHighlight(deviceManager.pumpStatusHighlight)
             hudView.pumpStatusHUD.lifecycleProgress = deviceManager.pumpLifecycleProgress
+        } else {
+            // The pod tile shows the pump manager's own view (the reservoir), as the HUD did.
+            if let pumpManagerHUDProvider = deviceManager.pumpManagerHUDProvider {
+                let view = pumpManagerHUDProvider.createHUDView()
+                view?.stateColors = .pumpStatus
+                homeStatusModel.pumpHUDView = view
+                pumpManagerHUDProvider.visible = active && onscreen
+            } else {
+                homeStatusModel.pumpHUDView = nil
+            }
         }
+        updateHomeDevices()
     }
 
     private func configureCGMManagerHUDViews() {
@@ -2617,6 +2709,205 @@ final class StatusTableViewController: LoopChartsTableViewController {
             hudView.cgmStatusHUD.presentStatusHighlight(deviceManager.cgmStatusHighlight)
             hudView.cgmStatusHUD.lifecycleProgress = deviceManager.cgmLifecycleProgress
         }
+        updateHomeDevices()
+    }
+
+    // MARK: - Home cards
+
+    /// What tapping the cards at the top does: the same as tapping the HUD did.
+    private func configureHomeStatusModel() {
+        let model = homeStatusModel
+        model.isClosedLoop = automaticDosingStatus.automaticDosingEnabled
+        model.lastLoopCompleted = deviceManager.loopManager.lastLoopCompleted
+        model.onLoopTapped = { [weak self] in
+            self?.presentHomeLoopCompletionMessage()
+        }
+        let cgmTapped: () -> Void = { [weak self] in
+            guard let self else { return }
+            self.executeHUDTapAction(self.deviceManager.didTapOnCGMStatus(), from: nil)
+        }
+        model.onGlucoseTapped = cgmTapped
+        model.onSensorTapped = cgmTapped
+        model.onPumpTapped = { [weak self] in
+            guard let self else { return }
+            self.executeHUDTapAction(self.deviceManager.didTapOnPumpStatus(self.homeStatusModel.pumpHUDView), from: nil)
+        }
+        model.onInsulinTapped = { [weak self] in
+            self?.performSegue(withIdentifier: InsulinDeliveryTableViewController.className, sender: nil)
+        }
+        model.onCarbsTapped = { [weak self] in
+            self?.performSegue(withIdentifier: CarbAbsorptionViewController.className, sender: nil)
+        }
+        model.onForecastTapped = { [weak self] in
+            guard let self, self.automaticDosingStatus.automaticDosingEnabled || !FeatureFlags.simpleBolusCalculatorEnabled else { return }
+            self.performSegue(withIdentifier: PredictionTableViewController.className, sender: nil)
+        }
+    }
+
+    private func presentHomeLoopCompletionMessage() {
+        let message = LoopCompletionHUDView.loopCompletionMessage(
+            lastLoopCompleted: deviceManager.loopManager.lastLoopCompleted,
+            isClosedLoop: automaticDosingStatus.automaticDosingEnabled,
+            closedLoopDisallowedLocalizedDescription: deviceManager.closedLoopDisallowedLocalizedDescription
+        )
+        presentLoopCompletionMessage(title: message.title, message: message.message)
+    }
+
+    /// Fills the cards at the top from the managers and the last reload.
+    private func updateHomeStatus(eventualGlucose: GlucoseValue?) {
+        let model = homeStatusModel
+        model.lastLoopCompleted = deviceManager.loopManager.lastLoopCompleted
+        model.isClosedLoop = automaticDosingStatus.automaticDosingEnabled
+        model.glucoseUnitText = BGChartGlucoseDisplay.unit.localizedShortUnitString
+
+        if let latest = deviceManager.glucoseStore.latestGlucose {
+            let valueMGDL = latest.quantity.doubleValue(for: .milligramsPerDeciliter)
+            let display = deviceManager.glucoseDisplay(for: latest)
+            var valueText = BGChartGlucoseDisplay.string(fromMGDL: valueMGDL)
+            switch display?.glucoseRangeCategory {
+            case .belowRange?:
+                valueText = NSLocalizedString("LOW", comment: "String displayed instead of a glucose value below the CGM range")
+            case .aboveRange?:
+                valueText = NSLocalizedString("HIGH", comment: "String displayed instead of a glucose value above the CGM range")
+            default:
+                break
+            }
+            model.glucose = HomeStatusModel.Glucose(
+                valueText: valueText,
+                valueMGDL: valueMGDL,
+                rangeColor: nil,
+                trendSymbol: display?.trendType?.symbol,
+                deltaText: HomeStatusModel.deltaText(latestDate: latest.startDate, latestMGDL: valueMGDL, samples: cachedChartGlucoseSamples),
+                date: latest.startDate,
+                isManual: latest.wasUserEntered && !latest.isDisplayOnly
+            )
+        } else {
+            model.glucose = nil
+        }
+
+        let unitsFormatter = NumberFormatter()
+        unitsFormatter.numberStyle = .decimal
+        unitsFormatter.minimumFractionDigits = 1
+        unitsFormatter.maximumFractionDigits = 1
+        model.insulinOnBoardText = currentInsulinOnBoard.flatMap { unitsFormatter.string(from: NSNumber(value: $0)) }.map {
+            String(format: NSLocalizedString("%@ U", comment: "Status screen: active insulin, e.g. 1.4 U (1: amount)"), $0)
+        }
+        model.carbsOnBoardText = currentCarbsOnBoard.flatMap {
+            carbFormatter.string(from: HKQuantity(unit: .gram(), doubleValue: $0.rounded()))
+        }
+        model.eventualGlucoseText = eventualGlucose.map {
+            BGChartGlucoseDisplay.string(fromMGDL: $0.quantity.doubleValue(for: .milligramsPerDeciliter))
+        }
+
+        updateHomeDevices()
+    }
+
+    /// The sensor and pod tiles: name, picture, time left and what the devices report.
+    private func updateHomeDevices() {
+        let now = Date()
+
+        let cgmManager = deviceManager.cgmManager
+        var sensor = HomeStatusModel.Device(title: NSLocalizedString("Sensor", comment: "Title of the sensor tile on the status screen"),
+                                            image: (cgmManager as? CGMManagerUI)?.smallImage,
+                                            symbolName: "sensor.tag.radiowaves.forward.fill")
+        if cgmManager != nil, let start = lastSensorStart {
+            let lifecycle = DeviceLifecycle.sensor(cgmPluginIdentifier: cgmManager?.pluginIdentifier, startedAt: start)
+            // A start long past the sensor's end is one the store missed the next of.
+            if now < lifecycle.graceEnd.addingTimeInterval(.hours(24)) {
+                sensor.lifecycle = lifecycle
+            }
+        }
+        if let progress = deviceManager.cgmLifecycleProgress {
+            sensor.managerProgress = progress.percentComplete
+            sensor.managerProgressColor = progress.progressState.color
+        }
+        sensor.highlight = deviceManager.cgmStatusHighlight.map {
+            HomeStatusModel.Highlight(message: $0.localizedMessage, image: $0.image, color: $0.state.color)
+        }
+        sensor.badge = deviceManager.cgmStatusBadge.map { HomeStatusModel.Badge(image: $0.image, color: $0.state.color) }
+
+        let pumpManager = deviceManager.pumpManager
+        let isOmnipod = pumpManager?.pluginIdentifier.lowercased().contains("omni") == true
+        var pump = HomeStatusModel.Device(title: isOmnipod
+                                            ? NSLocalizedString("Pod", comment: "Title of the pod tile on the status screen")
+                                            : NSLocalizedString("Pump", comment: "Title of the pump tile on the status screen"),
+                                          image: (pumpManager as? PumpManagerUI)?.smallImage,
+                                          symbolName: "cross.vial.fill")
+        if pumpManager != nil, let start = lastPumpChange {
+            let lifecycle = DeviceLifecycle.pump(isOmnipod: isOmnipod, startedAt: start)
+            if now < lifecycle.graceEnd.addingTimeInterval(.hours(24)) {
+                pump.lifecycle = lifecycle
+            }
+        }
+        if let progress = deviceManager.pumpLifecycleProgress {
+            pump.managerProgress = progress.percentComplete
+            pump.managerProgressColor = progress.progressState.color
+        }
+        pump.highlight = deviceManager.pumpStatusHighlight.map {
+            HomeStatusModel.Highlight(message: $0.localizedMessage, image: $0.image, color: $0.state.color)
+        }
+        pump.badge = deviceManager.pumpStatusBadge.map { HomeStatusModel.Badge(image: $0.image, color: $0.state.color) }
+
+        if homeStatusModel.sensor != sensor {
+            homeStatusModel.sensor = sensor
+        }
+        if homeStatusModel.pump != pump {
+            homeStatusModel.pump = pump
+        }
+    }
+
+    /// The basal rate running now: a temp basal's, nothing while suspended, else the schedule's.
+    private static func currentBasalRate(deliveryState: PumpManagerStatus.BasalDeliveryState?, schedule: BasalRateSchedule?, at date: Date) -> Double? {
+        switch deliveryState {
+        case .none:
+            return nil
+        case .tempBasal(let dose)? where dose.endDate > date:
+            return dose.unitsPerHour
+        case .suspending?, .suspended?:
+            return 0
+        default:
+            return schedule?.value(at: date)
+        }
+    }
+
+    /// "0,45 U/hr".
+    private static func basalRateText(_ rate: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        let number = formatter.string(from: NSNumber(value: rate)) ?? String(rate)
+        return String(format: NSLocalizedString("%@ U/hr", comment: "Status screen: the basal rate running now (1: rate)"), number)
+    }
+
+    /// Height of the cards at the top at the table's width, so the chart can take the rest.
+    private var homeHeaderHeight: CGFloat {
+        fittingHeight(of: homeHeaderSizingController, fallback: 300)
+    }
+
+    private var homeStatsHeight: CGFloat {
+        fittingHeight(of: homeStatsSizingController, fallback: 100)
+    }
+
+    private func fittingHeight<Content: View>(of controller: UIHostingController<Content>, fallback: CGFloat) -> CGFloat {
+        let width = tableView.bounds.width - 2 * HomeLayout.horizontalMargin
+        guard width > 0 else { return fallback }
+        // Measured with the text size in use, which the off-screen controller does not see.
+        controller.traitOverrides.preferredContentSizeCategory = traitCollection.preferredContentSizeCategory
+        let size = controller.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude))
+        return ceil(size.height) + 2 * HomeLayout.verticalMargin
+    }
+
+    /// The full statistics for the last 24 hours, from "More" on the time-in-range card.
+    private func presentFullStatistics() {
+        let hostingController = UIHostingController(rootView: HomeFullStatsView(model: statsDisplayModel, onDone: { [weak self] in
+            self?.dismiss(animated: true)
+        }))
+        if let sheet = hostingController.sheetPresentationController {
+            sheet.detents = [.medium()]
+            sheet.prefersGrabberVisible = true
+        }
+        present(hostingController, animated: true)
     }
 
     private func addPumpManagerViewToHUD(_ view: BaseHUDView) {

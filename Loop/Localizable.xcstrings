@@ -1,6 +1,294 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld min" : {
+      "comment" : "A duration in minutes, e.g. how long glucose was low today",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld min"
+          }
+        }
+      }
+    },
+    "%lld h" : {
+      "comment" : "A duration in hours, e.g. how long glucose was high today",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld t"
+          }
+        }
+      }
+    },
+    "%lld h %lld min" : {
+      "comment" : "A duration in hours and minutes, e.g. how long glucose was in range today",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld t %lld min"
+          }
+        }
+      }
+    },
+    "%lld d" : {
+      "comment" : "Days since Loop last ran, under the loop ring",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld d"
+          }
+        }
+      }
+    },
+    "%lld min ago" : {
+      "comment" : "How long ago the glucose shown was measured, under the glucose value (1: minutes)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld min siden"
+          }
+        }
+      }
+    },
+    "%lld hours" : {
+      "comment" : "Chart span, for VoiceOver (1: number of hours)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld timer"
+          }
+        }
+      }
+    },
+    "%@ U/hr" : {
+      "comment" : "Status screen: the basal rate running now (1: rate)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ E/t"
+          }
+        }
+      }
+    },
+    "Today: %@ in range" : {
+      "comment" : "Headline of the time-in-range card on the status screen (1: percentage)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I dag: %@ i målområdet"
+          }
+        }
+      }
+    },
+    "Loop ran %@ ago" : {
+      "comment" : "Accessibility label of the loop ring (1: e.g. 2 min)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loop kjørte %@ siden"
+          }
+        }
+      }
+    },
+    "Waiting for first run" : {
+      "comment" : "Accessibility label of the loop ring before Loop has run",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Venter på første kjøring"
+          }
+        }
+      }
+    },
+    "LOW" : {
+      "comment" : "String displayed instead of a glucose value below the CGM range",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LAV"
+          }
+        }
+      }
+    },
+    "HIGH" : {
+      "comment" : "String displayed instead of a glucose value above the CGM range",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HØY"
+          }
+        }
+      }
+    },
+    "Expired" : {
+      "comment" : "Tile text when a sensor or pod is past its end",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utløpt"
+          }
+        }
+      }
+    },
+    "Sensor" : {
+      "comment" : "Title of the sensor tile on the status screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sensor"
+          }
+        }
+      }
+    },
+    "Pod" : {
+      "comment" : "Title of the pod tile on the status screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pod"
+          }
+        }
+      }
+    },
+    "Active carbs" : {
+      "comment" : "Status screen: carbs on board, above the number",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktive karbo"
+          }
+        }
+      }
+    },
+    "Basal" : {
+      "comment" : "Status screen: the basal rate running now, above the number",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basal"
+          }
+        }
+      }
+    },
+    "Forecast" : {
+      "comment" : "Status screen: where Loop expects the glucose to end up, above the number",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prognose"
+          }
+        }
+      }
+    },
+    "More" : {
+      "comment" : "Opens the full statistics from the time-in-range card",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mer"
+          }
+        }
+      }
+    },
+    "Low" : {
+      "comment" : "Time-in-range card: below range",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lavt"
+          }
+        }
+      }
+    },
+    "In range" : {
+      "comment" : "Time-in-range card: in range",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I mål"
+          }
+        }
+      }
+    },
+    "High" : {
+      "comment" : "Time-in-range card: above range",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Høyt"
+          }
+        }
+      }
+    },
+    "Last 24 hours" : {
+      "comment" : "Period of the full statistics opened from the status screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste 24 timer"
+          }
+        }
+      }
+    },
+    "Statistics" : {
+      "comment" : "Title of the full statistics opened from the status screen",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statistikk"
+          }
+        }
+      }
+    },
     "Nothing was saved or given: Loop cannot calculate a bolus recommendation right now." : {
       "comment" : "Why a remote meal with bolus was refused: no fresh bolus recommendation",
       "extractionState" : "manual",

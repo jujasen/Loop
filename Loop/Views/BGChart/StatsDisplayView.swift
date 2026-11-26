@@ -60,7 +60,7 @@ struct StatsDisplayView: View {
             .frame(maxWidth: .infinity)
         }
         .frame(maxHeight: .infinity)
-        .background(Color(.secondarySystemBackground))
+        .background(Color(.secondarySystemGroupedBackground))
         .contentShape(Rectangle())
         .onTapGesture { onTap?() }
     }

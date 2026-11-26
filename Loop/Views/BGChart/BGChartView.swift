@@ -231,7 +231,7 @@ private struct MainBGChart: View {
         GeometryReader { geo in
             chart(viewport: geo.size)
         }
-        .background(Color(.systemBackground))
+        .background(Color(.secondarySystemGroupedBackground))
     }
 
     private func chart(viewport: CGSize) -> some View {
@@ -1035,7 +1035,7 @@ private struct SmallBGChart: View {
                     }
             )
         }
-        .background(Color(.systemBackground))
+        .background(Color(.secondarySystemGroupedBackground))
     }
 
     /// Box showing where the main chart's visible window currently sits.
@@ -1769,5 +1769,46 @@ private struct PillLabel: View {
             .foregroundColor(.primary)
             .multilineTextAlignment(.center)
             .lineLimit(lineLimit)
+    }
+}
+
+// MARK: - Span control
+
+/// The spans the 3/6/12/24 h control above the chart offers, as on LoopFollow's Home.
+enum ChartSpan: TimeInterval, CaseIterable, Identifiable {
+    case three = 10800
+    case six = 21600
+    case twelve = 43200
+    case twentyFour = 86400
+
+    var id: TimeInterval { rawValue }
+
+    var hours: Int { Int(rawValue / 3600) }
+
+    var label: String {
+        String(format: NSLocalizedString("%lld h", comment: "A duration in hours, e.g. how long glucose was high today"), hours)
+    }
+
+    /// The span the chart shows now, when it is one of these (a pinch can leave it in between).
+    static func matching(visibleSeconds: TimeInterval) -> ChartSpan? {
+        allCases.first { abs($0.rawValue - visibleSeconds) <= $0.rawValue * 0.03 }
+    }
+}
+
+extension BGChartInteraction {
+    /// Shows `seconds` of the main chart with "now" where following puts it, and keeps
+    /// following — what the 3/6/12/24 h control above the chart does.
+    func show(seconds: TimeInterval, model: BGChartModel) {
+        let span = min(max(seconds, BGChartConfig.minVisibleSeconds), BGChartConfig.maxVisibleSeconds)
+        visibleSeconds = span
+        followLatest = true
+        var leadingEdge = model.now.addingTimeInterval(-span * BGChartConfig.followNowFraction)
+        // Before the first data load the domain is a placeholder; don't clamp to it.
+        if model.domainEnd > model.domainStart.addingTimeInterval(1) {
+            let latest = model.domainEnd.addingTimeInterval(-span)
+            leadingEdge = min(max(leadingEdge, model.domainStart), max(model.domainStart, latest))
+        }
+        scrollPosition = leadingEdge
+        persistZoom()
     }
 }
