@@ -72,6 +72,40 @@ final class HomeStatusModel: ObservableObject {
         var managerProgressColor: UIColor?
         var highlight: Highlight?
         var badge: Badge?
+        /// LoopFollow's picture of the device (`dexcom_g7`, `omnipod` in DefaultAssets), so the
+        /// tiles look the same in both apps; nil falls back to the device manager's own image.
+        var assetName: String?
+        /// The pod tile's «50+ U» or «23 U», as LoopFollow shows it.
+        var reservoir: Reservoir?
+    }
+
+    /// What is left in the pump, drawn as LoopFollow's tile draws it.
+    struct Reservoir: Equatable {
+        /// Units left; nil when the pump only says it has more than its top reading (Omnipod: 50 U).
+        var units: Double?
+
+        var text: String {
+            let symbol = NSLocalizedString("U", comment: "Symbol for insulin units on the pod tile")
+            guard let units else { return "50+ " + symbol }
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.maximumFractionDigits = 0
+            return (formatter.string(from: NSNumber(value: units)) ?? "\(Int(units))") + " " + symbol
+        }
+
+        /// The drawing's fill; Omnipod reports levels up to 50 U.
+        var fill: Double {
+            guard let units else { return 1 }
+            return min(1, max(0, units / 50))
+        }
+
+        /// LoopFollow's colours: red at 10 U or less, orange at 20 U or less.
+        var level: DeviceLifecycle.Level {
+            let level = units ?? 50
+            if level <= 10 { return .critical }
+            if level <= 20 { return .warning }
+            return .normal
+        }
     }
 
     @Published var sensor = Device(title: "", image: nil, symbolName: "sensor.tag.radiowaves.forward.fill")

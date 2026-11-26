@@ -108,7 +108,7 @@ struct HomeHeaderView: View {
     var body: some View {
         VStack(spacing: HomeLayout.verticalMargin * 2) {
             HomeGlucoseCard(model: model)
-            HomeDeviceTiles(model: model, showsPumpHUDView: !isForMeasuring)
+            HomeDeviceTiles(model: model)
             HomeNumbersCard(model: model)
         }
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
@@ -248,7 +248,6 @@ struct HomeGlucoseCard: View {
 /// place of the time left, in its colour. Tapping opens what tapping the HUD opened.
 struct HomeDeviceTiles: View {
     @ObservedObject var model: HomeStatusModel
-    var showsPumpHUDView = true
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -257,7 +256,7 @@ struct HomeDeviceTiles: View {
                     HomeDeviceTile(device: model.sensor, tint: .teal, now: context.date)
                 }
                 Button { model.onPumpTapped?() } label: {
-                    HomeDeviceTile(device: model.pump, tint: .blue, now: context.date, hudView: model.pump.highlight == nil ? model.pumpHUDView : nil, drawsHUDView: showsPumpHUDView)
+                    HomeDeviceTile(device: model.pump, tint: .blue, now: context.date)
                 }
             }
             .buttonStyle(.plain)
@@ -269,15 +268,14 @@ struct HomeDeviceTile: View {
     let device: HomeStatusModel.Device
     let tint: Color
     let now: Date
-    var hudView: BaseHUDView? = nil
-    /// False only for the copy that is measured: it keeps the room but leaves the view alone.
-    var drawsHUDView = true
 
     var body: some View {
         let level = device.lifecycle?.level(at: now) ?? .normal
-        let progress = device.managerProgress ?? device.lifecycle?.progress(at: now)
+        // As LoopFollow: the time since the change decides; the manager's own progress only
+        // when the change is not known.
+        let progress = device.lifecycle?.progress(at: now) ?? device.managerProgress
         let barColor: Color = {
-            if let managerColor = device.managerProgressColor { return Color(managerColor) }
+            if device.lifecycle == nil, let managerColor = device.managerProgressColor { return Color(managerColor) }
             return device.lifecycle == nil ? .secondary : level.color(normal: tint)
         }()
 
@@ -319,16 +317,14 @@ struct HomeDeviceTile: View {
                     }
                 }
                 Spacer(minLength: 2)
-                if let hudView {
-                    Group {
-                        if drawsHUDView {
-                            PumpManagerHUDViewRepresentable(view: hudView)
-                        } else {
-                            Color.clear
-                        }
+                if let reservoir = device.reservoir {
+                    HStack(spacing: 4) {
+                        ReservoirGauge(fill: reservoir.fill, color: reservoir.level.color(normal: tint))
+                            .frame(width: 12, height: 16)
+                        Text(reservoir.text)
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(reservoir.level.color(normal: .primary))
                     }
-                    .frame(width: 48, height: 40)
-                    .allowsHitTesting(false)
                 }
             }
             .lineLimit(1)
@@ -352,7 +348,11 @@ struct HomeDeviceTile: View {
 
     @ViewBuilder
     private var icon: some View {
-        if let image = device.image {
+        if let assetName = device.assetName {
+            Image(assetName)
+                .resizable()
+                .scaledToFit()
+        } else if let image = device.image {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFit()
@@ -394,33 +394,32 @@ private struct LifecycleBar: View {
     }
 }
 
-/// The pump manager's own HUD view (an Omnipod's reservoir), kept as the manager draws it.
-private struct PumpManagerHUDViewRepresentable: UIViewRepresentable {
-    let view: BaseHUDView
+/// The pod reservoir drawing from OmnipodKit, filled to the level left (as LoopFollow's).
+struct ReservoirGauge: View {
+    let fill: Double
+    let color: Color
 
-    func makeUIView(context: Context) -> UIView {
-        let container = UIView()
-        container.backgroundColor = .clear
-        embed(view, in: container)
-        return container
-    }
-
-    func updateUIView(_ container: UIView, context: Context) {
-        if view.superview !== container {
-            container.subviews.forEach { $0.removeFromSuperview() }
-            embed(view, in: container)
+    var body: some View {
+        ZStack {
+            GeometryReader { geometry in
+                let offset = geometry.size.height * 0.05
+                let fillHeight = geometry.size.height * 0.81
+                Rectangle()
+                    .fill(color)
+                    .mask(Image("pod_reservoir_mask_swiftui").resizable().scaledToFit())
+                    .mask(
+                        Rectangle().path(in: CGRect(x: 0,
+                                                    y: offset + fillHeight - fillHeight * fill,
+                                                    width: geometry.size.width,
+                                                    height: fillHeight * fill))
+                    )
+            }
+            Image("pod_reservoir_swiftui")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(color)
         }
-    }
-
-    private func embed(_ view: BaseHUDView, in container: UIView) {
-        view.removeFromSuperview()
-        view.stateColors = .pumpStatus
-        // The HUD hid it while a status highlight took its place.
-        view.isHidden = false
-        view.translatesAutoresizingMaskIntoConstraints = true
-        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        view.frame = container.bounds
-        container.addSubview(view)
     }
 }
 

@@ -1,6 +1,18 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Infusion set" : {
+      "comment" : "Title of the pump tile on the status screen, for a pump that is not an Omnipod",
+      "extractionState" : "manual",
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Infusjonssett"
+          }
+        }
+      }
+    },
     "%lld min" : {
       "comment" : "A duration in minutes, e.g. how long glucose was low today",
       "extractionState" : "manual",

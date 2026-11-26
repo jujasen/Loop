@@ -1049,7 +1049,10 @@ final class StatusTableViewController: LoopChartsTableViewController {
     // content does end up taller than the screen.
     private static let minimumMainChartHeight: CGFloat = 180
     private static let smallChartRowHeight: CGFloat = 60
-    private static let minimumMainChartInCardHeight: CGFloat = 120
+    /// Julia (26 November 2026): the chart must get plenty of room. The plot keeps at least this
+    /// (LoopFollow's Home gives it about 210 pt); with a card or banner above, the screen scrolls
+    /// instead of the chart shrinking.
+    private static let minimumMainChartInCardHeight: CGFloat = 230
     /// The chart card's title row with the 3/6/12/24 h control, and its padding.
     private static let chartCardHeaderHeight: CGFloat = 40
     private static let statsRowHeight: CGFloat = 100
@@ -2135,8 +2138,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
                 let cardExtra = UIFontMetrics(forTextStyle: .subheadline).scaledValue(for: Self.chartCardHeaderHeight)
                     + (BGChartSettings.shared.showSmallGraph ? Self.smallChartRowHeight : 0)
                     + 2 * HomeLayout.verticalMargin
-                // The plot itself keeps at least the height LoopFollow's Home leaves it, so a
-                // card or banner above makes the plot smaller rather than the screen scroll.
+                // The plot keeps at least `minimumMainChartInCardHeight`; past that, the screen scrolls.
                 return max(Self.minimumMainChartInCardHeight + cardExtra, remaining)
             case .glucoseOverview, .stats, .detailsHeader, .prediction:
                 return fixedChartRowHeight(chartRow)
@@ -2810,6 +2812,9 @@ final class StatusTableViewController: LoopChartsTableViewController {
         var sensor = HomeStatusModel.Device(title: NSLocalizedString("Sensor", comment: "Title of the sensor tile on the status screen"),
                                             image: (cgmManager as? CGMManagerUI)?.smallImage,
                                             symbolName: "sensor.tag.radiowaves.forward.fill")
+        if cgmManager?.pluginIdentifier.lowercased().contains("g7") == true {
+            sensor.assetName = "dexcom_g7"
+        }
         if cgmManager != nil, let start = lastSensorStart {
             let lifecycle = DeviceLifecycle.sensor(cgmPluginIdentifier: cgmManager?.pluginIdentifier, startedAt: start)
             // A start long past the sensor's end is one the store missed the next of.
@@ -2830,7 +2835,7 @@ final class StatusTableViewController: LoopChartsTableViewController {
         let isOmnipod = pumpManager?.pluginIdentifier.lowercased().contains("omni") == true
         var pump = HomeStatusModel.Device(title: isOmnipod
                                             ? NSLocalizedString("Pod", comment: "Title of the pod tile on the status screen")
-                                            : NSLocalizedString("Pump", comment: "Title of the pump tile on the status screen"),
+                                            : NSLocalizedString("Infusion set", comment: "Title of the pump tile on the status screen, for a pump that is not an Omnipod"),
                                           image: (pumpManager as? PumpManagerUI)?.smallImage,
                                           symbolName: "cross.vial.fill")
         if pumpManager != nil, let start = lastPumpChange {
@@ -2847,6 +2852,20 @@ final class StatusTableViewController: LoopChartsTableViewController {
             HomeStatusModel.Highlight(message: $0.localizedMessage, image: $0.image, color: $0.state.color)
         }
         pump.badge = deviceManager.pumpStatusBadge.map { HomeStatusModel.Badge(image: $0.image, color: $0.state.color) }
+        if isOmnipod {
+            pump.assetName = "omnipod"
+        }
+        if pumpManager != nil {
+            // Omnipod only reports what is left below 50 U; a reading from before the last
+            // change belongs to the old pod. Without one the tile says «50+ U», as LoopFollow does.
+            var units: Double?
+            if let last = deviceManager.doseStore.lastReservoirValue,
+               last.startDate > (lastPumpChange ?? .distantPast),
+               now.timeIntervalSince(last.startDate) < .hours(24) {
+                units = last.unitVolume
+            }
+            pump.reservoir = HomeStatusModel.Reservoir(units: units)
+        }
 
         if homeStatusModel.sensor != sensor {
             homeStatusModel.sensor = sensor
