@@ -110,7 +110,10 @@ struct CarbEntryView: View, HorizontalSizeClassOverride {
                         .background(.bar)
                 }
             }
+            // Dragging the screen takes the keyboard down, as does "Done" above it.
+            .scrollDismissesKeyboard(.interactively)
         }
+        .keyboardDoneBar()
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
             isKeyboardShown = true
         }
@@ -817,5 +820,51 @@ extension CarbEntryView {
 extension CarbEntryView {
     enum Row {
         case amountConsumed, time, foodType, absorptionTime
+    }
+}
+
+// MARK: - Keyboard
+
+/// Puts a bar with "Done" above the keyboard of every text and number field on a screen, so
+/// the keyboard can be put away when it is in the way — also the decimal pad, which has no
+/// return key. The amount, food type and other rows here are UIKit fields from LoopKitUI,
+/// which SwiftUI's keyboard toolbar does not reach, so the bar is given to each field as it
+/// starts editing.
+struct KeyboardDoneBar: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { notification in
+                guard let field = notification.object as? UITextField, field.inputAccessoryView == nil else { return }
+                field.inputAccessoryView = KeyboardDoneBar.makeBar()
+                field.reloadInputViews()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidBeginEditingNotification)) { notification in
+                guard let view = notification.object as? UITextView, view.inputAccessoryView == nil else { return }
+                view.inputAccessoryView = KeyboardDoneBar.makeBar()
+                view.reloadInputViews()
+            }
+    }
+
+    static func makeBar() -> UIToolbar {
+        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: 320, height: 44))
+        let done = UIBarButtonItem(
+            title: NSLocalizedString("Done", comment: "Button above the keyboard that puts the keyboard away"),
+            primaryAction: UIAction { _ in KeyboardDoneBar.dismissKeyboard() }
+        )
+        done.style = .done
+        toolbar.items = [UIBarButtonItem(systemItem: .flexibleSpace), done]
+        toolbar.sizeToFit()
+        return toolbar
+    }
+
+    static func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}
+
+extension View {
+    /// A "Done" bar above the keyboard for every field in this view. See `KeyboardDoneBar`.
+    func keyboardDoneBar() -> some View {
+        modifier(KeyboardDoneBar())
     }
 }

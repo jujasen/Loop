@@ -43,6 +43,8 @@ struct BolusEntryView: View {
                     }
                 }
                 .insetGroupedListStyle()
+                // Dragging the list takes the keyboard down, as does "Done" above it.
+                .scrollDismissesKeyboard(.interactively)
                 
             }
             .navigationBarTitle(self.title)
